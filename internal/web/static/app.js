@@ -78,6 +78,21 @@ function delLienzo(x, y, m) {
   return [90 - (y / m.alto) * 180, (x / m.ancho) * 360 - 180];
 }
 
+// dispersar convierte una IP en un desvio pequeno y ESTABLE, para separar
+// las lineas que salen del mismo pais sin que salten de sitio en cada
+// refresco. El mismo texto da siempre el mismo desvio.
+function dispersar(ip) {
+  let h = 0;
+  for (let i = 0; i < ip.length; i++) {
+    h = (h * 31 + ip.charCodeAt(i)) | 0;
+  }
+  // Un anillo de radio fijo: el angulo lo decide la IP. Radio en unidades
+  // del lienzo (~8 sobre un ancho de 1000), suficiente para distinguirlas
+  // sin alejarlas del pais.
+  const ang = (h >>> 0) % 360 * Math.PI / 180;
+  return [Math.cos(ang) * 8, Math.sin(ang) * 8];
+}
+
 function pintarAtaques(lienzo, m, recientes, paisPropio, propio) {
   // Las coordenadas mandan sobre el pais: el centroide de un pais grande
   // deja la marca a cientos de kilometros de donde esta la maquina.
@@ -89,17 +104,47 @@ function pintarAtaques(lienzo, m, recientes, paisPropio, propio) {
   const capa = svg("g", { class: "ataques" });
   let dibujados = 0;
 
+  // Una linea por IP DISTINTA, no por evento. Una sola sesion SSH genera
+  // "conecta", "huella", varios "login"... todos desde la misma IP: pintar
+  // uno por evento amontona lineas identicas encima. Y como el origen es el
+  // centroide del pais, todas las IP de un mismo pais salen del mismo punto,
+  // asi que se les da un pequeno desvio para que se distingan en vez de
+  // superponerse. Eso -y no que "siempre sean las mismas"- es lo que hacia
+  // que el mapa pareciera congelado.
+  const vistas = new Set();
+  // La peor clasificacion de cada IP manda el color: si una IP tiene un
+  // evento notable, su linea debe salir en rojo aunque el ultimo fuera ruido.
+  const peorDe = new Map();
+  const rango = { ruido_fondo: 0, revisar: 1, notable: 2 };
+  for (const ev of recientes) {
+    const actual = peorDe.get(ev.ip);
+    if (actual === undefined || rango[ev.clasificacion] > rango[actual]) {
+      peorDe.set(ev.ip, ev.clasificacion);
+    }
+  }
+
   for (const ev of recientes) {
     const origen = m.paises[ev.pais]?.c;
-    if (!origen || ev.pais === paisPropio) continue;
+    if (!origen || ev.pais === paisPropio || vistas.has(ev.ip)) continue;
     if (dibujados >= 18) break; // mas lineas solo ensucian
+    vistas.add(ev.ip);
 
+    // Desvio estable por IP: el mismo atacante cae siempre en el mismo
+    // sitio -no baila entre refrescos- pero separado de sus compatriotas.
+    const desvio = dispersar(ev.ip);
+    const salida = [origen[0] + desvio[0], origen[1] + desvio[1]];
+
+    const clase = peorDe.get(ev.ip);
     const linea = svg("path", {
-      d: arco(origen, destino),
-      class: `ataque ${ev.clasificacion === "notable" ? "notable" : ev.clasificacion === "revisar" ? "revisar" : ""}`,
+      d: arco(salida, destino),
+      class: `ataque ${clase === "notable" ? "notable" : clase === "revisar" ? "revisar" : ""}`,
     });
     // El retardo va por CSSOM: la CSP bloquea los atributos style en linea.
     linea.style.animationDelay = `${(dibujados * 0.14).toFixed(2)}s`;
+    // Cada linea es ya un atacante concreto: al pasar el raton dice quien es.
+    const quien = svg("title");
+    quien.textContent = `${ev.ip}${ev.pais ? ` (${nombrePais(ev.pais)})` : ""}`;
+    linea.appendChild(quien);
     capa.appendChild(linea);
     dibujados++;
   }
