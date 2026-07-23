@@ -693,6 +693,9 @@ func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion string,
 		Config:    ajustes,
 		Generador: generadorDe(ajustes.Actual(), sinLLM),
 		Trampas:   trampa.Disponibles(),
+		// Donde Cowrie deja lo que consigue capturar. Que el directorio no
+		// exista es lo normal hasta que alguien descargue algo.
+		DirDescargas: "data/cowrie/lib/downloads",
 	}
 	// Al guardar ajustes se rehace el generador, para que cambiar de modelo
 	// o de clave surta efecto sin reiniciar el servicio.

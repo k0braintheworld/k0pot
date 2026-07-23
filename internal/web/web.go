@@ -38,6 +38,10 @@ type Servidor struct {
 	// Trampas son los honeypots nativos disponibles, para poder describir
 	// su estado en el panel.
 	Trampas []trampa.Trampa
+	// DirDescargas es donde Cowrie guarda lo que consigue capturar. Se
+	// inyecta en vez de deducirse para poder probarlo con un directorio
+	// temporal.
+	DirDescargas string
 	// AlCambiarConfig avisa a quien haya que reconfigurar (el generador de
 	// informes, el enriquecedor) cuando se guardan ajustes nuevos.
 	AlCambiarConfig func(config.Config)
@@ -77,6 +81,8 @@ func (s *Servidor) Rutas() http.Handler {
 	mux.HandleFunc("/api/informe", s.protegido(s.informe))
 	mux.HandleFunc("/api/episodios", s.protegido(s.episodios))
 	mux.HandleFunc("/api/episodio", s.protegido(s.episodio))
+	mux.HandleFunc("/api/campanas", s.protegido(s.campanas))
+	mux.HandleFunc("/api/artefactos", s.protegido(s.artefactos))
 	mux.HandleFunc("/api/ajustes", s.protegido(s.ajustes))
 	mux.HandleFunc("/api/ajustes/defecto", s.protegido(s.valoresPorDefecto))
 	mux.HandleFunc("/api/servicios", s.protegido(s.servicios))

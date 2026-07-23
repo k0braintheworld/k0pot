@@ -90,10 +90,13 @@ main.rejilla-panel {
 .bloque-ataques { grid-column: span 7; }
 .bloque-informe { grid-column: span 5; }
 .bloque-serie   { grid-column: span 12; }
+.bloque-campanas   { grid-column: span 7; }
+.bloque-artefactos { grid-column: span 5; }
 .bloque-tabla   { grid-column: span 3; }
 
 @media (max-width: 88rem) {
   .bloque-ataques, .bloque-informe { grid-column: span 12; }
+  .bloque-campanas, .bloque-artefactos { grid-column: span 12; }
   .bloque-tabla { grid-column: span 6; }
 }
 @media (max-width: 62rem) {
@@ -511,3 +514,32 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   border-radius: .3rem;
 }
 .nota-proveedor strong { color: var(--texto); }
+
+/* ── Campanas y artefactos ──────────────────────────────────────────────
+   Misma forma que la lista de ataques: la severidad ancla a la izquierda
+   y el contenido se lee de un vistazo. */
+.lista-campanas, .lista-artefactos {
+  display: flex; flex-direction: column; gap: .35rem;
+  max-height: 20rem; overflow-y: auto;
+}
+.campana {
+  display: grid; grid-template-columns: 5.5rem 1fr auto;
+  align-items: baseline; gap: .75rem;
+  padding: .5rem .6rem;
+  border: 1px solid var(--borde); border-radius: .4rem;
+}
+.campana-que { min-width: 0; }
+.campana-que strong { font-weight: 600; }
+.campana-que code {
+  display: block; font-size: .76rem; color: var(--sub);
+  margin-top: .15rem; word-break: break-all;
+}
+.campana-alcance { font-size: .74rem; color: var(--sub); white-space: nowrap; }
+
+.artefacto {
+  padding: .5rem .6rem;
+  border: 1px solid var(--borde); border-radius: .4rem;
+  font-size: .82rem;
+}
+.artefacto code { word-break: break-all; color: var(--texto); }
+.artefacto .sub { display: block; font-size: .74rem; margin-top: .2rem; }

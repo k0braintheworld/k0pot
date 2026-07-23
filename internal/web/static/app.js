@@ -431,6 +431,76 @@ async function abrirAtaque(clave) {
   dlg.showModal();
 }
 
+// ── Campanas y artefactos ───────────────────────────────────────────────
+
+const QUE_COMPARTEN = {
+  credenciales: "el mismo diccionario",
+  descarga: "el mismo fichero",
+  comandos: "la misma secuencia de comandos",
+  rutas: "las mismas rutas",
+};
+
+async function cargarCampanas() {
+  const lista = await traer("/api/campanas");
+  const cont = $("campanas");
+  cont.replaceChildren();
+
+  if (!lista.length) {
+    cont.appendChild(nodo("p", "vacio",
+      "Ninguna coincidencia entre ataques todavia. Hacen falta al menos dos IPs compartiendo guion."));
+    return;
+  }
+
+  for (const c of lista) {
+    const fila = nodo("div", "campana");
+    fila.appendChild(nodo("span", `sev sev-${c.severidad}`, c.severidad));
+
+    const que = nodo("div", "campana-que");
+    que.appendChild(nodo("strong", null, QUE_COMPARTEN[c.tipo] || c.tipo));
+    que.appendChild(nodo("code", null, c.muestra));
+    fila.appendChild(que);
+
+    const paises = (c.paises || []).length ? ` · ${c.paises.join(" ")}` : "";
+    fila.appendChild(nodo("span", "campana-alcance",
+      `${c.ips.length} IPs${paises}`));
+    cont.appendChild(fila);
+  }
+}
+
+function tamano(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+async function cargarArtefactos() {
+  const lista = await traer("/api/artefactos");
+  const cont = $("artefactos");
+  cont.replaceChildren();
+
+  if (!lista.length) {
+    cont.appendChild(nodo("p", "vacio",
+      "Nadie ha intentado descargar nada todavia."));
+    return;
+  }
+
+  for (const a of lista) {
+    const caja = nodo("div", "artefacto");
+    caja.appendChild(nodo("code", null, a.url || a.fichero));
+
+    const partes = [];
+    if (a.ips?.length) partes.push(`${a.ips.length} IP${a.ips.length > 1 ? "s" : ""}`);
+    if (a.bytes) partes.push(tamano(a.bytes));
+    // Cowrie nombra los ficheros con el SHA-256 de su contenido, asi que
+    // el nombre sirve tal cual para consultarlo sin subir la muestra.
+    if (a.fichero && !a.url) partes.push("nombre = SHA-256 del contenido");
+    if (a.momento) partes.push(hace(a.momento));
+    caja.appendChild(nodo("span", "sub", partes.join(" · ")));
+    cont.appendChild(caja);
+  }
+}
+
 async function cargarInforme() {
   pintarInforme(await traer("/api/informe"));
 }
@@ -466,6 +536,8 @@ async function refrescar() {
     await Promise.all([
       cargarEstado(recientes),
       cargarAtaques(),
+      cargarCampanas(),
+      cargarArtefactos(),
       cargarInforme(),
       traer("/api/serie").then(pintarSerie),
     ]);
