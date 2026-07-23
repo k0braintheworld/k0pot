@@ -1,6 +1,6 @@
 [Unit]
 Description=k0Pot — ingesta y enriquecimiento
-Documentation=https://github.com/k0bra/honey
+Documentation=https://github.com/k0braintheworld/k0pot
 # El collector lee el log que escribe Cowrie, asi que Docker debe estar listo.
 After=network-online.target docker.service
 Wants=network-online.target
@@ -12,18 +12,65 @@ StartLimitBurst=5
 [Service]
 Type=simple
 WorkingDirectory=%h/k0pot
-ExecStart=%h/k0pot/honey
+ExecStart=%h/k0pot/k0pot
 Restart=always
 RestartSec=5s
-# Endurecimiento: este proceso lee datos que dejan atacantes.
+
+# ── Aislamiento del proceso ─────────────────────────────────────────────
+#
+# Este proceso es el que mas importa encerrar: dentro de el corren las
+# trampas nativas de HTTP, Redis y FTP, que hablan directamente con
+# internet y NO estan en un contenedor, a diferencia de Cowrie.
+#
+# El usuario que lo ejecuta pertenece a los grupos sudo y docker, y el
+# grupo docker equivale a root: basta un contenedor con el disco montado.
+# Asi que este sandbox es lo unico que separa un fallo en una trampa de
+# ser root en la maquina. Conviene que sea explicito y no accidental.
+
+# Estas cuatro NO se pueden usar en una unidad de USUARIO, aunque el
+# fichero se acepte sin quejarse: PrivateDevices, ProtectKernelModules,
+# ProtectKernelLogs y ProtectClock implican soltar capacidades del
+# bounding set, y eso exige CAP_SETPCAP, que un proceso de usuario no
+# tiene. El servicio arranca y muere con 218/CAPABILITIES.
+#
+# Para poder aplicarlas hace falta una unidad de SISTEMA con User=k0pot.
+# Ver deploy/sistema/ para esa variante, que requiere root para instalar.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
 ReadWritePaths=%h/k0pot/data
+# NO se pone InaccessiblePaths=%h/.ssh: systemd la acepta, systemctl show
+# la da por configurada y no hace absolutamente nada. En una unidad de
+# USUARIO la proteccion del home se ignora -el propio gestor de sesion vive
+# ahi-, asi que ni ProtectHome=tmpfs esconde nada. Comprobado mirando
+# /proc/PID/mountinfo: cero montajes bajo /home.
+#
+# Se deja fuera a proposito: una directiva inerte es peor que su ausencia,
+# porque quien lea el fichero dara por protegido algo que no lo esta. Para
+# ocultar de verdad ~/.ssh hace falta la variante de deploy/sistema/.
+ProtectProc=invisible
 ProtectKernelTunables=true
 ProtectControlGroups=true
+# ProtectHostname se omite: necesita un espacio de nombres UTS que systemd
+# no puede crear aqui, y solo genera un aviso en cada arranque.
 RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+# CapabilityBoundingSet no se pone: soltar capacidades es una operacion
+# privilegiada y una unidad de USUARIO no puede hacerla -systemd falla con
+# "Failed to drop capabilities" y el servicio no arranca. Da igual: un
+# proceso de usuario no tiene ninguna capacidad que soltar.
+# Solo sockets de red. Esto cierra AF_UNIX y con el, POR DISENO, el socket
+# de Docker: hasta ahora quedaba fuera de alcance solo como efecto
+# colateral de ProtectSystem=strict, que es una proteccion fragil porque
+# depende de un detalle de montaje y no de una regla explicita.
+RestrictAddressFamilies=AF_INET AF_INET6
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+SystemCallArchitectures=native
+UMask=0077
 MemoryMax=256M
 
 [Install]

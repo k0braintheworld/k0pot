@@ -1,7 +1,8 @@
 [Unit]
-Description=k0Pot — panel web
+Description=k0Pot — panel web (unidad de sistema)
 Documentation=https://github.com/k0braintheworld/k0pot
-After=network-online.target k0pot-collector.service
+# El collector lee el log que escribe Cowrie, asi que Docker debe estar listo.
+After=network-online.target docker.service
 Wants=network-online.target
 # Si el binario falla en bucle, systemd deja de insistir en vez de calentar
 # la maquina para siempre. Van en [Unit]: en [Service] se ignoran.
@@ -10,40 +11,44 @@ StartLimitBurst=5
 
 [Service]
 Type=simple
-WorkingDirectory=%h/k0pot
-ExecStart=%h/k0pot/k0pot -web 0.0.0.0:8080
+# La diferencia con la variante de usuario: aqui el gestor es root, asi
+# que puede soltar capacidades y montar sobre el home antes de bajar a
+# este usuario. Eso habilita todo lo que alli quedaba inerte.
+User=k0pot
+Group=k0pot
+SupplementaryGroups=
+WorkingDirectory=/home/k0pot/k0pot
+ExecStart=/home/k0pot/k0pot/k0pot -web 0.0.0.0:8080
 Restart=always
 RestartSec=5s
 
 # ── Aislamiento del proceso ─────────────────────────────────────────────
 #
-# El panel sirve HTTP sin cifrar y ejecuta el mismo binario que las
-# trampas, con el mismo usuario, que pertenece a los grupos sudo y docker
-# -y el grupo docker equivale a root. Se encierra igual que el collector:
-# un sandbox que solo cubre la mitad de los procesos no cubre nada.
-
-# Estas cuatro NO se pueden usar en una unidad de USUARIO, aunque el
-# fichero se acepte sin quejarse: PrivateDevices, ProtectKernelModules,
-# ProtectKernelLogs y ProtectClock implican soltar capacidades del
-# bounding set, y eso exige CAP_SETPCAP, que un proceso de usuario no
-# tiene. El servicio arranca y muere con 218/CAPABILITIES.
+# Este proceso es el que mas importa encerrar: dentro de el corren las
+# trampas nativas de HTTP, Redis y FTP, que hablan directamente con
+# internet y NO estan en un contenedor, a diferencia de Cowrie.
 #
-# Para poder aplicarlas hace falta una unidad de SISTEMA con User=k0pot.
-# Ver deploy/sistema/ para esa variante, que requiere root para instalar.
+# El usuario que lo ejecuta pertenece a los grupos sudo y docker, y el
+# grupo docker equivale a root: basta un contenedor con el disco montado.
+# Asi que este sandbox es lo unico que separa un fallo en una trampa de
+# ser root en la maquina. Conviene que sea explicito y no accidental.
+
+PrivateDevices=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectClock=true
+CapabilityBoundingSet=
+AmbientCapabilities=
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ProtectHome=read-only
-ReadWritePaths=%h/k0pot/data
-# NO se pone InaccessiblePaths=%h/.ssh: systemd la acepta, systemctl show
-# la da por configurada y no hace absolutamente nada. En una unidad de
-# USUARIO la proteccion del home se ignora -el propio gestor de sesion vive
-# ahi-, asi que ni ProtectHome=tmpfs esconde nada. Comprobado mirando
-# /proc/PID/mountinfo: cero montajes bajo /home.
-#
-# Se deja fuera a proposito: una directiva inerte es peor que su ausencia,
-# porque quien lea el fichero dara por protegido algo que no lo esta. Para
-# ocultar de verdad ~/.ssh hace falta la variante de deploy/sistema/.
+ProtectHome=tmpfs
+BindPaths=/home/k0pot/k0pot
+ReadWritePaths=/home/k0pot/k0pot/data
+# Aqui si funciona: el home se sustituye por un tmpfs vacio y solo se
+# monta de vuelta el directorio del proyecto. El proceso no puede leer
+# ~/.ssh ni ningun otro fichero personal, ni aunque manana aparezca una
+# clave privada ahi.
 ProtectProc=invisible
 ProtectKernelTunables=true
 ProtectControlGroups=true
@@ -69,4 +74,4 @@ UMask=0077
 MemoryMax=256M
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

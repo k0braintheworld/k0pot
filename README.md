@@ -150,6 +150,33 @@ Para comprobarlo desde fuera: `deploy/comprobar-aislamiento.sh <IP-expuesta>
 <IP-gestion>`, ejecutado **desde otra maquina**. Desde el propio servidor no
 demuestra nada.
 
+## Endurecimiento del servicio
+
+Las trampas de HTTP, Redis y FTP corren **dentro del proceso del collector,
+sobre el anfitrion**, no en un contenedor como Cowrie. El sandbox de systemd
+es lo unico que las separa del resto de la maquina, asi que conviene que sea
+explicito.
+
+En `deploy/` hay dos variantes:
+
+| | Unidades de usuario | Unidades de sistema (`deploy/sistema/`) |
+|---|---|---|
+| Instalacion | sin root | requiere root |
+| Sandbox base | si | si |
+| Soltar capacidades, `PrivateDevices`, `ProtectClock` | **no puede** | si |
+| Ocultar `~/.ssh` y el resto del home | **no puede** | si |
+| Sacar el proceso del grupo `docker` | no | si |
+
+La columna de la izquierda no es una eleccion de diseno: en una unidad de
+usuario esas directivas **se aceptan y no hacen nada**. `systemctl show` las
+da por configuradas, pero `/proc/PID/mountinfo` no muestra ningun montaje y
+el fichero sigue siendo legible. Estan documentadas en los propios ficheros
+para que nadie las de por buenas.
+
+Si el usuario que ejecuta k0Pot pertenece al grupo `docker` -que equivale a
+root, porque basta un contenedor con el disco montado-, la variante de
+sistema es la unica que puede quitarselo al proceso.
+
 ## Decisiones de diseno
 
 | Area | Decision | Motivo |
