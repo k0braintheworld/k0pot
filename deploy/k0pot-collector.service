@@ -1,0 +1,30 @@
+[Unit]
+Description=k0Pot — ingesta y enriquecimiento
+Documentation=https://github.com/k0bra/honey
+# El collector lee el log que escribe Cowrie, asi que Docker debe estar listo.
+After=network-online.target docker.service
+Wants=network-online.target
+# Si el binario falla en bucle, systemd deja de insistir en vez de calentar
+# la maquina para siempre. Van en [Unit]: en [Service] se ignoran.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=%h/k0pot
+ExecStart=%h/k0pot/honey
+Restart=always
+RestartSec=5s
+# Endurecimiento: este proceso lee datos que dejan atacantes.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/k0pot/data
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+MemoryMax=256M
+
+[Install]
+WantedBy=default.target

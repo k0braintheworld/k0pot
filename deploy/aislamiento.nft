@@ -1,0 +1,165 @@
+#!/usr/sbin/nft -f
+#
+# Aislamiento del honeypot — tercera y ultima capa.
+#
+# Las dos primeras estan hechas y verificadas en este servidor:
+#   1. Hipervisor: la interfaz expuesta en su propia VLAN.
+#   2. Router: esa VLAN sin ruta hacia la red interna.
+#
+# Esta cubre lo que las otras dos no pueden: el propio servidor tiene una
+# pata en cada red y, con ip_forward activo (lo enciende Docker), actua de
+# router entre ambas.
+#
+# NO aplicar con "nft -f" a pelo. Usar el aplicador, que valida las IP
+# antes de cargar y revierte solo a los 120 s si no confirmas:
+#   sudo /usr/local/sbin/k0pot-nft aplicar
+#   sudo /usr/local/sbin/k0pot-nft confirmar     # desde la sesion nueva
+#
+# ── Adaptar a cada instalacion: solo estas cinco lineas ─────────────────
+#
+# Los valores de abajo son EJEMPLOS. El aplicador comprueba que las IP
+# existan de verdad en la maquina y se niega a cargar si no, precisamente
+# para que copiar este fichero sin adaptarlo no te deje fuera del servidor.
+#
+# Si prefieres no tocar este fichero, copialo a deploy/aislamiento.local.nft
+# con tus valores: esta ignorado por git y el aplicador lo prefiere.
+define IP_GESTION  = 192.168.1.10
+define IP_EXPUESTA = 192.168.100.10
+define RED_GESTION = 192.168.1.0/24
+define IF_EXPUESTA = "ens19"
+define IF_GESTION  = "ens18"
+
+define RED_INTERNA = { 192.168.1.0/24, 10.0.0.0/8, 172.16.0.0/12 }
+
+# Puertos de honeypot. Deben coincidir con lo configurado en el panel.
+define PUERTOS_HONEYPOT = { 2222, 2223, 8081, 6379, 2121 }
+
+# Reaplicar tiene que REEMPLAZAR, no acumular.
+#
+# "nft -f" sobre una tabla que ya existe AÑADE las reglas al final de sus
+# cadenas; las viejas siguen delante y, como gana la primera que casa, un
+# arreglo recien aplicado no surte ningun efecto. Y no falla: carga sin
+# quejarse, asi que nada avisa de que lo aplicado no es lo que manda.
+#
+# La primera linea crea la tabla si no estaba, para que el delete no falle
+# la primera vez. No se usa "flush ruleset": eso borraria tambien las
+# tablas de Docker y tumbaria la publicacion de puertos de los
+# contenedores, dejando los honeypots inalcanzables.
+table inet aislamiento
+delete table inet aislamiento
+
+table inet aislamiento {
+
+    # ── Trafico que ATRAVIESA la maquina ────────────────────────────────
+    chain forward {
+        type filter hook forward priority filter; policy accept;
+
+        # Docker necesita reenviar lo suyo; se deja pasar antes de cortar.
+        iifname "br-*" oifname "br-*" accept
+        iifname "docker0" accept
+        oifname "docker0" accept
+
+        # Cowrie corre en un contenedor y Docker publica sus puertos con
+        # DNAT: el paquete entra por la interfaz expuesta y sale reescrito
+        # hacia la red de contenedores (172.18.0.0/16), que cae dentro de
+        # RED_INTERNA. Sin esta linea, la regla del pivote que va debajo lo
+        # mata y SSH y Telnet quedan inalcanzables desde internet, aunque
+        # el puerto figure publicado y responda desde el propio servidor:
+        # por loopback el trafico no pasa por "forward".
+        #
+        # Se acota con "ct status dnat" mas la lista de puertos, para que
+        # solo pase lo que Docker publico a proposito y no cualquier cosa
+        # dirigida a la red de contenedores.
+        iifname $IF_EXPUESTA ct status dnat tcp dport $PUERTOS_HONEYPOT accept
+
+        # Nada mas que entre por la VLAN expuesta sigue hacia la red interna.
+        iifname $IF_EXPUESTA ip daddr $RED_INTERNA \
+            log prefix "k0pot-PIVOTE-BLOQUEADO " drop
+
+        # Ni al reves: que el honeypot no sirva para atacar a terceros
+        # usando tu salida a internet.
+        iifname $IF_GESTION oifname $IF_EXPUESTA \
+            log prefix "k0pot-SALIDA-BLOQUEADA " drop
+    }
+
+    # ── Trafico dirigido a la propia maquina ────────────────────────────
+    #
+    # Las reglas van ancladas a DIRECCION IP, no a nombre de interfaz.
+    # Los nombres los decide el kernel y cambian entre instalaciones
+    # (ens18 / enp6s18 / eth0). nftables acepta sin protestar un iifname
+    # inexistente: no casa nunca, se impone "policy drop" y te quedas
+    # fuera de la maquina. Las IP, en cambio, las fijas tu en netplan.
+    # Se conservan ademas las reglas por interfaz como segundo camino:
+    # que casen las dos es inofensivo, que no case ninguna no lo es.
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        iif lo accept
+        ct state established,related accept
+        ct state invalid drop
+
+        # Ruido de la propia red: broadcasts del router de la VLAN y
+        # NetBIOS de los equipos que haya en ella. Se descartan SIN
+        # registrar: en unos minutos generan cientos de lineas y entierran
+        # los rechazos que si interesa mirar. Un log que nadie puede leer
+        # no protege de nada.
+        ip daddr 255.255.255.255 drop
+        pkttype { broadcast, multicast } drop
+
+        # Contra la IP expuesta: SOLO honeypots. Ni SSH, ni panel, ni nada.
+        # Esto cierra el 22, que escucha en todas las interfaces.
+        ip daddr $IP_EXPUESTA tcp dport $PUERTOS_HONEYPOT accept
+        ip daddr $IP_EXPUESTA icmp type echo-request limit rate 5/second accept
+        ip daddr $IP_EXPUESTA log prefix "k0pot-EXPUESTA-RECHAZO " drop
+        iifname $IF_EXPUESTA tcp dport $PUERTOS_HONEYPOT accept
+        iifname $IF_EXPUESTA icmp type echo-request limit rate 5/second accept
+        iifname $IF_EXPUESTA log prefix "k0pot-EXPUESTA-RECHAZO " drop
+
+        # Contra la IP de gestion: SSH real y panel.
+        ip daddr $IP_GESTION tcp dport { 22, 8080 } accept
+        iifname $IF_GESTION tcp dport { 22, 8080 } accept
+        # Y ping, que es lo primero que se prueba cuando algo no responde.
+        # Olvidarlo deja el servidor "muerto" a ojos de cualquier diagnostico.
+        ip daddr $IP_GESTION icmp type { echo-request, echo-reply, destination-unreachable, time-exceeded } accept
+        iifname $IF_GESTION icmp type { echo-request, echo-reply, destination-unreachable, time-exceeded } accept
+
+        # Docker habla con el anfitrion por sus puentes.
+        iifname "br-*" accept
+        iifname "docker0" accept
+    }
+
+    # ── Trafico que NACE en la maquina ──────────────────────────────────
+    #
+    # Las tres capas anteriores impiden que el trafico ATRAVIESE el
+    # servidor hacia la LAN. Ninguna impide que el servidor MISMO hable
+    # con ella: tiene una interfaz dentro. Si alguien llegase a ejecutar
+    # codigo aqui, ese seria su camino, y ni el router ni "forward" lo
+    # verian, porque el trafico nace en la propia maquina.
+    #
+    # Solo se corta lo que va DIRIGIDO a la LAN. La salida a internet no
+    # se ve afectada: ahi el destino es una IP publica y el router es solo
+    # el siguiente salto, no el destino.
+    chain output {
+        type filter hook output priority filter; policy accept;
+
+        # Las respuestas a tu SSH y al panel son "established", no "new":
+        # las conexiones entrantes siguen funcionando con normalidad.
+        ct state established,related accept
+
+        # El trafico hacia las direcciones de la propia maquina sale por
+        # loopback, pero su destino sigue cayendo dentro de la red de
+        # gestion. Sin esta linea, un proceso local que llame al panel por
+        # la IP del servidor (IP_GESTION:8080) se queda colgado sin
+        # explicacion: la conexion no llega ni a intentarse.
+        oif lo accept
+
+        # DHCP, por si la gestion deja de ser estatica algun dia. Sin esto
+        # una renovacion de concesion fallaria de forma dificil de atribuir.
+        udp dport { 67, 68 } accept
+
+        # Conexiones NUEVAS hacia la LAN: fuera. Esto rompe a proposito
+        # ping/scp/ssh DESDE el servidor HACIA tu red. Es el precio.
+        ip daddr $RED_GESTION ct state new \
+            log prefix "k0pot-PIVOTE-SALIDA " drop
+    }
+}

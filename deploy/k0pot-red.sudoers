@@ -1,0 +1,12 @@
+# Permite a k0pot cambiar SOLO la configuracion de red, y solo a traves de
+# su ayudante. No da acceso a netplan directamente ni a ningun otro comando.
+#
+# Instalar:
+#   sudo install -m 755 -o root -g root deploy/k0pot-red.sh /usr/local/sbin/k0pot-red
+#   sudo install -m 440 -o root -g root deploy/k0pot-red.sudoers /etc/sudoers.d/k0pot-red
+#   sudo visudo -c
+#
+# Sin esto, el panel sigue permitiendo editar y GENERAR la configuracion,
+# pero hay que aplicarla a mano. Es la opcion prudente: dar a un panel web
+# sin HTTPS la capacidad de reconfigurar la red del anfitrion no es gratis.
+k0pot ALL=(root) NOPASSWD: /usr/local/sbin/k0pot-red

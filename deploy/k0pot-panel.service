@@ -1,0 +1,28 @@
+[Unit]
+Description=k0Pot — panel web
+Documentation=https://github.com/k0bra/honey
+After=network-online.target k0pot-collector.service
+Wants=network-online.target
+# Si el binario falla en bucle, systemd deja de insistir en vez de calentar
+# la maquina para siempre. Van en [Unit]: en [Service] se ignoran.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=%h/k0pot
+ExecStart=%h/k0pot/honey -web 0.0.0.0:8080
+Restart=always
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/k0pot/data
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+MemoryMax=256M
+
+[Install]
+WantedBy=default.target

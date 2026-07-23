@@ -1,0 +1,25 @@
+# Binarios
+/k0pot
+/honey
+/bin/
+
+# Datos capturados y estado local.
+#
+# Aqui viven la base de datos -con claves de API, el hash de la contrasena
+# del panel y los tokens de sesion-, los registros capturados y las claves
+# de host que genera Cowrie. Nada de esto puede acabar en el repositorio,
+# asi que se ignora el directorio ENTERO y no patrones sueltos: un
+# `*.db` deja pasar una copia llamada `honey.db.antes-de-limpiar`, que es
+# exactamente como estuvo a punto de publicarse una base con claves dentro.
+/data/
+
+# Variables de entorno: la semilla de las claves.
+.env
+
+# Archivos del historial anterior a la publicacion.
+*.tar.gz
+
+# Configuracion local que sustituye a la de ejemplo. Lleva el
+# direccionamiento real de la instalacion y no debe publicarse.
+*.local.nft
+*.local.yml

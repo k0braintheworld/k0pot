@@ -1,0 +1,51 @@
+# Entorno de desarrollo de honey.
+#
+# Cowrie escucha SSH en el 2222 del host (NO en el 22: ese es el sshd real
+# del servidor y no debe tocarse). Los logs salen a ./data/cowrie/log, que
+# es de donde los leera el collector de honey.
+services:
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: k0pot-cowrie
+    restart: unless-stopped
+    # Corre con el UID del host (1000) en vez del 999 de la imagen:
+    # asi puede escribir en los volumenes montados sin necesitar chown de root.
+    user: "1000:1000"
+    ports:
+      # Atados a la interfaz expuesta. La IP viene del .env y la sintaxis
+      # :? hace que compose FALLE si no esta definida. Es deliberado: sin
+      # IP delante Docker publica en todas las interfaces, y el honeypot
+      # quedaria tambien en la red interna sin que nada lo avisara. Mejor
+      # no arrancar que arrancar expuesto por dentro.
+      - "${K0POT_IP_EXPUESTA:?define K0POT_IP_EXPUESTA en .env}:2222:2222"   # SSH falso
+      # Telnet: el contenedor ya lo servia, solo faltaba publicarlo.
+      # Es el protocolo favorito de las botnets de IoT.
+      - "${K0POT_IP_EXPUESTA:?define K0POT_IP_EXPUESTA en .env}:2223:2223"   # Telnet falso
+    volumes:
+      - ./data/cowrie/log:/cowrie/cowrie-git/var/log/cowrie
+      # Se monta var/lib/cowrie ENTERO, no solo downloads y tty.
+      #
+      # Ese directorio vive en un volumen anonimo que la imagen crea con
+      # dueño 999, y nosotros corremos como 1000. Cowrie genera ahi sus
+      # claves de host SSH al arrancar: sin permiso de escritura falla con
+      # PermissionError en ssh_host_rsa_key.pub, muere la CowrieSSHFactory
+      # y los honeypots de SSH y Telnet se quedan sin escuchar. El
+      # contenedor sigue "Up", asi que no se nota hasta que se prueba el
+      # puerto. Montando el directorio desde el host lo posee el 1000.
+      #
+      # Contiene ademas downloads/, tty/ (reproduccion de sesiones; sin el
+      # la shell no arranca y no se capturan comandos), snapshots/ y uuid.
+      - ./data/cowrie/lib:/cowrie/cowrie-git/var/lib/cowrie
+      # Config propia, en solo lectura. Sin ella Cowrie arranca con los
+      # valores de fabrica y Telnet queda desactivado: el 2223 acepta la
+      # conexion en docker-proxy y luego la rechaza, porque detras no hay
+      # nadie escuchando.
+      - ./deploy/cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg:ro
+    # Un honeypot es codigo expuesto a atacantes: sin privilegios extra
+    # y con el filesystem de solo lectura salvo lo que necesita escribir.
+    read_only: false
+    security_opt:
+      - no-new-privileges:true
+    # Con 1,6 GB en la maquina, acotamos para que no se coma el servidor.
+    mem_limit: 512m
+    cpus: 1.0

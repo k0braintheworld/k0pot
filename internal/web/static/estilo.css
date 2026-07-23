@@ -1,0 +1,513 @@
+:root {
+  --fondo: #0f1115;
+  --panel: #161920;
+  --panel-alto: #1d212a;
+  --borde: #262b36;
+  --texto: #e8eaf0;
+  --sub: #8b93a5;
+  --verde: #3fb27f;
+  --ambar: #e0a94f;
+  --rojo: #e5605a;
+  --acento: #d9a441;
+  --mar: #10131a;
+  --tierra: #232834;
+}
+:root[data-tema="claro"] {
+  --fondo: #f7f7f9;
+  --panel: #ffffff;
+  --panel-alto: #f0f1f4;
+  --borde: #e0e2e8;
+  --texto: #14161b;
+  --sub: #666d7d;
+  --verde: #1f8a5c;
+  --ambar: #a9741a;
+  --rojo: #c0392f;
+  --acento: #a37a1e;
+  --mar: #eef0f4;
+  --tierra: #d5d9e1;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding-bottom: 3rem;
+}
+
+/* ── Barra superior ─────────────────────────────────────────── */
+.barra {
+  display: flex; flex-wrap: wrap; gap: 1rem;
+  align-items: center; justify-content: space-between;
+  padding: .9rem 1.5rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--borde);
+  position: sticky; top: 0; z-index: 10;
+}
+.marca { display: flex; align-items: center; gap: .7rem; }
+.logo { font-size: 1.6rem; }
+.barra h1 { margin: 0; font-size: 1.15rem; letter-spacing: .04em; font-weight: 650; }
+.sub { margin: 0; font-size: .78rem; color: var(--sub); }
+.controles { display: flex; align-items: center; gap: 1rem; }
+.pulso { display: flex; align-items: center; gap: .45rem; font-size: .78rem; color: var(--sub); font-variant-numeric: tabular-nums; }
+.punto { flex: none; width: .5rem; height: .5rem; min-height: 0; border-radius: 50%; background: var(--sub); }
+.punto.conectado { background: var(--verde); box-shadow: 0 0 0 3px color-mix(in srgb, var(--verde) 22%, transparent); }
+.punto.cargando { background: var(--ambar); }
+.punto.error { background: var(--rojo); }
+select {
+  font: inherit; font-size: .82rem; padding: .3rem .55rem;
+  background: var(--panel-alto); color: var(--texto);
+  border: 1px solid var(--borde); border-radius: .4rem;
+}
+
+/* Acotado al panel: la pantalla de entrada tambien usa <main>, y sin esta
+   clase heredaba la rejilla de 12 columnas y se descuadraba entera. */
+main.rejilla-panel {
+  padding: 1rem 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+/* Reparto de la rejilla, en orden de lectura y de arriba abajo:
+     1. el veredicto -semaforo y cifras-, que responde "tengo que
+        preocuparme" sin bajar la pagina;
+     2. que esta pasando AHORA: el mapa y el pulso en vivo;
+     3. que ha pasado y que significa: los ataques y el informe, uno al
+        lado del otro porque se leen juntos;
+     4. la tendencia, que es contexto y no urgencia;
+     5. el detalle que se consulta, no que se vigila.
+
+   Todos los anchos viven en este bloque a proposito. Estaban repartidos
+   por la hoja y el reparto acababa saliendo por casualidad: un bloque
+   nuevo declaraba su ancho 400 lineas mas abajo y descolocaba la fila
+   entera sin que nadie lo relacionase. */
+.semaforo, .metricas { grid-column: span 12; }
+.bloque-mapa    { grid-column: span 8; }
+.bloque-vivo    { grid-column: span 4; }
+.bloque-ataques { grid-column: span 7; }
+.bloque-informe { grid-column: span 5; }
+.bloque-serie   { grid-column: span 12; }
+.bloque-tabla   { grid-column: span 3; }
+
+@media (max-width: 88rem) {
+  .bloque-ataques, .bloque-informe { grid-column: span 12; }
+  .bloque-tabla { grid-column: span 6; }
+}
+@media (max-width: 62rem) {
+  .bloque-mapa, .bloque-vivo, .bloque-tabla { grid-column: span 12; }
+}
+
+/* ── Semaforo ───────────────────────────────────────────────── */
+.semaforo {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 1.1rem 1.4rem; border-radius: .6rem;
+  background: var(--panel); border: 1px solid var(--borde);
+  border-left: .3rem solid var(--sub);
+}
+.semaforo .indicador { width: .8rem; height: .8rem; border-radius: 50%; background: var(--sub); flex: none; }
+.semaforo p { margin: 0; font-size: 1.02rem; font-weight: 500; }
+.semaforo.verde { border-left-color: var(--verde); }
+.semaforo.verde .indicador { background: var(--verde); box-shadow: 0 0 0 4px color-mix(in srgb, var(--verde) 20%, transparent); }
+.semaforo.ambar { border-left-color: var(--ambar); }
+.semaforo.ambar .indicador { background: var(--ambar); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ambar) 20%, transparent); }
+.semaforo.rojo { border-left-color: var(--rojo); }
+.semaforo.rojo .indicador { background: var(--rojo); box-shadow: 0 0 0 4px color-mix(in srgb, var(--rojo) 22%, transparent); }
+.semaforo.rojo p { color: var(--rojo); }
+
+/* ── Metricas ───────────────────────────────────────────────── */
+.metricas { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: .7rem; }
+.metrica {
+  background: var(--panel); border: 1px solid var(--borde);
+  border-radius: .55rem; padding: .8rem .95rem;
+  display: flex; flex-direction: column; gap: .1rem;
+}
+.cifra { font-size: 1.7rem; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.etiqueta { font-size: .72rem; color: var(--sub); text-transform: uppercase; letter-spacing: .06em; }
+.metrica.revisar .cifra { color: var(--ambar); }
+.metrica.notable .cifra { color: var(--rojo); }
+
+/* ── Bloques ────────────────────────────────────────────────── */
+.bloque { background: var(--panel); border: 1px solid var(--borde); border-radius: .6rem; padding: 1rem 1.2rem 1.2rem; }
+.cabecera-bloque { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem; margin-bottom: .8rem; }
+h2 { margin: 0 0 .8rem; font-size: .82rem; text-transform: uppercase; letter-spacing: .09em; color: var(--sub); font-weight: 600; }
+.cabecera-bloque h2 { margin: 0; }
+.cargando, .vacio { color: var(--sub); font-size: .85rem; margin: 0; }
+
+/* ── Mapa ───────────────────────────────────────────────────── */
+.mapa { background: var(--mar); border-radius: .45rem; overflow: hidden; }
+.bloque-vivo { display: flex; flex-direction: column; }
+.lienzo-mapa { display: block; width: 100%; height: auto; }
+.pais { fill: var(--tierra); stroke: var(--fondo); stroke-width: .5; }
+.pais.activo { fill: var(--rojo); }
+/* La intensidad va en fill-opacity, no en color-mix con calc: un calc
+   invalido dentro de color-mix deja el fill sin valor y el SVG cae al
+   negro por defecto, que es justo lo que pasaba. */
+.marca-pais .halo { fill: var(--rojo); opacity: .16; }
+.marca-pais .nucleo { fill: var(--rojo); opacity: .85; }
+.aviso-mapa { margin: .6rem 0 0; font-size: .8rem; color: var(--sub); }
+
+/* ── Grafica temporal ───────────────────────────────────────── */
+.serie { display: flex; flex-direction: column; gap: .5rem; }
+.barras { display: flex; align-items: flex-end; justify-content: flex-start; gap: 2px; height: 11rem; }
+/* Con tope: un unico intervalo ocupaba el ancho entero y parecia un
+   bloque solido en vez de una barra. */
+.columna { flex: 1 1 0; height: 100%; display: flex; align-items: flex-end; min-width: 2px; max-width: 4rem; }
+.pila { width: 100%; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+/* flex: none es imprescindible: como items de un contenedor flex en
+   columna, los segmentos se encogen por defecto (flex-shrink: 1) y su
+   altura calculada se queda en una linea de 2px. */
+.segmento { flex: none; min-height: 2px; border-radius: 1px 1px 0 0; }
+.b-ruido { background: color-mix(in srgb, var(--sub) 55%, transparent); }
+.b-revisar { background: var(--ambar); }
+.b-notable { background: var(--rojo); }
+.ejes { display: flex; justify-content: space-between; font-size: .72rem; color: var(--sub); font-variant-numeric: tabular-nums; }
+
+/* ── Feed en vivo ───────────────────────────────────────────── */
+/* Con tope: sin el, 40 eventos estiran la fila entera y dejan un hueco
+   enorme bajo el mapa. El scroll se queda dentro del bloque. */
+.bloque-vivo .vivo {
+  display: flex; flex-direction: column; gap: 1px;
+  min-height: 12rem; max-height: 34rem; overflow-y: auto;
+  font-size: .78rem;
+}
+.bloque-vivo .linea-viva {
+  display: grid; grid-template-columns: 4.6rem 9rem 1fr; gap: .5rem;
+  padding: .25rem .4rem; border-radius: .25rem;
+  border-left: 2px solid transparent;
+}
+.linea-viva:nth-child(odd) { background: var(--panel-alto); }
+.linea-viva.revisar { border-left-color: var(--ambar); }
+.linea-viva.notable { border-left-color: var(--rojo); }
+.linea-viva .hora { color: var(--sub); font-variant-numeric: tabular-nums; }
+.linea-viva .ip { color: var(--sub); font-family: ui-monospace, Menlo, monospace; font-size: .72rem; overflow: hidden; text-overflow: ellipsis; }
+.linea-viva .que { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.linea-viva.notable .que { color: var(--rojo); }
+
+/* ── Destacados ─────────────────────────────────────────────── */
+
+.informe p { margin: 0 0 .65rem; max-width: 62ch; }
+.informe p:last-child { margin-bottom: 0; }
+
+/* ── Tablas ─────────────────────────────────────────────────── */
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+td { padding: .35rem .3rem; border-bottom: 1px solid var(--borde); vertical-align: top; word-break: break-word; }
+tr:last-child td { border-bottom: none; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; width: 3.5rem; color: var(--sub); }
+td.sub { font-size: .74rem; color: var(--sub); }
+
+footer { margin: 1.5rem 0 0; padding: 1rem 1.25rem 0; border-top: 1px solid var(--borde); }
+footer p { margin: 0; font-size: .76rem; color: var(--sub); }
+
+/* ── Botones ────────────────────────────────────────────────── */
+.boton-icono, .boton-texto {
+  font: inherit; cursor: pointer;
+  background: transparent; color: var(--sub);
+  border: 1px solid var(--borde); border-radius: .4rem;
+  padding: .25rem .5rem; line-height: 1;
+}
+.boton-icono { font-size: 1rem; }
+.boton-texto { font-size: .78rem; }
+.boton-icono:hover, .boton-texto:hover { color: var(--texto); border-color: var(--sub); }
+.boton-principal, .boton-secundario {
+  font: inherit; font-size: .85rem; cursor: pointer;
+  padding: .45rem .9rem; border-radius: .4rem; border: 1px solid var(--borde);
+}
+.boton-principal { background: var(--acento); color: var(--fondo); border-color: var(--acento); font-weight: 600; }
+.boton-secundario { background: var(--panel-alto); color: var(--texto); }
+.boton-principal:hover { filter: brightness(1.08); }
+
+/* ── Pantalla de entrada ────────────────────────────────────── */
+.pantalla-entrada { display: grid; place-items: center; min-height: 100vh; padding: 1.5rem; }
+.caja-entrada {
+  width: min(23rem, 100%);
+  background: var(--panel); border: 1px solid var(--borde);
+  border-radius: .7rem; padding: 2rem 1.8rem;
+}
+.marca-entrada { display: flex; align-items: center; gap: .6rem; }
+.marca-entrada h1 { margin: 0; font-size: 1.3rem; letter-spacing: .04em; }
+.caja-entrada .sub { margin: .2rem 0 1.6rem; }
+.caja-entrada form { display: flex; flex-direction: column; gap: .3rem; }
+.caja-entrada label { font-size: .78rem; color: var(--sub); margin-top: .6rem; }
+.caja-entrada input {
+  font: inherit; padding: .5rem .65rem;
+  background: var(--panel-alto); color: var(--texto);
+  border: 1px solid var(--borde); border-radius: .4rem;
+}
+.caja-entrada button {
+  margin-top: 1.3rem; font: inherit; font-weight: 600; cursor: pointer;
+  padding: .55rem; border-radius: .4rem; border: none;
+  background: var(--acento); color: var(--fondo);
+}
+.caja-entrada button:disabled { opacity: .5; cursor: not-allowed; }
+.mensaje { margin: 1rem 0 0; font-size: .82rem; color: var(--sub); min-height: 1.2em; }
+.mensaje.error { color: var(--rojo); }
+
+/* ── Dialogo de ajustes ─────────────────────────────────────── */
+.dialogo {
+  width: min(34rem, 92vw); max-height: 88vh;
+  padding: 0; border: 1px solid var(--borde); border-radius: .7rem;
+  background: var(--panel); color: var(--texto);
+}
+.dialogo::backdrop { background: rgb(0 0 0 / .55); }
+/* overflow-y en el formulario es lo que da contexto de scroll: sin el,
+   los sticky de cabecera y pie no tienen contra que anclarse y el pie
+   acaba flotando sobre el contenido. */
+.dialogo form { display: flex; flex-direction: column; max-height: 88vh; overflow-y: auto; }
+.cabecera-dialogo {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.3rem; border-bottom: 1px solid var(--borde);
+  position: sticky; top: 0; z-index: 1; background: var(--panel);
+}
+.cabecera-dialogo h2 { margin: 0; font-size: .9rem; }
+.grupo { flex: none; padding: 1rem 1.3rem; border-bottom: 1px solid var(--borde); display: flex; flex-direction: column; gap: .5rem; }
+.grupo h3 { margin: 0; font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; color: var(--sub); }
+.grupo label { display: flex; flex-direction: column; gap: .25rem; font-size: .82rem; }
+.grupo label.fila { flex-direction: row; align-items: center; gap: .5rem; }
+.grupo input[type=text], .grupo input[type=number], .grupo input[type=password] {
+  font: inherit; font-size: .85rem; padding: .4rem .55rem;
+  background: var(--panel-alto); color: var(--texto);
+  border: 1px solid var(--borde); border-radius: .35rem;
+}
+.grupo input[type=checkbox] { width: 1rem; height: 1rem; accent-color: var(--acento); }
+.ayuda { margin: 0; font-size: .75rem; color: var(--sub); }
+.pie-dialogo {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  flex-wrap: wrap;
+  /* Como item flex del formulario deberia estirarse solo, pero se estaba
+     ajustando al contenido y dejaba ver el texto de debajo por la
+     izquierda. Explicito y sin sorpresas. */
+  align-self: stretch; width: 100%;
+  padding: .9rem 1.3rem; position: sticky; bottom: 0; z-index: 1;
+  background: var(--panel); border-top: 1px solid var(--borde);
+  margin-top: auto;
+}
+.pie-dialogo div { display: flex; gap: .5rem; }
+
+/* ── Lineas de ataque ───────────────────────────────────────── */
+.ataques { pointer-events: none; }
+
+.ataque {
+  fill: none;
+  stroke: var(--ambar);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  /* El trazo se dibuja con dasharray: el patron es mas largo que
+     cualquier arco posible, asi que animar el offset lo "traza". */
+  stroke-dasharray: 1400;
+  stroke-dashoffset: 1400;
+  opacity: 0;
+  animation: trazar 2.6s ease-out forwards;
+}
+.ataque.revisar { stroke: var(--ambar); stroke-width: 1.8; }
+.ataque.notable { stroke: var(--rojo); stroke-width: 2.2; }
+
+@keyframes trazar {
+  0%   { stroke-dashoffset: 1400; opacity: 0; }
+  12%  { opacity: .85; }
+  55%  { stroke-dashoffset: 0;    opacity: .85; }
+  100% { stroke-dashoffset: 0;    opacity: .12; }
+}
+
+/* Donde esta el honeypot: destino de todas las lineas. */
+.marca-propia { pointer-events: none; }
+.marca-propia .diana {
+  fill: none;
+  stroke: var(--verde);
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: latir 2.4s ease-out infinite;
+}
+.marca-propia .centro { fill: var(--verde); }
+
+@keyframes latir {
+  0%   { transform: scale(.45); opacity: .9; }
+  70%  { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ataque { animation: none; stroke-dashoffset: 0; opacity: .5; }
+  .marca-propia .diana { animation: none; opacity: .8; }
+}
+
+/* ── Servicios de honeypot ──────────────────────────────────── */
+.servicios { display: flex; flex-direction: column; gap: .55rem; }
+.servicio {
+  background: var(--panel-alto); border: 1px solid var(--borde);
+  border-radius: .4rem; padding: .6rem .75rem;
+}
+.servicio-cab { display: flex; align-items: center; gap: .5rem; }
+.servicio-nombre { font-weight: 600; font-size: .9rem; }
+.chip {
+  margin-left: auto; font-size: .68rem; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--sub);
+  border: 1px solid var(--borde); border-radius: 1rem; padding: .1rem .5rem;
+}
+.chip.activo { color: var(--verde); border-color: var(--verde); }
+.servicio .ayuda { margin: .35rem 0 0; }
+.servicio-puertos {
+  display: flex; align-items: center; gap: .6rem;
+  margin-top: .5rem; flex-wrap: wrap;
+}
+.puerto-campo { display: flex; align-items: center; gap: .4rem; font-size: .78rem; }
+.puerto-campo input { width: 6rem; }
+.ayuda.peligro { color: var(--rojo); }
+
+/* ── Editor de direcciones de red ───────────────────────────── */
+.interfaces-red { display: flex; flex-direction: column; gap: .6rem; }
+.interfaz-red {
+  background: var(--panel-alto); border: 1px solid var(--borde);
+  border-radius: .4rem; padding: .6rem .75rem;
+  display: flex; flex-direction: column; gap: .35rem;
+}
+.interfaz-cab { display: flex; align-items: center; gap: .5rem; }
+.interfaz-red label { display: flex; flex-direction: column; gap: .2rem; font-size: .78rem; }
+.interfaz-red label.fila { flex-direction: row; align-items: center; gap: .45rem; }
+.interfaz-red input[type=text] {
+  font: inherit; font-size: .82rem; padding: .35rem .5rem;
+  background: var(--fondo); color: var(--texto);
+  border: 1px solid var(--borde); border-radius: .3rem;
+}
+.interfaz-red input[type=text]:disabled { opacity: .45; }
+.acciones-red { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
+.acciones-red button:disabled { opacity: .4; cursor: not-allowed; }
+.yaml {
+  margin: .6rem 0 0; padding: .6rem .7rem;
+  background: var(--fondo); border: 1px solid var(--borde); border-radius: .3rem;
+  font: .76rem/1.5 ui-monospace, Menlo, monospace;
+  overflow-x: auto; white-space: pre;
+}
+
+/* ── Pestanas de ajustes ────────────────────────────────────── */
+.pestanas {
+  display: flex; gap: .15rem; flex-wrap: wrap;
+  padding: .5rem 1.3rem 0;
+  border-bottom: 1px solid var(--borde);
+  position: sticky; top: 3.1rem; z-index: 1;
+  background: var(--panel);
+}
+.pestanas button {
+  font: inherit; font-size: .8rem; cursor: pointer;
+  padding: .45rem .8rem; border: none; background: transparent;
+  color: var(--sub); border-bottom: 2px solid transparent;
+  border-radius: .3rem .3rem 0 0;
+}
+.pestanas button:hover { color: var(--texto); }
+.pestanas button[aria-selected="true"] {
+  color: var(--acento); border-bottom-color: var(--acento); font-weight: 600;
+}
+/* Sin borde entre grupos de la misma pestana: solo se ve uno cada vez. */
+.dialogo .grupo:last-of-type { border-bottom: none; }
+
+/* El atributo hidden aplica display:none con la especificidad del navegador,
+   que pierde contra `.grupo { display: flex }`. Sin esta regla las pestanas
+   marcan el boton pero no ocultan nada. */
+.dialogo .grupo[hidden] { display: none; }
+
+/* Boton discreto para acciones dentro de la cabecera de un bloque: pesa
+   menos que los de formulario porque no es la accion principal. */
+.boton-menor {
+  margin-left: auto;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.8rem;
+  color: var(--tenue);
+  background: transparent;
+  border: 1px solid var(--borde);
+  border-radius: 0.35rem;
+  cursor: pointer;
+}
+.boton-menor:hover:not(:disabled) { color: var(--texto); border-color: var(--acento); }
+.boton-menor:disabled { opacity: 0.5; cursor: default; }
+
+.estado-informe {
+  margin-top: 0.6rem;
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+/* ── Lista de ataques ────────────────────────────────────────────────────
+   OJO con los nombres: .ataque y .ataques ya son del mapa, para las lineas
+   SVG. Reutilizarlos aqui heredaba su animacion -que acaba en opacity .12,
+   de ahi el gris parpadeante- y, peor, su "pointer-events: none", que dejo
+   la lista entera sin poder pulsarse. Nada avisa de una colision asi.
+
+   La lista se lee de un vistazo: severidad a la izquierda como ancla
+   visual, resumen en el centro y cuando, al final. */
+.lista-ataques { display: flex; flex-direction: column; gap: .35rem; max-height: 26rem; overflow-y: auto; }
+
+.fila-ataque {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  align-items: baseline;
+  gap: .75rem;
+  padding: .5rem .6rem;
+  border: 1px solid var(--borde);
+  border-radius: .4rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fila-ataque:hover { border-color: var(--acento); }
+
+.sev {
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 700;
+  text-align: center;
+  padding: .15rem 0;
+  border-radius: .25rem;
+}
+/* El color sigue la gravedad, no el volumen: una intrusion tiene que
+   saltar a la vista aunque sea la unica linea entre mil escaneos. */
+.sev-roce      { color: var(--sub);  border: 1px solid var(--borde); }
+.sev-tanteo    { color: #d9a441; border: 1px solid #d9a441; }
+.sev-acceso    { color: #e8833a; border: 1px solid #e8833a; }
+.sev-intrusion { color: #fff; background: #c0392b; border: 1px solid #c0392b; }
+
+.fila-ataque-texto { min-width: 0; }
+.fila-ataque-texto strong { font-weight: 600; }
+.fila-ataque-texto .sub { display: block; font-size: .76rem; margin: .15rem 0 0; }
+.fila-ataque-cuando { font-size: .74rem; color: var(--sub); white-space: nowrap; }
+
+/* ── Narracion de un ataque ───────────────────────────────────────────── */
+.cabecera-dialogo { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; }
+.cabecera-dialogo h2 { margin: 0; }
+.cuerpo-dialogo { overflow-y: auto; max-height: 65vh; }
+
+.paso { display: grid; grid-template-columns: 5.5rem 1fr; gap: .75rem; padding: .3rem 0; font-size: .85rem; }
+.paso + .paso { border-top: 1px solid var(--borde); }
+.paso-hora { color: var(--sub); font-variant-numeric: tabular-nums; font-size: .78rem; }
+.paso-texto { word-break: break-word; }
+/* Los pasos que cambian la historia -entrar, ejecutar, descargar- tienen
+   que localizarse sin leer las doscientas lineas de intentos fallidos. */
+.paso-clave .paso-texto { color: #e8833a; font-weight: 600; }
+
+/* La nota acompana al hecho, no lo sustituye: por eso va debajo, mas
+   pequena y en color secundario. El hecho es lo que se observo; la nota
+   es lo que creemos que significa, y esa diferencia debe verse. */
+.paso-nota {
+  display: block;
+  margin-top: .15rem;
+  font-size: .76rem;
+  color: var(--sub);
+  line-height: 1.35;
+}
+.paso-nota strong { color: var(--texto); font-weight: 600; }
+
+.nota-proveedor {
+  margin: 0 0 .7rem;
+  padding: .5rem .65rem;
+  font-size: .8rem;
+  color: var(--sub);
+  background: var(--panel-alto);
+  border-left: 2px solid var(--borde);
+  border-radius: .3rem;
+}
+.nota-proveedor strong { color: var(--texto); }

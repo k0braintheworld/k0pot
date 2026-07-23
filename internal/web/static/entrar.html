@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>k0Pot — entrar</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body class="pantalla-entrada">
+<main class="caja-entrada">
+  <div class="marca-entrada">
+    <span class="logo">🍯</span>
+    <h1>k0Pot</h1>
+  </div>
+  <p class="sub">panel de actividad del honeypot</p>
+
+  <form id="form-entrar" autocomplete="on">
+    <label for="usuario">Usuario</label>
+    <input id="usuario" name="username" type="text" autocomplete="username" required autofocus>
+
+    <label for="contrasena">Contrasena</label>
+    <input id="contrasena" name="password" type="password" autocomplete="current-password" required>
+
+    <button type="submit" id="boton">Entrar</button>
+  </form>
+
+  <p id="mensaje" class="mensaje" role="alert"></p>
+</main>
+<script src="entrar.js"></script>
+</body>
+</html>

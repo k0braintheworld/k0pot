@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>k0Pot — panel</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<header class="barra">
+  <div class="marca">
+    <span class="logo">🍯</span>
+    <div>
+      <h1>k0Pot</h1>
+      <p class="sub">panel de actividad del honeypot</p>
+    </div>
+  </div>
+  <div class="controles">
+    <div class="pulso"><span id="latido" class="punto"></span><span id="actualizado">conectando…</span></div>
+    <select id="rango" aria-label="Periodo">
+      <option value="1">24 horas</option>
+      <option value="7" selected>7 dias</option>
+      <option value="30">30 dias</option>
+      <option value="90">90 dias</option>
+    </select>
+    <button id="tema" class="boton-icono" title="Cambiar tema" aria-label="Cambiar tema">◐</button>
+    <button id="abrir-ajustes" class="boton-icono" title="Ajustes" aria-label="Ajustes">⚙</button>
+    <span id="quien" class="sub"></span>
+    <button id="salir" class="boton-texto">salir</button>
+  </div>
+</header>
+
+<dialog id="dialogo-ajustes" class="dialogo">
+  <form id="form-ajustes" method="dialog">
+    <header class="cabecera-dialogo">
+      <h2>Ajustes</h2>
+      <button type="button" id="cerrar-ajustes" class="boton-icono" aria-label="Cerrar">✕</button>
+    </header>
+
+    <nav class="pestanas" role="tablist">
+      <button type="button" role="tab" data-ir="servicios" aria-selected="true">Servicios</button>
+      <button type="button" role="tab" data-ir="red" aria-selected="false">Red</button>
+      <button type="button" role="tab" data-ir="deteccion" aria-selected="false">Deteccion</button>
+      <button type="button" role="tab" data-ir="informes" aria-selected="false">Informes</button>
+      <button type="button" role="tab" data-ir="general" aria-selected="false">General</button>
+    </nav>
+
+    <div class="grupo" data-pestana="servicios">
+      <h3>Servicios de honeypot</h3>
+      <p class="ayuda">Cada servicio activo escucha en el puerto indicado. Para
+        capturar ataques reales hay que <strong>redirigir</strong> hacia el el
+        trafico del puerto de verdad (el 80 hacia el de HTTP, etc.).</p>
+      <div id="lista-servicios" class="servicios"></div>
+      <p class="ayuda">Cowrie (SSH en el 2222 y Telnet en el 2223) va en su propio
+        contenedor y se gestiona desde <code>docker-compose.yml</code>.</p>
+    </div>
+
+    <div class="grupo" data-pestana="red">
+      <h3>Red</h3>
+      <p class="ayuda" id="aviso-red"></p>
+      <label>Interfaz del panel
+        <select id="c-escucha-panel"></select>
+      </label>
+      <label>Interfaz de los honeypots
+        <select id="c-escucha-honeypots"></select>
+      </label>
+    </div>
+
+    <div class="grupo" data-pestana="red">
+      <h3>Direcciones IP de las interfaces</h3>
+      <p class="ayuda peligro">Cambiar la IP por la que entras al panel te dejara
+        fuera hasta que abras la nueva. La red se revierte sola en 2 minutos si no
+        confirmas, asi que un error no deja el servidor inaccesible.</p>
+      <p class="ayuda" id="aviso-ayudante"></p>
+      <div id="editor-red" class="interfaces-red"></div>
+      <div class="acciones-red">
+        <button type="button" id="generar-red" class="boton-secundario">Ver configuracion</button>
+        <button type="button" id="aplicar-red" class="boton-secundario">Aplicar</button>
+        <button type="button" id="confirmar-red" class="boton-secundario">Confirmar</button>
+        <button type="button" id="revertir-red" class="boton-secundario">Revertir</button>
+      </div>
+      <pre id="yaml-red" class="yaml" hidden></pre>
+      <p class="ayuda" id="estado-red"></p>
+    </div>
+
+    <div class="grupo" data-pestana="deteccion">
+      <h3>Clasificador</h3>
+      <p class="ayuda">A partir de que punto una IP deja de ser ruido de fondo. Subirlos hace a honey mas callado.</p>
+      <label>Reputacion alta (0-100)<input type="number" id="c-reputacion" min="0" max="100"></label>
+      <label>Denuncias altas<input type="number" id="c-denuncias" min="0"></label>
+    </div>
+
+    <div class="grupo" data-pestana="deteccion">
+      <h3>Enriquecimiento de IPs</h3>
+      <label class="fila"><input type="checkbox" id="c-enriquecer"> Consultar AbuseIPDB</label>
+      <label>Caducidad del dato (dias)<input type="number" id="c-caducidad" min="1" max="365"></label>
+      <label>Reserva de cuota diaria<input type="number" id="c-reserva" min="0" max="1000"></label>
+      <label>Clave de AbuseIPDB
+        <input type="password" id="c-clave-abuse" autocomplete="off" placeholder="sin cambios">
+      </label>
+      <p class="ayuda" id="estado-abuse"></p>
+    </div>
+
+    <div class="grupo" data-pestana="informes">
+      <h3>Informes</h3>
+      <label class="fila"><input type="checkbox" id="c-usar-llm"> Redactar con LLM</label>
+      <label>Proveedor
+        <select id="c-proveedor">
+          <option value="compatible">Compatible con OpenAI (Groq, OpenRouter, Mistral, Ollama…)</option>
+          <option value="anthropic">Anthropic</option>
+        </select>
+      </label>
+      <label>Modelo<input type="text" id="c-modelo" autocomplete="off"></label>
+
+      <label>Minutos entre informes
+        <input type="number" id="c-informe-intervalo" min="1" max="1440">
+        <small>El panel pide el informe en cada refresco. Sin este freno, una
+        pestaña abierta genera miles de llamadas al dia.</small>
+      </label>
+      <label>Tope de informes con IA al dia
+        <input type="number" id="c-informe-tope" min="0" max="10000">
+        <small>Limite duro; al alcanzarlo redactan las reglas. 0 = sin limite.</small>
+      </label>
+
+      <div id="campos-compatible">
+        <label>URL base<input type="text" id="c-url-base" autocomplete="off"></label>
+        <label>Clave del proveedor
+          <input type="password" id="c-clave-compatible" autocomplete="off" placeholder="sin cambios">
+        </label>
+        <p class="ayuda" id="estado-compatible"></p>
+      </div>
+
+      <div id="campos-anthropic">
+        <label>Clave de Anthropic
+          <input type="password" id="c-clave-anthropic" autocomplete="off" placeholder="sin cambios">
+        </label>
+        <p class="ayuda" id="estado-anthropic"></p>
+      </div>
+    </div>
+
+    <div class="grupo" data-pestana="general">
+      <h3>Panel y datos</h3>
+      <label>Refresco del panel (segundos)<input type="number" id="c-refresco" min="5" max="3600"></label>
+      <label>Pais del honeypot (ISO, p.ej. ES)
+        <input type="text" id="c-pais" maxlength="2" autocomplete="off">
+      </label>
+      <p class="ayuda">Destino de las lineas de ataque en el mapa.</p>
+      <label>Retencion de eventos (dias, 0 = sin limite)<input type="number" id="c-retencion" min="0" max="3650"></label>
+    </div>
+
+    <div class="grupo" data-pestana="general">
+      <h3>Cambiar contrasena</h3>
+      <label>Actual<input type="password" id="p-actual" autocomplete="current-password"></label>
+      <label>Nueva<input type="password" id="p-nueva" autocomplete="new-password"></label>
+      <button type="button" id="guardar-contrasena" class="boton-secundario">Cambiar contrasena</button>
+      <p class="ayuda" id="estado-contrasena"></p>
+    </div>
+
+    <footer class="pie-dialogo">
+      <p id="estado-ajustes" class="ayuda"></p>
+      <div>
+        <button type="button" id="restaurar" class="boton-secundario">Restaurar valores</button>
+        <button type="button" id="guardar-ajustes" class="boton-principal">Guardar</button>
+      </div>
+    </footer>
+  </form>
+</dialog>
+
+<dialog id="dialogo-ataque" class="dialogo">
+  <header class="cabecera-dialogo">
+    <div>
+      <h2 id="ataque-titulo">Ataque</h2>
+      <p id="ataque-sub" class="sub"></p>
+    </div>
+    <button id="cerrar-ataque" type="button" class="boton-menor">Cerrar</button>
+  </header>
+  <div id="ataque-cuerpo" class="cuerpo-dialogo"></div>
+</dialog>
+
+<main class="rejilla-panel">
+  <section id="semaforo" class="semaforo">
+    <span class="indicador"></span>
+    <p id="frase">Cargando…</p>
+  </section>
+
+  <section class="metricas">
+    <article class="metrica"><span id="m-total" class="cifra">—</span><span class="etiqueta">eventos</span></article>
+    <article class="metrica"><span id="m-ips" class="cifra">—</span><span class="etiqueta">IPs unicas</span></article>
+    <article class="metrica"><span id="m-paises" class="cifra">—</span><span class="etiqueta">paises</span></article>
+    <article class="metrica ruido"><span id="m-ruido" class="cifra">—</span><span class="etiqueta">% ruido de fondo</span></article>
+    <article class="metrica revisar"><span id="m-revisar" class="cifra">—</span><span class="etiqueta">a revisar</span></article>
+    <article class="metrica notable"><span id="m-notable" class="cifra">—</span><span class="etiqueta">notables</span></article>
+  </section>
+
+  <section class="bloque bloque-mapa">
+    <div class="cabecera-bloque">
+      <h2>Origen de los ataques</h2>
+      <p id="leyenda-mapa" class="sub"></p>
+    </div>
+    <div id="mapa" class="mapa"><p class="cargando">Cargando mapa…</p></div>
+  </section>
+
+  <section class="bloque bloque-vivo">
+    <div class="cabecera-bloque"><h2>En vivo</h2><p class="sub">ultimos eventos</p></div>
+    <div id="vivo" class="vivo"><p class="cargando">Cargando…</p></div>
+  </section>
+
+  <section class="bloque bloque-ataques">
+    <div class="cabecera-bloque">
+      <h2>Ataques</h2>
+      <p class="sub">Los mas graves primero, no los mas ruidosos</p>
+    </div>
+    <div id="ataques" class="lista-ataques"><p class="cargando">Cargando…</p></div>
+  </section>
+
+  <section class="bloque bloque-informe">
+    <div class="cabecera-bloque">
+      <h2>Informe</h2>
+      <p id="generador" class="sub"></p>
+      <button id="regenerar" type="button" class="boton-menor" title="Redactar uno nuevo ahora">Regenerar</button>
+    </div>
+    <div id="informe" class="informe"><p class="cargando">Redactando…</p></div>
+    <p id="informe-estado" class="sub estado-informe"></p>
+  </section>
+
+  <section class="bloque bloque-serie">
+    <div class="cabecera-bloque">
+      <h2>Actividad en el tiempo</h2>
+      <p id="leyenda-serie" class="sub"></p>
+    </div>
+    <div id="serie" class="serie"><p class="cargando">Cargando…</p></div>
+  </section>
+
+  <section class="bloque bloque-tabla"><h2>IPs mas activas</h2><table id="tabla-ips"><tbody></tbody></table></section>
+  <section class="bloque bloque-tabla"><h2>Paises</h2><table id="tabla-paises"><tbody></tbody></table></section>
+  <section class="bloque bloque-tabla"><h2>Usuarios probados</h2><table id="tabla-usuarios"><tbody></tbody></table></section>
+  <section class="bloque bloque-tabla"><h2>Contrasenas probadas</h2><table id="tabla-passwords"><tbody></tbody></table></section>
+</main>
+
+<footer>
+  <p>Los datos de esta pagina los escriben atacantes. Se muestran siempre como texto plano, nunca como HTML.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
