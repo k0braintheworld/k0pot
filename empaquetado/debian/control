@@ -3,8 +3,7 @@ Version: VERSION
 Section: net
 Priority: optional
 Architecture: amd64
-Depends: docker.io | docker-ce, docker-compose-v2 | docker-compose-plugin, nftables
-Recommends: ntfy
+Depends: docker.io | docker-ce, docker-compose-v2 | docker-compose-plugin, nftables, adduser
 Maintainer: k0bra <k0bra@k0braintheworld.com>
 Homepage: https://github.com/k0braintheworld/k0pot
 Description: Honeypot ligero con informes comprensibles

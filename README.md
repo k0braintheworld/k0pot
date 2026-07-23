@@ -84,6 +84,13 @@ sudo apt install ./k0pot_0.1.0_amd64.deb
 sudo k0pot-configurar
 ```
 
+`apt install` —no `dpkg -i`— porque asi resuelve e instala las dependencias:
+Docker, el plugin de compose y nftables. En un Ubuntu de serie coge los de
+la distribucion (`docker.io`, `docker-compose-v2`); si ya tienes anadido el
+repositorio de Docker, sirven igual los suyos (`docker-ce`,
+`docker-compose-plugin`). **No hace falta Go**: el binario viene compilado y
+enlazado estaticamente.
+
 El asistente pregunta las dos IP —la de gestion y la expuesta—, las valida
 contra las interfaces reales de la maquina, crea tu cuenta y arranca los
 servicios.
