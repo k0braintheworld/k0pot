@@ -70,12 +70,29 @@ func TestSemaforo(t *testing.T) {
 	}
 }
 
+// Cuando no hay nada, hay que decirlo sin dejar poso de duda: tranquilizar
+// cuando toca es tan util como alertar. Se comprueba la intencion y no las
+// palabras exactas, para poder reescribir la frase sin romper el test.
 func TestFraseVerdeTranquiliza(t *testing.T) {
-	f := FraseSemaforo(map[model.Clasificacion]int{model.RuidoFondo: 5000})
-	for _, esperado := range []string{"VERDE", "no hay nada que requiera tu atencion"} {
-		if !strings.Contains(f, esperado) {
-			t.Errorf("frase = %q, esperaba que contuviera %q", f, esperado)
+	frase := FraseSemaforo(map[model.Clasificacion]int{model.RuidoFondo: 500})
+
+	if !strings.HasPrefix(frase, "VERDE") {
+		t.Errorf("frase = %q", frase)
+	}
+	for _, alarmante := range []string{"revisa", "urgente", "aisla", "bloquea", "atencion inmediata"} {
+		if strings.Contains(strings.ToLower(frase), alarmante) {
+			t.Errorf("la frase verde no deberia pedir nada: %q", frase)
 		}
+	}
+	// Tiene que aclarar que no hay nada que hacer, de una forma u otra.
+	tranquiliza := false
+	for _, senal := range []string{"nada", "ruido de fondo", "ninguna"} {
+		if strings.Contains(strings.ToLower(frase), senal) {
+			tranquiliza = true
+		}
+	}
+	if !tranquiliza {
+		t.Errorf("la frase verde no tranquiliza: %q", frase)
 	}
 }
 
@@ -259,5 +276,35 @@ func TestExplicarRescataElMensajeDeLaAPI(t *testing.T) {
 	}
 	if !strings.Contains(explicacion, "400") {
 		t.Errorf("explicacion = %q, esperaba que citara el codigo", explicacion)
+	}
+}
+
+// El informe lo escribe un modelo, asi que no se puede fijar su salida.
+// Lo que si se puede fijar es lo que se le dice: que esto es un senuelo y
+// que no debe recomendar cerrarlo.
+//
+// Sin ese encuadre el modelo escribe como si fuera un servidor de
+// produccion comprometido y recomienda aislar la maquina, bloquear las IPs
+// en su cortafuegos o cambiarle las contrasenas. Es consejo correcto para
+// otro sistema y exactamente lo contrario de lo que hay que hacer con este:
+// cerrar el senuelo es apagarlo.
+func TestElPromptDejaClaroQueEsUnSenuelo(t *testing.T) {
+	p := strings.ToLower(sistema)
+
+	for _, imprescindible := range []string{"senuelo", "no es un incidente", "nunca recomiendes"} {
+		if !strings.Contains(p, imprescindible) {
+			t.Errorf("el prompt no menciona %q", imprescindible)
+		}
+	}
+	// Las acciones que no debe proponer tienen que estar nombradas para
+	// poder prohibirlas: si no aparecen, no hay nada que las impida.
+	for _, prohibida := range []string{"aislar", "reinstalarla", "bloquear ips"} {
+		if !strings.Contains(p, prohibida) {
+			t.Errorf("el prompt no desaconseja %q explicitamente", prohibida)
+		}
+	}
+	// Y la excepcion real: si el senuelo dana a terceros, si hay que actuar.
+	if !strings.Contains(p, "terceros") {
+		t.Error("falta la excepcion: usarlo para atacar hacia fuera si es un problema")
 	}
 }

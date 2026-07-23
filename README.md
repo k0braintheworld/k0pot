@@ -150,6 +150,25 @@ Para comprobarlo desde fuera: `deploy/comprobar-aislamiento.sh <IP-expuesta>
 <IP-gestion>`, ejecutado **desde otra maquina**. Desde el propio servidor no
 demuestra nada.
 
+## Los textos hablan de un senuelo, no de un servidor comprometido
+
+Un modelo de lenguaje al que le cuentas que alguien entro como root por SSH
+escribe lo que escribiria cualquier analista: aisla la maquina, bloquea esa
+IP, cambia las contrasenas, contiene el incidente.
+
+Es buen consejo para otro sistema y **exactamente lo contrario** de lo que
+hay que hacer con este. En un honeypot que alguien consiga entrar no es un
+incidente: es la trampa haciendo su trabajo. Cerrarlo es apagarlo.
+
+Asi que el modelo recibe ese encuadre por delante de todo lo demas, con la
+lista de acciones que no debe proponer. En su lugar se le pide lo que si
+aporta: que buscaban, que habria significado en un servidor de verdad, y que
+credenciales o ficheros estan circulando.
+
+Con una excepcion, que si es un problema real: **si el senuelo se esta
+usando para danar a terceros** -reenviar trafico, servir de rele, atacar
+hacia fuera-, eso hay que decirlo con claridad y actuar.
+
 ## Desde tu ultima visita
 
 El panel ensena siempre la misma lista, asi que sin ayuda no hay forma de

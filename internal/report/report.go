@@ -88,14 +88,16 @@ func FraseSemaforo(niveles map[model.Clasificacion]int) string {
 
 	switch NivelDe(niveles) {
 	case Rojo:
-		return fmt.Sprintf("ROJO — %s piden que los mires: "+
+		// "Piden que los mires", no "hay que actuar": en un senuelo que
+		// alguien entre es la trampa funcionando, no una emergencia.
+		return fmt.Sprintf("ROJO — %s merecen que los mires: "+
 			"alguien no se limito a llamar a la puerta", plural(notables, "evento"))
 	case Ambar:
 		return fmt.Sprintf("AMBAR — %s se salen de lo normal, "+
 			"pero nada indica que hayan entrado", plural(revisar, "evento"))
 	default:
 		return "VERDE — todo es ruido de fondo automatizado; " +
-			"no hay nada que requiera tu atencion"
+			"nada que mirar hoy"
 	}
 }
 
