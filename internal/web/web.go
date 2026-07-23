@@ -162,6 +162,7 @@ type Estado struct {
 	IPsUnicas    int                         `json:"ips_unicas"`
 	Niveles      map[model.Clasificacion]int `json:"niveles"`
 	PorTipo      []store.Recuento            `json:"por_tipo"`
+	Severidades  map[string]int              `json:"severidades"`
 	PorPais      []store.Recuento            `json:"por_pais"`
 	TopIPs       []store.IPActiva            `json:"top_ips"`
 	TopUsuarios  []store.Recuento            `json:"top_usuarios"`
@@ -184,8 +185,16 @@ func (s *Servidor) estado(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no se pudo leer la clasificacion", http.StatusInternalServerError)
 		return
 	}
+	// Reparto de los ATAQUES por gravedad, para la grafica: es el resumen de
+	// una linea del negocio de k0Pot -cuanto ruido, cuanto de verdad.
+	severidades, err := s.Almacen.EpisodiosDesde(desde)
+	if err != nil {
+		http.Error(w, "no se pudo leer la gravedad de los ataques", http.StatusInternalServerError)
+		return
+	}
 
 	responderJSON(w, Estado{
+		Severidades:  severidades,
 		Nivel:        report.NivelDe(niveles),
 		PaisPropio:   s.Config.Actual().PaisPropio,
 		Latitud:      s.Config.Actual().LatitudPropia,

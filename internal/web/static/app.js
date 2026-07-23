@@ -492,6 +492,8 @@ async function cargarEstado(recientes) {
   pintarTabla("tabla-passwords", (e.top_passwords || []).map((p) => [
     { valor: p.Valor }, { valor: p.N, clase: "num" },
   ]));
+
+  pintarGravedad(e.severidades);
 }
 
 
@@ -505,29 +507,6 @@ function hace(iso) {
   const h = Math.round(min / 60);
   if (h < 24) return `hace ${h} h`;
   return `hace ${Math.round(h / 24)} d`;
-}
-
-function pintarInforme(inf) {
-  const cont = $("informe");
-  cont.replaceChildren();
-  for (const parrafo of inf.texto.split("\n").filter((l) => l.trim())) {
-    cont.appendChild(nodo("p", null, parrafo));
-  }
-  $("generador").textContent = inf.generador;
-
-  // Se dice quien lo redacto y si los datos han cambiado desde entonces.
-  // Un informe con IA fechado hace horas, sin mas, parece un panel colgado;
-  // decir que hay actividad nueva convierte eso en una invitacion a pulsar.
-  const partes = [];
-  partes.push(inf.con_ia ? "redactado con IA" : "resumen automatico");
-  if (inf.con_ia && inf.momento) partes.push(hace(inf.momento));
-  if (inf.desactualizado) partes.push("hay actividad nueva desde entonces");
-  else if (inf.motivo && !inf.con_ia) partes.push(inf.motivo);
-  else if (inf.motivo && inf.motivo !== "redactado con IA") partes.push(inf.motivo);
-  if (inf.cuota_tope > 0) {
-    partes.push(`${inf.cuota_usada}/${inf.cuota_tope} con IA hoy`);
-  }
-  $("informe-estado").textContent = partes.join(" · ");
 }
 
 // ── Ataques ─────────────────────────────────────────────────────────────
@@ -1117,26 +1096,40 @@ async function cargarArtefactos() {
   }
 }
 
-async function cargarInforme() {
-  pintarInforme(await traer("/api/informe"));
-}
+// pintarGravedad dibuja las barras de ataques por gravedad. Es el reparto
+// que resume el negocio de k0Pot: mucho ruido, y estrechandose hasta la
+// intrusion. El maximo escala las barras; sin datos, no se pinta nada.
+function pintarGravedad(severidades) {
+  const cont = $("grafica-gravedad");
+  cont.replaceChildren();
 
-// Va por POST porque cuesta dinero: el refresco automatico usa GET, que
-// siempre lo redactan las reglas y nunca gasta cuota.
-async function regenerarInforme() {
-  const boton = $("regenerar");
-  boton.disabled = true;
-  boton.textContent = "Redactando…";
-  try {
-    const resp = await fetch(
-      `/api/informe?dias=${encodeURIComponent(rango())}`, { method: "POST" });
-    if (!resp.ok) throw new Error(`respondio ${resp.status}`);
-    pintarInforme(await resp.json());
-  } catch (e) {
-    $("informe-estado").textContent = `no se pudo redactar con IA: ${e.message}`;
-  } finally {
-    boton.disabled = false;
-    boton.textContent = "Redactar con IA";
+  const orden = [
+    ["intrusion", "Intrusion — entraron y actuaron"],
+    ["acceso", "Acceso — consiguieron entrar"],
+    ["tanteo", "Tanteo — probaron credenciales o rutas"],
+    ["roce", "Roce — solo tocaron el puerto"],
+  ];
+  const total = orden.reduce((s, [k]) => s + (severidades?.[k] || 0), 0);
+  if (!total) {
+    cont.appendChild(nodo("p", "vacio", "Sin ataques en este periodo."));
+    return;
+  }
+  const max = Math.max(...orden.map(([k]) => severidades?.[k] || 0), 1);
+
+  for (const [clave, etiqueta] of orden) {
+    const n = severidades?.[clave] || 0;
+    const barra = nodo("div", `barra-sev ${clave}`);
+    const fila = nodo("div", "fila");
+    fila.appendChild(nodo("span", "nombre", etiqueta));
+    fila.appendChild(nodo("span", "cuenta", String(n)));
+    barra.appendChild(fila);
+    const canal = nodo("div", "canal");
+    const relleno = nodo("div", "relleno");
+    // El ancho por CSSOM: la CSP bloquea el atributo style en linea.
+    relleno.style.width = `${(n / max) * 100}%`;
+    canal.appendChild(relleno);
+    barra.appendChild(canal);
+    cont.appendChild(barra);
   }
 }
 
@@ -1155,7 +1148,6 @@ async function refrescar() {
       cargarAtaques(),
       cargarCampanas(),
       cargarArtefactos(),
-      cargarInforme(),
       traer("/api/serie").then(pintarSerie),
     ]);
     latido.className = "punto conectado";
@@ -1177,10 +1169,9 @@ $("tema").addEventListener("click", () => {
 });
 
 $("rango").addEventListener("change", refrescar);
-$("regenerar").addEventListener("click", regenerarInforme);
 // El informe se abre en otra pestana: es un documento para revisar e
 // imprimir, no algo que sustituya al panel. Lleva el periodo seleccionado.
-$("exportar").addEventListener("click", () => {
+$("generar-informe").addEventListener("click", () => {
   window.open(`/api/reporte?dias=${encodeURIComponent(rango())}`, "_blank", "noopener");
 });
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());

@@ -25,6 +25,7 @@
       <option value="30">30 dias</option>
       <option value="90">90 dias</option>
     </select>
+    <button id="generar-informe" type="button" class="boton-texto" title="Abrir un informe completo del periodo seleccionado, listo para imprimir o guardar como PDF">Generar informe</button>
     <button id="tema" class="boton-icono" title="Cambiar tema" aria-label="Cambiar tema">◐</button>
     <button id="abrir-ajustes" class="boton-icono" title="Ajustes" aria-label="Ajustes">⚙</button>
     <span id="quien" class="sub"></span>
@@ -360,15 +361,12 @@
     <div id="ataques" class="lista-ataques"><p class="cargando">Cargando…</p></div>
   </section>
 
-  <section class="bloque bloque-informe">
+  <section class="bloque bloque-grafica">
     <div class="cabecera-bloque">
-      <h2>Informe</h2>
-      <p id="generador" class="sub"></p>
-      <button id="regenerar" type="button" class="boton-menor" title="Redactar el informe con IA. Consume cuota del proveedor.">Redactar con IA</button>
-      <button id="exportar" type="button" class="boton-menor" title="Abrir un informe completo, listo para imprimir o guardar como PDF">Exportar</button>
+      <h2>Ataques por gravedad</h2>
+      <p class="sub">Cuanto es ruido de fondo y cuanto va en serio</p>
     </div>
-    <div id="informe" class="informe"><p class="cargando">Redactando…</p></div>
-    <p id="informe-estado" class="sub estado-informe"></p>
+    <div id="grafica-gravedad" class="grafica-gravedad"><p class="cargando">Cargando…</p></div>
   </section>
 
   <section class="bloque bloque-serie">

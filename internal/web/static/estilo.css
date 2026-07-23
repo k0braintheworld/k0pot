@@ -88,7 +88,7 @@ main.rejilla-panel {
 .bloque-mapa    { grid-column: span 8; }
 .bloque-vivo    { grid-column: span 4; }
 .bloque-ataques { grid-column: span 7; }
-.bloque-informe { grid-column: span 5; }
+.bloque-grafica { grid-column: span 5; }
 .bloque-serie   { grid-column: span 12; }
 /* Campanas y artefactos van a lo ancho y se ocultan cuando no hay nada,
    asi no dejan un cuadro vacio ni descuadran la fila de abajo. */
@@ -118,7 +118,7 @@ main.rejilla-panel {
 }
 
 @media (max-width: 88rem) {
-  .bloque-ataques, .bloque-informe { grid-column: span 12; }
+  .bloque-ataques, .bloque-grafica { grid-column: span 12; }
   .bloque-ips { grid-column: span 12; }
   .bloque-tabla { grid-column: span 6; }
   .bloque-credenciales { grid-column: span 6; }
@@ -823,3 +823,21 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   color: var(--sub);
 }
 @media (max-width: 30rem) { .par-tablas { grid-template-columns: 1fr; } }
+
+
+/* ── Ataques por gravedad ───────────────────────────────────────────────
+   Barras horizontales que resumen de un vistazo el reparto que da sentido
+   a k0Pot: mucho roce (ruido), y estrechandose hasta la intrusion. El color
+   es el mismo del resto del panel, para que "rojo" siga significando grave. */
+.grafica-gravedad { display: flex; flex-direction: column; gap: .7rem; padding-top: .3rem; }
+.barra-sev { }
+.barra-sev .fila { display: flex; justify-content: space-between; font-size: .8rem; margin-bottom: .2rem; }
+.barra-sev .nombre { color: var(--texto); }
+.barra-sev .cuenta { color: var(--sub); font-variant-numeric: tabular-nums; }
+.barra-sev .canal { height: .55rem; background: var(--panel-alto); border-radius: 1rem; overflow: hidden; }
+.barra-sev .relleno { height: 100%; border-radius: 1rem; transition: width .5s ease; }
+.barra-sev.roce      .relleno { background: #5f7d86; }
+.barra-sev.tanteo    .relleno { background: var(--ambar); }
+.barra-sev.acceso    .relleno { background: #d98a3a; }
+.barra-sev.intrusion .relleno { background: var(--rojo); }
+.barra-sev.intrusion .nombre { color: var(--rojo); font-weight: 600; }
