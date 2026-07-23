@@ -199,7 +199,7 @@ async function pintarMapa(porPais, recientes, paisPropio, propio) {
       // Raiz cuadrada para que los paises con poca actividad sigan
       // distinguiendose del fondo en vez de quedarse casi invisibles.
       const peso = Math.sqrt(n / maximo);
-      forma.setAttribute("fill-opacity", (0.22 + peso * 0.65).toFixed(3));
+      forma.setAttribute("fill-opacity", (0.10 + peso * 0.40).toFixed(3));
     }
     const titulo = svg("title");
     titulo.textContent = n > 0 ? `${pais.n}: ${n} eventos` : pais.n;
@@ -212,7 +212,7 @@ async function pintarMapa(porPais, recientes, paisPropio, propio) {
   for (const [iso, n] of porIso) {
     const pais = m.paises[iso];
     if (!pais) continue;
-    const r = 3 + Math.sqrt(n / maximo) * 17;
+    const r = 2 + Math.sqrt(n / maximo) * 9;
     const g = svg("g", { class: "marca-pais" });
     g.appendChild(svg("circle", { cx: pais.c[0], cy: pais.c[1], r: r, class: "halo" }));
     g.appendChild(svg("circle", { cx: pais.c[0], cy: pais.c[1], r: Math.max(2, r * 0.35), class: "nucleo" }));

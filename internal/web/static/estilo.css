@@ -152,12 +152,15 @@ h2 { margin: 0 0 .8rem; font-size: .82rem; text-transform: uppercase; letter-spa
 .bloque-vivo { display: flex; flex-direction: column; }
 .lienzo-mapa { display: block; width: 100%; height: auto; }
 .pais { fill: var(--tierra); stroke: var(--fondo); stroke-width: .5; }
-.pais.activo { fill: var(--rojo); }
+/* El relleno por volumen es un calido MUY apagado, no rojo: marca "de aqui
+   llega trafico" sin gritar. El rojo se reserva para lo que de verdad es
+   grave, en las lineas de ataque. */
+.pais.activo { fill: #b78a4e; }
 /* La intensidad va en fill-opacity, no en color-mix con calc: un calc
    invalido dentro de color-mix deja el fill sin valor y el SVG cae al
    negro por defecto, que es justo lo que pasaba. */
-.marca-pais .halo { fill: var(--rojo); opacity: .16; }
-.marca-pais .nucleo { fill: var(--rojo); opacity: .85; }
+.marca-pais .halo { fill: #b78a4e; opacity: .10; }
+.marca-pais .nucleo { fill: #d0a45f; opacity: .6; }
 .aviso-mapa { margin: .6rem 0 0; font-size: .8rem; color: var(--sub); }
 
 /* ── Grafica temporal ───────────────────────────────────────── */
@@ -331,8 +334,9 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 
 .ataque {
   fill: none;
-  stroke: var(--ambar);
-  stroke-width: 1.4;
+  /* Ruido: frio y tenue. Es el 90% del trafico y no debe llamar la atencion. */
+  stroke: #5f7d86;
+  stroke-width: 1.2;
   stroke-linecap: round;
   /* El trazo se dibuja con dasharray: el patron es mas largo que
      cualquier arco posible, asi que animar el offset lo "traza". */
