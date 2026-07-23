@@ -1,0 +1,20 @@
+Package: k0pot
+Version: VERSION
+Section: net
+Priority: optional
+Architecture: amd64
+Depends: docker.io | docker-ce, docker-compose-v2 | docker-compose-plugin, nftables
+Recommends: ntfy
+Maintainer: k0bra <k0bra@k0braintheworld.com>
+Homepage: https://github.com/k0braintheworld/k0pot
+Description: Honeypot ligero con informes comprensibles
+ k0Pot captura ataques y los explica en lenguaje que se entiende sin ser
+ analista de seguridad. Agrupa los eventos sueltos en ataques, los puntua por
+ lo que el atacante consiguio -no por cuanto insistio- y traduce lo observado
+ con un catalogo propio: "GET /SDK/webLanguage" pasa a ser "buscan camaras IP
+ Hikvision expuestas para reclutarlas en una botnet".
+ .
+ Reutiliza Cowrie para SSH y Telnet, y trae trampas propias para HTTP, Redis
+ y FTP. Avisa por ntfy, Telegram o webhook cuando alguien consigue entrar.
+ .
+ Tras instalar, ejecuta: sudo k0pot-configurar

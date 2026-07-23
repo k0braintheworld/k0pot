@@ -23,3 +23,6 @@
 # direccionamiento real de la instalacion y no debe publicarse.
 *.local.nft
 *.local.yml
+
+# Paquetes construidos.
+/dist/

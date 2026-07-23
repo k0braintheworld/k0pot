@@ -67,6 +67,8 @@ func main() {
 			"cambia la contrasena de una cuenta y sale")
 		listarUsuarios = flag.Bool("usuarios", false,
 			"lista las cuentas del panel y sale")
+		asistente = flag.Bool("configurar", false,
+			"asistente de configuracion inicial y sale")
 		revisar = flag.Bool("reclasificar", false,
 			"vuelve a juzgar los eventos guardados con el criterio de hoy y sale")
 	)
@@ -102,6 +104,13 @@ func main() {
 	if *listarUsuarios {
 		if err := listarCuentas(almacen); err != nil {
 			log.Fatalf("listando cuentas: %v", err)
+		}
+		return
+	}
+
+	if *asistente {
+		if err := configurar(almacen, ajustes, *rutaEnv); err != nil {
+			log.Fatalf("configuracion: %v", err)
 		}
 		return
 	}

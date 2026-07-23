@@ -1,0 +1,62 @@
+#!/bin/sh
+set -e
+
+USUARIO=k0pot
+DATOS=/var/lib/k0pot
+CONF=/etc/k0pot
+
+case "$1" in
+configure)
+    # Usuario propio del sistema, SIN shell y SIN grupos extra.
+    #
+    # Es la diferencia principal frente a instalarlo a mano: si k0Pot corre
+    # con una cuenta que pertenece a sudo y a docker -y el grupo docker
+    # equivale a root, porque basta un contenedor con el disco montado-,
+    # cualquier fallo en una trampa expuesta a internet se convierte en root
+    # en la maquina. Aqui el servicio no puede escalar a ningun sitio.
+    if ! getent passwd "$USUARIO" >/dev/null; then
+        adduser --system --group --no-create-home \
+                --home "$DATOS" --shell /usr/sbin/nologin "$USUARIO" >/dev/null
+    fi
+
+    mkdir -p "$DATOS"/cowrie/lib/downloads "$DATOS"/cowrie/lib/tty \
+             "$DATOS"/cowrie/lib/snapshots "$DATOS"/cowrie/log "$DATOS"/tls
+    chown -R "$USUARIO:$USUARIO" "$DATOS"
+    chmod 750 "$DATOS"
+    chmod 700 "$DATOS/tls"
+
+    mkdir -p "$CONF"
+    if [ ! -f "$CONF/k0pot.env" ]; then
+        cp /usr/share/k0pot/k0pot.env.ejemplo "$CONF/k0pot.env"
+    fi
+    # El fichero lleva claves de API: solo root y el servicio.
+    chown root:"$USUARIO" "$CONF/k0pot.env"
+    chmod 640 "$CONF/k0pot.env"
+
+    # El UID del servicio va al entorno: Cowrie corre con el dentro del
+    # contenedor para poder escribir en los volumenes montados. Sin esto
+    # falla al generar sus claves de host y arranca sin SSH ni Telnet,
+    # apareciendo como "Up".
+    UID_K0POT=$(id -u "$USUARIO")
+    GID_K0POT=$(id -g "$USUARIO")
+    sed -i "/^K0POT_UID=/d;/^K0POT_GID=/d" "$CONF/k0pot.env"
+    printf "K0POT_UID=%s\nK0POT_GID=%s\n" "$UID_K0POT" "$GID_K0POT" >> "$CONF/k0pot.env"
+
+    systemctl daemon-reload
+
+    if [ -z "$2" ]; then
+        # Instalacion nueva, no actualizacion.
+        echo
+        echo "  k0Pot instalado. Falta configurarlo:"
+        echo
+        echo "      sudo k0pot-configurar"
+        echo
+        echo "  Te preguntara las dos interfaces de red y creara tu cuenta."
+        echo
+    else
+        systemctl try-restart k0pot-collector k0pot-panel >/dev/null 2>&1 || true
+    fi
+    ;;
+esac
+
+exit 0

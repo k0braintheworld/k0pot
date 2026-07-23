@@ -1,0 +1,55 @@
+[Unit]
+Description=k0Pot — panel web
+Documentation=https://github.com/k0braintheworld/k0pot
+After=network-online.target k0pot-collector.service
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=k0pot
+Group=k0pot
+# Ningun grupo suplementario. En particular NO docker, que equivale a root.
+SupplementaryGroups=
+WorkingDirectory=/var/lib/k0pot
+EnvironmentFile=-/etc/k0pot/k0pot.env
+ExecStart=/usr/bin/k0pot -web 0.0.0.0:8080 -bd /var/lib/k0pot/k0pot.db
+Restart=always
+RestartSec=5s
+
+# ── Aislamiento del proceso ─────────────────────────────────────────────
+#
+# Dentro de este proceso corren las trampas de HTTP, Redis y FTP, que hablan
+# con internet y NO estan en un contenedor. Como unidad de SISTEMA se pueden
+# aplicar las restricciones que una de usuario acepta pero ignora.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/k0pot
+ProtectProc=invisible
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectClock=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+# AF_NETLINK hace falta para enumerar interfaces; AF_UNIX queda fuera y con
+# el, por diseno, el socket de Docker.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_NETLINK
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+SystemCallArchitectures=native
+UMask=0077
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

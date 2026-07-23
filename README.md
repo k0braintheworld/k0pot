@@ -77,21 +77,43 @@ panel indica a cuales hay que redirigir el trafico.
 
 ## Instalacion
 
+### Con paquete (recomendado)
+
+```sh
+sudo apt install ./k0pot_0.1.0_amd64.deb
+sudo k0pot-configurar
+```
+
+El asistente pregunta las dos IP —la de gestion y la expuesta—, las valida
+contra las interfaces reales de la maquina, crea tu cuenta y arranca los
+servicios.
+
+La diferencia importante frente a instalarlo a mano es **quien ejecuta el
+servicio**: el paquete crea un usuario propio del sistema, sin shell y **sin
+pertenecer a `sudo` ni a `docker`**. Como el grupo `docker` equivale a root
+—basta un contenedor con el disco montado—, un fallo en una trampa expuesta
+a internet dejaria de ser un camino a root en la maquina. Cowrie lo arranca
+un servicio aparte que si habla con Docker, de modo que el proceso expuesto
+nunca necesita ese acceso.
+
+Para construir el paquete desde el codigo:
+
+```sh
+./empaquetar.sh          # deja el .deb en dist/
+```
+
+### Desde el codigo, sin paquete
+
 ```sh
 git clone https://github.com/k0braintheworld/k0pot.git
 cd k0pot
 ./instalar.sh
 ```
 
-El instalador comprueba el entorno, te pregunta las dos IP -la de gestion y
-la expuesta-, prepara los volumenes con los permisos correctos, compila,
-levanta Cowrie, instala los servicios y crea la primera cuenta. Avisa si las
-dos IP estan en la misma red, que es el error que anula el aislamiento.
-
-**No aplica el cortafuegos**: eso exige root y un error puede dejarte fuera
-del servidor, asi que prepara el fichero con tus direcciones y te dice como
-aplicarlo con la red de seguridad. Al terminar lista lo que queda por hacer
-a mano, en orden.
+Instala en tu directorio de usuario con servicios de systemd de usuario.
+Mas rapido para desarrollar, pero el servicio hereda los grupos de tu
+cuenta: si estas en `docker`, el sandbox de systemd es lo unico que separa
+una trampa expuesta de tener root.
 
 ### Requisitos
 

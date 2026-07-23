@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# Asistente de configuracion de k0Pot para la instalacion por paquete.
+#
+# Envuelve a "k0pot -configurar" para que escriba donde toca y con los
+# permisos correctos: el asistente pregunta, y aqui se deja todo en su sitio.
+#
+set -e
+
+[ "$(id -u)" -eq 0 ] || { echo "Ejecutalo con sudo: sudo k0pot-configurar"; exit 1; }
+
+DATOS=/var/lib/k0pot
+CONF=/etc/k0pot/k0pot.env
+
+/usr/bin/k0pot -configurar -bd "$DATOS/k0pot.db" -env "$CONF"
+
+# El asistente ha podido crear la base como root; el servicio corre como
+# k0pot y no podria escribirla.
+chown -R k0pot:k0pot "$DATOS"
+chown root:k0pot "$CONF"
+chmod 640 "$CONF"
+
+systemctl enable --now k0pot-cowrie k0pot-collector k0pot-panel >/dev/null 2>&1 || true
+
+echo "  Servicios arrancados. Estado:"
+systemctl is-active k0pot-cowrie k0pot-collector k0pot-panel | sed "s/^/    /"

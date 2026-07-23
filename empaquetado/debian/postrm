@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+case "$1" in
+purge)
+    # Los datos NO se borran al desinstalar, solo al purgar, y aun asi se
+    # avisa: son ataques capturados que no se pueden recuperar.
+    echo "  Los datos de k0Pot siguen en /var/lib/k0pot."
+    echo "  Borralos a mano si de verdad ya no los quieres."
+    rm -f /etc/k0pot/k0pot.env
+    rmdir /etc/k0pot 2>/dev/null || true
+    ;;
+esac
+systemctl daemon-reload >/dev/null 2>&1 || true
+exit 0
