@@ -648,3 +648,23 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   cursor: pointer;
   text-decoration: underline dotted;
 }
+
+/* ── Ficha de una IP ────────────────────────────────────────────────────
+   Los datos van en pares etiqueta/valor: se leen en diagonal, que es como
+   se mira una ficha. */
+.ficha-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: .6rem;
+  margin-bottom: .9rem;
+}
+.dato { min-width: 0; }
+.dato .etiqueta {
+  display: block;
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--sub);
+}
+.dato .valor { font-size: .92rem; word-break: break-word; }
+.dato .valor.malo { color: var(--rojo); font-weight: 600; }

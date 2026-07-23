@@ -184,6 +184,9 @@ type FiltroEpisodios struct {
 	Minima string
 	// Protocolo acota a un servicio. Vacio = todos.
 	Protocolo string
+	// IP acota a una direccion exacta. Distinto de Texto, que busca por
+	// trozos: para una ficha hace falta esa IP y no las que se le parecen.
+	IP string
 	// Texto busca en IP, pais, proveedor y resumen a la vez. Quien
 	// consulta no sabe -ni tiene por que- en cual de esos campos esta lo
 	// que recuerda.
@@ -205,6 +208,10 @@ func (s *Store) Episodios(f FiltroEpisodios) ([]EpisodioFila, error) {
 	if f.Protocolo != "" {
 		consulta += " AND e.protocolo = ?"
 		args = append(args, f.Protocolo)
+	}
+	if f.IP != "" {
+		consulta += " AND e.ip = ?"
+		args = append(args, f.IP)
 	}
 	if t := strings.TrimSpace(f.Texto); t != "" {
 		// Se busca en varios campos a la vez y por trozos: quien escribe

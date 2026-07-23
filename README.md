@@ -150,6 +150,28 @@ Para comprobarlo desde fuera: `deploy/comprobar-aislamiento.sh <IP-expuesta>
 <IP-gestion>`, ejecutado **desde otra maquina**. Desde el propio servidor no
 demuestra nada.
 
+## Ficha de una IP
+
+Un ataque suelto no puede responder la pregunta que mas importa cuando una
+direccion reaparece: **¿esta ya habia venido?** Sin ficha, una IP que vuelve
+manana produce dos ataques sin relacion aparente.
+
+Pulsando la IP en cualquier ataque se abre su ficha: primera y ultima vez,
+cuantos ataques, cuantos eventos, que servicios ha tocado, lo peor que
+llego a hacer, y su contexto en AbuseIPDB.
+
+Arriba, en una frase, el veredicto que distingue insistir de progresar:
+
+> Ha vuelto: 3 ataques a lo largo de 3 dias. Consiguio entrar.
+> **Fue a mas con el tiempo: empezo mas suave de lo que acabo.**
+
+Esa ultima linea sale de comparar su primer ataque con el peor. Un escaner
+de paso repite lo mismo; alguien que progresa empieza tanteando y acaba
+entrando, y eso solo se ve mirando su historia entera.
+
+La ficha **no se recorta por el periodo en pantalla**: la gracia es ver todo
+lo que ha hecho esa direccion, no solo lo de los ultimos siete dias.
+
 ## Consultar: filtrar y buscar
 
 Un honeypot expuesto acumula cientos de ataques. Sin poder acotar, la lista

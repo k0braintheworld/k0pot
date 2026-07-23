@@ -476,12 +476,10 @@ async function abrirAtaque(clave) {
   titulo.appendChild(nodo("span", null, `${d.protocolo} desde `));
   const enlaceIP = nodo("button", "enlace-ip", d.ip);
   enlaceIP.type = "button";
-  enlaceIP.title = "Ver todo lo de esta IP";
-  enlaceIP.addEventListener("click", () => {
-    $("f-texto").value = d.ip;
-    $("dialogo-ataque").close();
-    refrescar();
-  });
+  enlaceIP.title = "Ver la ficha de esta IP";
+  enlaceIP.addEventListener("click", () => abrirIP(d.ip).catch((e) => {
+    $("ataque-sub").textContent = `no se pudo abrir la ficha: ${e.message}`;
+  }));
   titulo.appendChild(enlaceIP);
   const donde = [d.pais, d.isp].filter(Boolean).join(" · ");
   const rep = d.reputacion > 0 ? ` · reputacion ${d.reputacion}/100` : "";
@@ -589,6 +587,85 @@ async function probarAviso() {
   } finally {
     boton.disabled = false;
   }
+}
+
+// ── Ficha de una IP ─────────────────────────────────────────────────────
+
+function dato(etiqueta, valor, malo) {
+  const d = nodo("div", "dato");
+  d.appendChild(nodo("span", "etiqueta", etiqueta));
+  d.appendChild(nodo("span", malo ? "valor malo" : "valor", valor));
+  return d;
+}
+
+function cuantoLleva(desde, hasta) {
+  const dias = (new Date(hasta) - new Date(desde)) / 86400000;
+  if (dias < 1) return "el mismo dia";
+  if (dias < 2) return "a lo largo de 1 dia";
+  return `a lo largo de ${Math.round(dias)} dias`;
+}
+
+async function abrirIP(ip) {
+  const p = await pedirJSON(`/api/ip?ip=${encodeURIComponent(ip)}`);
+  $("dialogo-ataque").close();
+
+  $("ip-titulo").textContent = p.ip;
+  const donde = [p.origen.pais, p.origen.isp, p.origen.tipo_uso].filter(Boolean);
+  $("ip-sub").textContent = donde.join(" · ") || "sin datos publicos";
+
+  // El veredicto va arriba y en una frase: es lo que distingue a un
+  // escaner de paso de alguien que insiste, que es para lo que se abre
+  // una ficha.
+  const caja = $("ip-veredicto");
+  caja.replaceChildren();
+  const frases = [];
+  if (p.episodios > 1) {
+    frases.push(`Ha vuelto: ${p.episodios} ataques ${cuantoLleva(p.vista, p.ultima_vez)}.`);
+  } else {
+    frases.push("Primera y unica vez que aparece.");
+  }
+  if (p.llego_a_entrar) frases.push("Consiguio entrar.");
+  if (p.escalo) frases.push("Fue a mas con el tiempo: empezo mas suave de lo que acabo.");
+  if (p.nota_proveedor) {
+    frases.push(`${p.nota_proveedor.que}: ${p.nota_proveedor.por}.`);
+  }
+  caja.appendChild(nodo("p", null, frases.join(" ")));
+  caja.hidden = false;
+
+  const datos = $("ip-datos");
+  datos.replaceChildren();
+  datos.appendChild(dato("Primera vez", new Date(p.vista).toLocaleString("es")));
+  datos.appendChild(dato("Ultima vez", hace(p.ultima_vez)));
+  datos.appendChild(dato("Ataques", String(p.episodios)));
+  datos.appendChild(dato("Eventos", String(p.eventos)));
+  datos.appendChild(dato("Servicios", (p.servicios || []).join(", ") || "—"));
+  datos.appendChild(dato("Lo peor que hizo", NOMBRE_SEV[p.peor_hasta] || p.peor_hasta,
+    p.peor_hasta === "intrusion" || p.peor_hasta === "acceso"));
+  if (p.origen.reputacion) {
+    datos.appendChild(dato("Reputacion", `${p.origen.reputacion}/100`, p.origen.reputacion >= 75));
+  }
+  if (p.origen.total_reportes) {
+    datos.appendChild(dato("Denuncias", String(p.origen.total_reportes)));
+  }
+  if (p.origen.tor) datos.appendChild(dato("Red", "nodo de salida Tor", true));
+
+  const lista = $("ip-ataques");
+  lista.replaceChildren();
+  lista.appendChild(nodo("p", "sub", "Sus ataques, del mas reciente al mas antiguo:"));
+  for (const a of p.ataques || []) {
+    const fila = nodo("button", "fila-ataque");
+    fila.type = "button";
+    fila.appendChild(nodo("span", `sev sev-${a.severidad}`, NOMBRE_SEV[a.severidad] || a.severidad));
+    const texto = nodo("div", "fila-ataque-texto");
+    texto.appendChild(nodo("strong", null, `${a.protocolo} — ${new Date(a.inicio).toLocaleString("es")}`));
+    texto.appendChild(nodo("span", "sub", a.resumen));
+    fila.appendChild(texto);
+    fila.appendChild(nodo("span", "fila-ataque-cuando", hace(a.fin)));
+    fila.addEventListener("click", () => { $("dialogo-ip").close(); abrirAtaque(a.clave); });
+    lista.appendChild(fila);
+  }
+
+  $("dialogo-ip").showModal();
 }
 
 // ── Campanas y artefactos ───────────────────────────────────────────────
@@ -724,6 +801,7 @@ $("rango").addEventListener("change", refrescar);
 $("regenerar").addEventListener("click", regenerarInforme);
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
 $("explicar-ataque").addEventListener("click", explicarAtaque);
+$("cerrar-ip").addEventListener("click", () => $("dialogo-ip").close());
 
 // Los filtros recargan solo la lista, no el panel entero: cambiar de
 // gravedad no tiene por que volver a pedir el mapa ni el informe.
