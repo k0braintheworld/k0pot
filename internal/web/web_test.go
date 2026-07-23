@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -512,5 +513,44 @@ func TestCadaBloqueDeclaraSuAnchoEnLaRejilla(t *testing.T) {
 	}
 	if len(vistos) == 0 {
 		t.Error("no se encontro ningun bloque; el test no esta comprobando nada")
+	}
+}
+
+// Todo ajuste editable tiene que poder guardarse desde el panel.
+//
+// entradaAjustes lleva la lista de campos a mano, asi que anadir uno a
+// config.Config y olvidarlo aqui produce el peor fallo posible: el panel
+// responde 200, el usuario ve su cambio en pantalla, y al recargar sigue
+// como estaba. Paso dos veces -con el intervalo de informes y con los
+// avisos- y en ninguna hubo el menor sintoma.
+func TestTodoAjusteEditableSePuedeGuardar(t *testing.T) {
+	// Las claves se tratan aparte, con su campo de borrado explicito.
+	aparte := map[string]bool{
+		"clave_abuseipdb": true, "clave_anthropic": true,
+		"clave_compatible": true, "clave_aviso": true,
+	}
+
+	tags := func(v any) map[string]bool {
+		out := map[string]bool{}
+		tipo := reflect.TypeOf(v)
+		for i := 0; i < tipo.NumField(); i++ {
+			tag := tipo.Field(i).Tag.Get("json")
+			if tag == "" || tag == "-" {
+				continue
+			}
+			out[strings.Split(tag, ",")[0]] = true
+		}
+		return out
+	}
+
+	editables := tags(config.Config{})
+	admitidos := tags(entradaAjustes{})
+
+	for campo := range editables {
+		if aparte[campo] || admitidos[campo] {
+			continue
+		}
+		t.Errorf("config.Config tiene %q pero entradaAjustes no lo acepta: "+
+			"guardarlo desde el panel respondera 200 y no cambiara nada", campo)
 	}
 }

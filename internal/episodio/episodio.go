@@ -47,6 +47,14 @@ const (
 // orden permite comparar severidades; el valor mayor manda.
 var orden = map[Severidad]int{Roce: 0, Tanteo: 1, Acceso: 2, Intrusion: 3}
 
+// Rango convierte una severidad en un numero comparable.
+//
+// Es la unica definicion del orden de gravedad en todo el proyecto: la
+// consulta SQL de los avisos y la ordenacion del panel la citan en vez de
+// repetirla, porque dos criterios que divergen hacen que el panel y las
+// notificaciones discrepen sobre que es mas grave.
+func Rango(s Severidad) int { return orden[s] }
+
 // Peor devuelve la mas grave de dos severidades.
 func Peor(a, b Severidad) Severidad {
 	if orden[b] > orden[a] {

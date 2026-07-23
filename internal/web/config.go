@@ -49,14 +49,26 @@ type entradaAjustes struct {
 	EscuchaHoneypots *string                    `json:"escucha_honeypots"`
 	Servicios        map[string]config.Servicio `json:"servicios"`
 
+	InformeIntervaloMin *int `json:"informe_intervalo_min"`
+	InformeTopeDiario   *int `json:"informe_tope_diario"`
+
+	AvisosActivos *bool   `json:"avisos_activos"`
+	AvisoCanal    *string `json:"aviso_canal"`
+	AvisoDestino  *string `json:"aviso_destino"`
+	AvisoServidor *string `json:"aviso_servidor"`
+	AvisoMinima   *string `json:"aviso_minima"`
+	AvisoEnlace   *string `json:"aviso_enlace"`
+
 	// Claves: cadena vacia o ausente = dejar la que hay. Para borrar una
 	// clave existe el campo explicito de abajo.
 	ClaveAbuseIPDB   *string `json:"clave_abuseipdb"`
 	ClaveAnthropic   *string `json:"clave_anthropic"`
 	ClaveCompatible  *string `json:"clave_compatible"`
+	ClaveAviso       *string `json:"clave_aviso"`
 	BorrarAbuseIPDB  bool    `json:"borrar_abuseipdb"`
 	BorrarAnthropic  bool    `json:"borrar_anthropic"`
 	BorrarCompatible bool    `json:"borrar_compatible"`
+	BorrarAviso      bool    `json:"borrar_aviso"`
 }
 
 func (s *Servidor) guardarAjustes(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +91,22 @@ func (s *Servidor) guardarAjustes(w http.ResponseWriter, r *http.Request) {
 	aplicarInt(&c.ReservaCuota, e.ReservaCuota)
 	aplicarInt(&c.RefrescoSegundos, e.RefrescoSegundos)
 	aplicarInt(&c.RetencionDias, e.RetencionDias)
+	aplicarInt(&c.InformeIntervaloMin, e.InformeIntervaloMin)
+	aplicarInt(&c.InformeTopeDiario, e.InformeTopeDiario)
+
+	aplicarTexto := func(destino *string, origen *string) {
+		if origen != nil {
+			*destino = *origen
+		}
+	}
+	aplicarTexto(&c.AvisoCanal, e.AvisoCanal)
+	aplicarTexto(&c.AvisoDestino, e.AvisoDestino)
+	aplicarTexto(&c.AvisoServidor, e.AvisoServidor)
+	aplicarTexto(&c.AvisoMinima, e.AvisoMinima)
+	aplicarTexto(&c.AvisoEnlace, e.AvisoEnlace)
+	if e.AvisosActivos != nil {
+		c.AvisosActivos = *e.AvisosActivos
+	}
 
 	if e.EnriquecerActivo != nil {
 		c.EnriquecerActivo = *e.EnriquecerActivo
@@ -125,6 +153,11 @@ func (s *Servidor) guardarAjustes(w http.ResponseWriter, r *http.Request) {
 		c.ClaveCompatible = ""
 	} else if e.ClaveCompatible != nil && *e.ClaveCompatible != "" {
 		c.ClaveCompatible = *e.ClaveCompatible
+	}
+	if e.BorrarAviso {
+		c.ClaveAviso = ""
+	} else if e.ClaveAviso != nil && *e.ClaveAviso != "" {
+		c.ClaveAviso = *e.ClaveAviso
 	}
 
 	if err := s.Config.Guardar(c); err != nil {

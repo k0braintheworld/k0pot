@@ -139,6 +139,62 @@
       </div>
     </div>
 
+    <div class="grupo" data-pestana="avisos">
+      <p class="nota-grupo">
+        Un panel solo avisa a quien lo tiene abierto. Con esto, k0Pot te
+        escribe cuando alguien <strong>consigue entrar</strong> en el
+        honeypot o <strong>se sirve de el</strong>. El ruido de fondo
+        —escaneos y contrasenas por defecto, cientos al dia— no genera
+        ningun aviso.
+      </p>
+
+      <label class="interruptor">
+        <input type="checkbox" id="c-avisos-activos"> Avisar cuando pase algo grave
+      </label>
+
+      <label>Por donde
+        <select id="c-aviso-canal">
+          <option value="ntfy">ntfy (sin cuenta, con app movil)</option>
+          <option value="telegram">Telegram</option>
+          <option value="webhook">Webhook propio</option>
+        </select>
+      </label>
+
+      <label>A partir de que gravedad
+        <select id="c-aviso-minima">
+          <option value="acceso">Acceso — consiguieron entrar</option>
+          <option value="intrusion">Intrusion — entraron y ademas actuaron</option>
+        </select>
+      </label>
+
+      <label id="etiqueta-aviso-destino">Tema de ntfy
+        <input type="text" id="c-aviso-destino" autocomplete="off">
+        <small id="ayuda-aviso-destino">Elige un nombre largo y dificil de adivinar:
+        cualquiera que sepa el tema puede leer tus avisos. Instala la app ntfy y
+        suscribete a ese mismo tema.</small>
+      </label>
+
+      <label id="etiqueta-aviso-clave" hidden>Token del bot
+        <input type="password" id="c-aviso-clave" autocomplete="off" placeholder="sin cambios">
+        <small>Lo da @BotFather al crear el bot.</small>
+      </label>
+
+      <label id="etiqueta-aviso-servidor">Servidor de ntfy
+        <input type="text" id="c-aviso-servidor" autocomplete="off" placeholder="https://ntfy.sh">
+        <small>Dejalo vacio salvo que tengas uno propio.</small>
+      </label>
+
+      <label>Enlace al panel
+        <input type="text" id="c-aviso-enlace" autocomplete="off" placeholder="http://192.168.1.10:8080">
+        <small>Se incluye en el aviso para poder abrir el panel desde la notificacion.</small>
+      </label>
+
+      <div class="fila-acciones">
+        <button id="probar-aviso" type="button" class="boton-menor">Enviar un aviso de prueba</button>
+        <span id="estado-aviso" class="sub"></span>
+      </div>
+    </div>
+
     <div class="grupo" data-pestana="general">
       <h3>Panel y datos</h3>
       <label>Refresco del panel (segundos)<input type="number" id="c-refresco" min="5" max="3600"></label>

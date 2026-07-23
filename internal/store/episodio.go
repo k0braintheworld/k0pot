@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS episodios (
     motivos         TEXT     NOT NULL DEFAULT '[]',
     puerto          TEXT     NOT NULL DEFAULT '',
     solo_conexiones INTEGER  NOT NULL DEFAULT 0,
+    avisado         TEXT     NOT NULL DEFAULT '',
     resumen         TEXT     NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_episodios_fin ON episodios (fin);
@@ -301,4 +302,61 @@ func (s *Store) NovedadesDesde(ultimoID int64) (maxID int64, minNuevo time.Time,
 		minNuevo, _ = time.Parse(time.RFC3339Nano, texto)
 	}
 	return maxID, minNuevo, nil
+}
+
+// rangoSeveridad ordena las severidades dentro de SQL. Tiene que coincidir
+// con episodio.orden; si divergen, el panel y los avisos discreparian sobre
+// que es mas grave.
+const rangoSeveridad = `CASE %s WHEN 'intrusion' THEN 3 WHEN 'acceso' THEN 2
+                                WHEN 'tanteo' THEN 1 ELSE 0 END`
+
+// EpisodiosPorAvisar devuelve los ataques que alcanzan la severidad minima
+// y de los que aun no se ha avisado.
+//
+// Se compara con la severidad ya avisada, no con un simple "avisado si o
+// no": un ataque que empezo como acceso y acabo en intrusion merece un
+// segundo aviso, porque la situacion ha cambiado. Uno que sigue igual, no.
+func (s *Store) EpisodiosPorAvisar(minima string) ([]EpisodioFila, error) {
+	consulta := fmt.Sprintf(selectEpisodio+`
+		 WHERE %s >= %s
+		   AND %s > %s
+		 ORDER BY e.fin`,
+		fmt.Sprintf(rangoSeveridad, "e.severidad"), fmt.Sprintf(rangoSeveridad, "?"),
+		fmt.Sprintf(rangoSeveridad, "e.severidad"), fmt.Sprintf(rangoSeveridad, "e.avisado"))
+
+	filas, err := s.db.Query(consulta, minima)
+	if err != nil {
+		return nil, fmt.Errorf("buscando ataques por avisar: %w", err)
+	}
+	defer filas.Close()
+
+	out := []EpisodioFila{}
+	for filas.Next() {
+		e, err := escanearEpisodio(filas)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, filas.Err()
+}
+
+// MarcarAvisados deja constancia de con que severidad se aviso, para no
+// repetir el mismo aviso en cada ciclo.
+func (s *Store) MarcarAvisados(eps []EpisodioFila) error {
+	if len(eps) == 0 {
+		return nil
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, e := range eps {
+		if _, err := tx.Exec(`UPDATE episodios SET avisado = ? WHERE clave = ?`,
+			string(e.Severidad), e.Clave); err != nil {
+			return fmt.Errorf("marcando %s como avisado: %w", e.Clave, err)
+		}
+	}
+	return tx.Commit()
 }

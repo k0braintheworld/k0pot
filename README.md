@@ -150,6 +150,26 @@ Para comprobarlo desde fuera: `deploy/comprobar-aislamiento.sh <IP-expuesta>
 <IP-gestion>`, ejecutado **desde otra maquina**. Desde el propio servidor no
 demuestra nada.
 
+## Avisos
+
+Un panel solo avisa a quien lo tiene abierto. La primera intrusion real de
+este honeypot ocurrio a las 11:40 y se descubrio horas despues, porque a
+alguien le dio por abrir el navegador.
+
+k0Pot puede escribirte cuando alguien **consigue entrar** o **se sirve de la
+maquina**, por ntfy, Telegram o un webhook propio. Se configura en Ajustes →
+Avisos, con un boton para mandarse uno de prueba: un aviso que no llega el
+dia que hace falta no se distingue de no tener avisos.
+
+Dos decisiones que evitan el fallo tipico de este tipo de sistemas:
+
+- **Solo lo grave.** Un honeypot expuesto genera cientos de eventos al dia.
+  Mandarlos todos garantiza que se dejen de leer, que es peor que no mandar
+  ninguno.
+- **Uno por ataque, no por evento**, y solo una vez. Si el ataque empeora
+  -de "entro" a "entro y ademas actuo"- se avisa de nuevo, porque la
+  situacion ha cambiado. Si sigue igual, no.
+
 ## Endurecimiento del servicio
 
 Las trampas de HTTP, Redis y FTP corren **dentro del proceso del collector,

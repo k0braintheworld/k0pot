@@ -65,6 +65,22 @@ type Config struct {
 	// El mapa traza hacia ahi las lineas de ataque.
 	PaisPropio string `json:"pais_propio"`
 
+	// Avisos. Un panel solo funciona para quien lo tiene abierto: sin esto,
+	// una intrusion espera a que alguien se acuerde de mirar.
+	AvisosActivos bool `json:"avisos_activos"`
+	// AvisoCanal: ntfy, telegram o webhook.
+	AvisoCanal string `json:"aviso_canal"`
+	// AvisoDestino: el tema de ntfy, el chat de Telegram o la URL.
+	AvisoDestino string `json:"aviso_destino"`
+	// AvisoServidor solo para ntfy autoalojado.
+	AvisoServidor string `json:"aviso_servidor"`
+	// AvisoMinima es la severidad a partir de la cual se avisa. Por debajo
+	// de "acceso" son cientos de mensajes al dia, y eso es garantizar que
+	// se dejen de leer.
+	AvisoMinima string `json:"aviso_minima"`
+	// AvisoEnlace es la direccion del panel que se incluye en el aviso.
+	AvisoEnlace string `json:"aviso_enlace"`
+
 	// Retencion: 0 significa conservar para siempre.
 	RetencionDias int `json:"retencion_dias"`
 
@@ -72,6 +88,9 @@ type Config struct {
 	ClaveAbuseIPDB  string `json:"clave_abuseipdb"`
 	ClaveAnthropic  string `json:"clave_anthropic"`
 	ClaveCompatible string `json:"clave_compatible"`
+	// ClaveAviso es el token del bot de Telegram. Se trata como clave: no
+	// sale nunca en claro del servidor.
+	ClaveAviso string `json:"clave_aviso"`
 }
 
 // Servicio es el estado de una trampa.
@@ -111,6 +130,9 @@ func PorDefecto() Config {
 		EscuchaHoneypots: "0.0.0.0",
 		Servicios:        map[string]Servicio{},
 		RetencionDias:    0,
+		AvisosActivos:    false,
+		AvisoCanal:       "ntfy",
+		AvisoMinima:      "acceso",
 	}
 }
 
@@ -197,9 +219,11 @@ type Publica struct {
 	ClaveAbuseIPDB  string `json:"clave_abuseipdb"`
 	ClaveAnthropic  string `json:"clave_anthropic"`
 	ClaveCompatible string `json:"clave_compatible"`
+	ClaveAviso      string `json:"clave_aviso"`
 	TieneAbuseIPDB  bool   `json:"tiene_abuseipdb"`
 	TieneAnthropic  bool   `json:"tiene_anthropic"`
 	TieneCompatible bool   `json:"tiene_compatible"`
+	TieneAviso      bool   `json:"tiene_aviso"`
 }
 
 // ParaPanel enmascara las claves antes de salir del servidor.
@@ -209,9 +233,11 @@ func (c Config) ParaPanel() Publica {
 		ClaveAbuseIPDB:  enmascarar(c.ClaveAbuseIPDB),
 		ClaveAnthropic:  enmascarar(c.ClaveAnthropic),
 		ClaveCompatible: enmascarar(c.ClaveCompatible),
+		ClaveAviso:      enmascarar(c.ClaveAviso),
 		TieneAbuseIPDB:  c.ClaveAbuseIPDB != "",
 		TieneAnthropic:  c.ClaveAnthropic != "",
 		TieneCompatible: c.ClaveCompatible != "",
+		TieneAviso:      c.ClaveAviso != "",
 	}
 }
 

@@ -431,6 +431,44 @@ async function abrirAtaque(clave) {
   dlg.showModal();
 }
 
+// ── Avisos ──────────────────────────────────────────────────────────────
+
+// Cada canal pide cosas distintas: ensenar los campos de los tres a la vez
+// obliga a adivinar cuales tocan.
+function camposDelCanal() {
+  const canal = $("c-aviso-canal").value;
+  const etiquetas = {
+    ntfy: ["Tema de ntfy", "Elige un nombre largo y dificil de adivinar: cualquiera que sepa el tema puede leer tus avisos. Instala la app ntfy y suscribete a ese mismo tema."],
+    telegram: ["Chat de Telegram", "El identificador numerico del chat. Escribe a @userinfobot para saber el tuyo."],
+    webhook: ["URL del webhook", "Recibira un POST con el aviso en JSON."],
+  };
+  const [titulo, ayuda] = etiquetas[canal] || etiquetas.ntfy;
+  const etiqueta = $("etiqueta-aviso-destino");
+  etiqueta.childNodes[0].nodeValue = titulo;
+  $("ayuda-aviso-destino").textContent = ayuda;
+  $("etiqueta-aviso-clave").hidden = canal !== "telegram";
+  $("etiqueta-aviso-servidor").hidden = canal !== "ntfy";
+}
+
+async function probarAviso() {
+  const boton = $("probar-aviso");
+  const estado = $("estado-aviso");
+  boton.disabled = true;
+  estado.textContent = "Enviando…";
+  try {
+    // Se guardan los ajustes primero: probar con lo que hay en pantalla y
+    // no con lo guardado daria un resultado que no se corresponde con lo
+    // que hara el servicio luego.
+    await guardarAjustes();
+    const r = await pedirJSON("/api/aviso/probar", { method: "POST" });
+    estado.textContent = `Enviado por ${r.enviado}. Si no llega, revisa el destino.`;
+  } catch (e) {
+    estado.textContent = `No se pudo enviar: ${e.message}`;
+  } finally {
+    boton.disabled = false;
+  }
+}
+
 // ── Campanas y artefactos ───────────────────────────────────────────────
 
 const QUE_COMPARTEN = {
@@ -562,6 +600,8 @@ $("tema").addEventListener("click", () => {
 $("rango").addEventListener("change", refrescar);
 $("regenerar").addEventListener("click", regenerarInforme);
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
+$("c-aviso-canal").addEventListener("change", camposDelCanal);
+$("probar-aviso").addEventListener("click", probarAviso);
 
 // ─── Sesion y ajustes ──────────────────────────────────────────────────
 
@@ -591,11 +631,21 @@ const CAMPOS = {
   "c-retencion": "retencion_dias",
   "c-informe-intervalo": "informe_intervalo_min",
   "c-informe-tope": "informe_tope_diario",
+  "c-aviso-canal": "aviso_canal",
+  "c-aviso-destino": "aviso_destino",
+  "c-aviso-servidor": "aviso_servidor",
+  "c-aviso-minima": "aviso_minima",
+  "c-aviso-enlace": "aviso_enlace",
 };
-const INTERRUPTORES = { "c-enriquecer": "enriquecer_activo", "c-usar-llm": "usar_llm" };
+const INTERRUPTORES = {
+  "c-enriquecer": "enriquecer_activo",
+  "c-usar-llm": "usar_llm",
+  "c-avisos-activos": "avisos_activos",
+};
 
 function volcarAjustes(c) {
   for (const [id, clave] of Object.entries(CAMPOS)) $(id).value = c[clave];
+  camposDelCanal();
   for (const [id, clave] of Object.entries(INTERRUPTORES)) $(id).checked = c[clave];
 
   $("estado-abuse").textContent = c.tiene_abuseipdb
@@ -637,6 +687,7 @@ function leerAjustes() {
     ["c-clave-abuse", "clave_abuseipdb"],
     ["c-clave-anthropic", "clave_anthropic"],
     ["c-clave-compatible", "clave_compatible"],
+    ["c-aviso-clave", "clave_aviso"],
   ]) {
     const v = $(id).value.trim();
     if (v) cuerpo[clave] = v;

@@ -543,3 +543,16 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 }
 .artefacto code { word-break: break-all; color: var(--texto); }
 .artefacto .sub { display: block; font-size: .74rem; margin-top: .2rem; }
+
+.nota-grupo {
+  margin: 0 0 .9rem;
+  padding: .6rem .75rem;
+  font-size: .82rem;
+  line-height: 1.45;
+  color: var(--sub);
+  background: var(--panel-alto);
+  border-left: 2px solid var(--acento);
+  border-radius: .3rem;
+}
+.nota-grupo strong { color: var(--texto); }
+.fila-acciones { display: flex; align-items: center; gap: .8rem; margin-top: .4rem; }

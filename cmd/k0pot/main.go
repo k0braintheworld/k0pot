@@ -21,6 +21,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/k0braintheworld/k0pot/internal/auth"
+	"github.com/k0braintheworld/k0pot/internal/aviso"
 	"github.com/k0braintheworld/k0pot/internal/classify"
 	"github.com/k0braintheworld/k0pot/internal/collector"
 	"github.com/k0braintheworld/k0pot/internal/config"
@@ -287,6 +288,10 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 			ultimoEvento = n
 		}
 
+		if err := avisarDeLoGrave(ctx, almacen, ajustes.Actual()); err != nil {
+			log.Printf("avisos: %v", err)
+		}
+
 		// Activar o desactivar un servicio desde el panel surte efecto
 		// aqui, sin reiniciar nada.
 		c := ajustes.Actual()
@@ -312,6 +317,42 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 		case <-time.After(intervalo):
 		}
 	}
+}
+
+// avisarDeLoGrave saca del panel lo que no puede esperar a que alguien
+// mire.
+//
+// Solo se avisa de lo que supera la severidad configurada, y una vez por
+// ataque. Un honeypot expuesto genera cientos de eventos diarios: mandarlos
+// todos garantiza que se dejen de leer, que es peor que no mandar ninguno.
+func avisarDeLoGrave(ctx context.Context, almacen *store.Store, c config.Config) error {
+	if !c.AvisosActivos || c.AvisoCanal == "" {
+		return nil
+	}
+	canal, err := aviso.De(aviso.Config{
+		Canal: c.AvisoCanal, Destino: c.AvisoDestino,
+		Clave: c.ClaveAviso, Servidor: c.AvisoServidor, Enlace: c.AvisoEnlace,
+	}, nil)
+	if err != nil || canal == nil {
+		return err
+	}
+
+	pendientes, err := almacen.EpisodiosPorAvisar(c.AvisoMinima)
+	if err != nil || len(pendientes) == 0 {
+		return err
+	}
+	mensaje, hay := aviso.Redactar(pendientes, c.AvisoEnlace)
+	if !hay {
+		return nil
+	}
+	if err := canal.Enviar(ctx, mensaje); err != nil {
+		// No se marcan como avisados: se reintenta en el ciclo siguiente.
+		// Perder un aviso por un fallo de red seria justo lo contrario de
+		// lo que esta funcion existe para evitar.
+		return fmt.Errorf("enviando por %s: %w", canal.Nombre(), err)
+	}
+	log.Printf("aviso enviado por %s: %d ataque(s)", canal.Nombre(), len(pendientes))
+	return almacen.MarcarAvisados(pendientes)
 }
 
 // reconstruirEpisodios agrupa en ataques los eventos nuevos y devuelve
