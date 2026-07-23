@@ -974,14 +974,26 @@ async function abrirAjustes() {
   try {
     volcarAjustes(await pedirJSON("/api/ajustes"));
     pintarServicios(await pedirJSON("/api/servicios"));
-    await cargarRed();
-    irAPestana("servicios");
-    $("estado-ajustes").textContent = "";
-    $("estado-contrasena").textContent = "";
-    dialogo.showModal();
   } catch (err) {
     $("actualizado").textContent = err.message;
+    return;
   }
+
+  // La red va aparte y no bloquea: enumerar interfaces depende del sistema
+  // y puede fallar por motivos que nada tienen que ver con el resto de los
+  // ajustes. Que un fallo ahi deje sin abrir la ventana entera es una
+  // ventana que se pierde por una pestana. Paso: el sandbox de systemd
+  // cerro AF_NETLINK y Ajustes dejo de abrirse sin decir por que.
+  try {
+    await cargarRed();
+  } catch (err) {
+    $("estado-red").textContent = `No se pudo leer la red: ${err.message}`;
+  }
+
+  irAPestana("servicios");
+  $("estado-ajustes").textContent = "";
+  $("estado-contrasena").textContent = "";
+  dialogo.showModal();
 }
 
 async function guardarAjustes() {

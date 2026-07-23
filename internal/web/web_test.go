@@ -554,3 +554,44 @@ func TestTodoAjusteEditableSePuedeGuardar(t *testing.T) {
 			"guardarlo desde el panel respondera 200 y no cambiara nada", campo)
 	}
 }
+
+// Cada pestana de ajustes tiene que tener contenido, y cada contenido su
+// pestana.
+//
+// El boton de "Avisos" se anadio con un reemplazo que fallo en silencio: el
+// grupo quedo en el HTML y la pestana no, asi que habia una seccion entera
+// de ajustes a la que no se podia llegar por ningun sitio. Nada avisa de
+// eso: el HTML es valido y el panel carga con normalidad.
+func TestCadaPestanaDeAjustesTieneSuContenido(t *testing.T) {
+	html, err := estaticos.ReadFile("static/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := string(html)
+
+	extraer := func(atributo string) map[string]bool {
+		out := map[string]bool{}
+		for _, trozo := range strings.Split(h, atributo+`="`)[1:] {
+			if fin := strings.Index(trozo, `"`); fin > 0 {
+				out[trozo[:fin]] = true
+			}
+		}
+		return out
+	}
+	pestanas := extraer("data-ir")
+	grupos := extraer("data-pestana")
+
+	if len(pestanas) == 0 || len(grupos) == 0 {
+		t.Fatal("no se encontraron pestanas; el test no comprueba nada")
+	}
+	for p := range pestanas {
+		if !grupos[p] {
+			t.Errorf("la pestana %q no tiene ningun grupo: al pulsarla no se vera nada", p)
+		}
+	}
+	for g := range grupos {
+		if !pestanas[g] {
+			t.Errorf("el grupo %q no tiene pestana: no hay forma de llegar a el", g)
+		}
+	}
+}

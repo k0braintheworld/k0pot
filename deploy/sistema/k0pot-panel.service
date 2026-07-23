@@ -62,11 +62,16 @@ LockPersonality=true
 # privilegiada y una unidad de USUARIO no puede hacerla -systemd falla con
 # "Failed to drop capabilities" y el servicio no arranca. Da igual: un
 # proceso de usuario no tiene ninguna capacidad que soltar.
-# Solo sockets de red. Esto cierra AF_UNIX y con el, POR DISENO, el socket
-# de Docker: hasta ahora quedaba fuera de alcance solo como efecto
-# colateral de ProtectSystem=strict, que es una proteccion fragil porque
-# depende de un detalle de montaje y no de una regla explicita.
-RestrictAddressFamilies=AF_INET AF_INET6
+# Sin AF_UNIX se cierra, POR DISENO, el socket de Docker: hasta ahora
+# quedaba fuera de alcance solo como efecto colateral de
+# ProtectSystem=strict, que es fragil porque depende de un detalle de
+# montaje y no de una regla explicita.
+# AF_NETLINK hace falta para enumerar las interfaces de red: es lo que usa
+# Go por debajo de net.Interfaces(). Sin el, el panel no puede listar la red
+# y -al fallar esa consulta- no llegaba a abrirse la ventana de Ajustes
+# entera. No abre ninguna via hacia fuera: es una interfaz con el kernel.
+# El socket de Docker sigue cerrado, porque ese es AF_UNIX.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_NETLINK
 SystemCallFilter=@system-service
 SystemCallErrorNumber=EPERM
 SystemCallArchitectures=native
