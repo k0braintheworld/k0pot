@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
     nombre      TEXT NOT NULL UNIQUE,
     hash        TEXT NOT NULL,
     creado_en   TEXT NOT NULL,
-    ultimo_acceso TEXT
+    ultimo_acceso TEXT,
+    ultima_revision TEXT
 );
 
 CREATE TABLE IF NOT EXISTS sesiones (
@@ -240,6 +241,62 @@ func (s *Store) ListarUsuarios() ([]Usuario, error) {
 			u.UltimoAcceso, _ = time.Parse(time.RFC3339, ultimo.String)
 		}
 		out = append(out, u)
+	}
+	return out, filas.Err()
+}
+
+// UltimaRevision es cuando el usuario dio por vistos los ataques.
+//
+// Se guarda por usuario y no global: el panel puede tenerlo abierto mas de
+// una persona, y lo que ha visto una no dice nada de lo que ha visto otra.
+func (s *Store) UltimaRevision(usuarioID int64) (time.Time, error) {
+	var texto sql.NullString
+	err := s.db.QueryRow(
+		`SELECT ultima_revision FROM usuarios WHERE id = ?`, usuarioID).Scan(&texto)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("leyendo la ultima revision: %w", err)
+	}
+	if !texto.Valid || texto.String == "" {
+		// Nunca reviso: se toma el momento de la consulta, no el principio
+		// de los tiempos. Estrenar el panel con "247 ataques nuevos" no
+		// informa de nada; lo util es lo que llegue a partir de ahora.
+		return time.Now(), nil
+	}
+	t, err := time.Parse(time.RFC3339Nano, texto.String)
+	if err != nil {
+		return time.Now(), nil
+	}
+	return t, nil
+}
+
+// MarcarRevisado deja constancia de que el usuario ya ha mirado.
+func (s *Store) MarcarRevisado(usuarioID int64, cuando time.Time) error {
+	_, err := s.db.Exec(`UPDATE usuarios SET ultima_revision = ? WHERE id = ?`,
+		cuando.UTC().Format(time.RFC3339Nano), usuarioID)
+	if err != nil {
+		return fmt.Errorf("marcando como revisado: %w", err)
+	}
+	return nil
+}
+
+// EpisodiosDesde cuenta los ataques posteriores a una fecha, por severidad.
+func (s *Store) EpisodiosDesde(desde time.Time) (map[string]int, error) {
+	filas, err := s.db.Query(
+		`SELECT severidad, COUNT(*) FROM episodios WHERE fin > ? GROUP BY severidad`,
+		desde.UTC().Format(time.RFC3339Nano))
+	if err != nil {
+		return nil, fmt.Errorf("contando ataques nuevos: %w", err)
+	}
+	defer filas.Close()
+
+	out := map[string]int{}
+	for filas.Next() {
+		var sev string
+		var n int
+		if err := filas.Scan(&sev, &n); err != nil {
+			return nil, err
+		}
+		out[sev] = n
 	}
 	return out, filas.Err()
 }

@@ -382,6 +382,9 @@ async function cargarAtaques() {
     texto.appendChild(nodo("span", "sub", a.resumen));
     fila.appendChild(texto);
 
+    if (corteNovedades && new Date(a.fin).getTime() > corteNovedades) {
+      fila.classList.add("nuevo");
+    }
     fila.appendChild(nodo("span", "fila-ataque-cuando", hace(a.fin)));
     fila.addEventListener("click", () => abrirAtaque(a.clave));
     cont.appendChild(fila);
@@ -429,6 +432,38 @@ async function abrirAtaque(clave) {
     cuerpo.appendChild(nodo("p", "vacio", "Sin detalle: los eventos ya se purgaron."));
   }
   dlg.showModal();
+}
+
+// ── Novedades ───────────────────────────────────────────────────────────
+
+// corteNovedades es el instante desde el que algo cuenta como nuevo. Lo
+// comparten el contador y la lista para que no puedan discrepar: un chip
+// que dice "2 nuevos" sobre una lista sin nada marcado seria peor que no
+// tener chip.
+let corteNovedades = null;
+
+async function cargarNovedades() {
+  const n = await pedirJSON("/api/novedades");
+  corteNovedades = n.desde ? new Date(n.desde).getTime() : null;
+
+  const chip = $("novedades");
+  if (!n.total) {
+    chip.hidden = true;
+    return;
+  }
+  chip.hidden = false;
+  chip.classList.toggle("grave", n.graves > 0);
+  chip.textContent = n.graves
+    ? `${n.total} nuevos · ${n.graves} grave${n.graves > 1 ? "s" : ""}`
+    : `${n.total} nuevos`;
+  chip.title = `Desde ${new Date(n.desde).toLocaleString("es")}. Pulsa para marcarlos como vistos.`;
+}
+
+// Marcar como visto es explicito: si se hiciera al cargar la pagina, el
+// aviso desapareceria antes de que nadie lo leyera.
+async function marcarVisto() {
+  await pedirJSON("/api/visto", { method: "POST" });
+  await refrescar();
 }
 
 // ── Avisos ──────────────────────────────────────────────────────────────
@@ -569,6 +604,7 @@ async function refrescar() {
     await cargarMundo();
     // Los recientes se piden primero: el mapa los necesita para trazar las
     // lineas de ataque.
+    await cargarNovedades();
     const recientes = await pedirJSON("/api/recientes");
     pintarVivo(recientes);
     await Promise.all([
@@ -602,6 +638,7 @@ $("regenerar").addEventListener("click", regenerarInforme);
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
 $("c-aviso-canal").addEventListener("change", camposDelCanal);
 $("probar-aviso").addEventListener("click", probarAviso);
+$("novedades").addEventListener("click", marcarVisto);
 
 // ─── Sesion y ajustes ──────────────────────────────────────────────────
 

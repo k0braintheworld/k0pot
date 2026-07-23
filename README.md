@@ -150,6 +150,28 @@ Para comprobarlo desde fuera: `deploy/comprobar-aislamiento.sh <IP-expuesta>
 <IP-gestion>`, ejecutado **desde otra maquina**. Desde el propio servidor no
 demuestra nada.
 
+## Desde tu ultima visita
+
+El panel ensena siempre la misma lista, asi que sin ayuda no hay forma de
+saber que es nuevo: se relee lo mismo cada vez y se acaba dejando de leer.
+
+En la cabecera aparece un contador -*"2 nuevos · 1 grave"*- y las filas
+posteriores a tu ultima revision quedan marcadas. Pulsar el contador las da
+por vistas.
+
+Tres detalles pensados:
+
+- **Es por usuario**, no global: lo que ha visto uno no dice nada de lo que
+  ha visto otro.
+- **Marcar como visto es explicito.** Si se hiciera al cargar la pagina, el
+  aviso desapareceria antes de que nadie lo leyera.
+- **Estrenar el panel no anuncia todo el historico.** Sin revision previa el
+  corte es el momento de la primera consulta: "247 ataques nuevos" el primer
+  dia no informa de nada.
+
+Si un ataque **continua** despues de darlo por visto, vuelve a contar como
+nuevo. No es lo mismo un ataque terminado que uno que sigue pasando.
+
 ## Avisos
 
 Un panel solo avisa a quien lo tiene abierto. La primera intrusion real de

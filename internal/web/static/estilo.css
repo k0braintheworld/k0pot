@@ -556,3 +556,34 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 }
 .nota-grupo strong { color: var(--texto); }
 .fila-acciones { display: flex; align-items: center; gap: .8rem; margin-top: .4rem; }
+
+/* ── Novedades ──────────────────────────────────────────────────────────
+   Vive en la cabecera porque responde a la pregunta que uno trae al abrir
+   el panel: ¿ha pasado algo desde la ultima vez? */
+.chip-novedades {
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 600;
+  padding: .3rem .7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--acento);
+  background: transparent;
+  color: var(--acento);
+}
+.chip-novedades:hover { background: var(--panel-alto); }
+/* Con algo grave el chip deja de ser informativo y pasa a ser una alerta:
+   el color tiene que decirlo sin leer el numero. */
+.chip-novedades.grave {
+  color: #fff;
+  background: #c0392b;
+  border-color: #c0392b;
+}
+
+/* Las filas nuevas se distinguen sin releerlas enteras. */
+.fila-ataque.nuevo { border-left: 3px solid var(--acento); }
+.fila-ataque.nuevo .fila-ataque-cuando::after {
+  content: " · nuevo";
+  color: var(--acento);
+  font-weight: 600;
+}
