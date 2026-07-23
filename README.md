@@ -233,6 +233,21 @@ Y al abrir un ataque, **la IP es pulsable**: filtra por ella y ensena todo
 lo que ha hecho esa direccion. Es la forma mas corta de responder "¿esta
 IP ya habia venido antes?" sin construir una pantalla aparte.
 
+## Exportar un informe
+
+El boton **Exportar** del bloque de informe abre un documento HTML completo y
+autocontenido: el veredicto, las cifras, y **cada ataque con su secuencia
+entera** -conexiones, credenciales probadas, comandos tal y como se tecleron,
+peticiones, tuneles- mas las IPs mas activas y las credenciales.
+
+Para PDF: desde ese documento, **Imprimir → Guardar como PDF** del navegador.
+Se hace asi -y no con un generador de PDF propio- porque el HTML impreso queda
+mejor y no arrastra dependencias.
+
+El informe se arma con `html/template`, que auto-escapa: un comando de
+atacante con `<script>` sale como texto, nunca como HTML. Es la misma garantia
+del panel, en un fichero que puede compartirse o guardarse como evidencia.
+
 ## Explicar un ataque concreto
 
 El momento en que alguien quiere entender algo no es leyendo el resumen del

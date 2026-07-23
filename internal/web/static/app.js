@@ -1178,6 +1178,11 @@ $("tema").addEventListener("click", () => {
 
 $("rango").addEventListener("change", refrescar);
 $("regenerar").addEventListener("click", regenerarInforme);
+// El informe se abre en otra pestana: es un documento para revisar e
+// imprimir, no algo que sustituya al panel. Lleva el periodo seleccionado.
+$("exportar").addEventListener("click", () => {
+  window.open(`/api/reporte?dias=${encodeURIComponent(rango())}`, "_blank", "noopener");
+});
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
 $("explicar-ataque").addEventListener("click", explicarAtaque);
 $("cerrar-ip").addEventListener("click", () => $("dialogo-ip").close());

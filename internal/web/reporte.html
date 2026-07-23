@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>k0Pot — informe de actividad</title>
+<style>
+  /* Documento para leer e imprimir: claro, sobrio, buen contraste en papel.
+     Distinto del panel a proposito -un informe no es un dashboard. */
+  * { box-sizing: border-box; }
+  body {
+    font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #1a1d23; background: #fff; margin: 0; padding: 2.5rem;
+    max-width: 60rem; margin-inline: auto;
+  }
+  h1 { font-size: 1.5rem; margin: 0 0 .2rem; }
+  h2 { font-size: 1.05rem; margin: 2rem 0 .6rem; padding-bottom: .3rem; border-bottom: 2px solid #e3e6ea; }
+  h3 { font-size: .95rem; margin: 1.4rem 0 .3rem; }
+  .sub { color: #6b7280; font-size: .85rem; }
+  .barra-superior { display: flex; justify-content: space-between; align-items: flex-start; }
+  .imprimir {
+    font: inherit; font-size: .82rem; cursor: pointer;
+    padding: .45rem .9rem; border: 1px solid #c7ccd3; border-radius: .4rem;
+    background: #f5f6f8;
+  }
+  @media print { .imprimir { display: none; } body { padding: 0; } }
+
+  .veredicto { padding: .8rem 1rem; border-radius: .5rem; margin: 1rem 0; border-left: 4px solid #9aa2ad; background: #f6f7f9; }
+  .veredicto.rojo { border-left-color: #c0392b; background: #fdf0ee; }
+  .veredicto.ambar { border-left-color: #c8931f; background: #fdf8ec; }
+  .veredicto.verde { border-left-color: #2e7d52; background: #eef7f1; }
+  .veredicto strong { display: block; font-size: 1rem; margin-bottom: .3rem; }
+
+  .cifras { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 1rem 0; }
+  .cifra { }
+  .cifra .n { font-size: 1.6rem; font-weight: 700; }
+  .cifra .et { color: #6b7280; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; margin: .5rem 0 1rem; }
+  th { text-align: left; color: #6b7280; font-weight: 600; font-size: .72rem; text-transform: uppercase; padding: .3rem .5rem; border-bottom: 1px solid #e3e6ea; }
+  td { padding: .3rem .5rem; border-bottom: 1px solid #f0f2f4; vertical-align: top; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .mono { font-family: ui-monospace, Menlo, monospace; font-size: .82rem; }
+
+  .ataque { border: 1px solid #e3e6ea; border-radius: .5rem; padding: 1rem 1.1rem; margin: 1rem 0; page-break-inside: avoid; }
+  .ataque-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+  .sev { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: .12rem .5rem; border-radius: .25rem; white-space: nowrap; }
+  .sev-roce { color: #6b7280; border: 1px solid #d1d5db; }
+  .sev-tanteo { color: #b07d10; border: 1px solid #e0b84f; }
+  .sev-acceso { color: #c0651a; border: 1px solid #e0913a; }
+  .sev-intrusion { color: #fff; background: #c0392b; }
+  .ataque-resumen { font-weight: 600; margin: .4rem 0; }
+
+  .paso { display: grid; grid-template-columns: 4.5rem 1fr; gap: .6rem; padding: .18rem 0; font-size: .84rem; border-top: 1px solid #f4f5f7; }
+  .paso-hora { color: #9aa2ad; font-variant-numeric: tabular-nums; }
+  .paso.clave .paso-texto { font-weight: 600; color: #b0341f; }
+  .paso-nota { display: block; color: #6b7280; font-size: .78rem; }
+  .paso-crudo { margin: .2rem 0 0; padding: .25rem .5rem; background: #f5f6f8; border-radius: .3rem; font-family: ui-monospace, Menlo, monospace; font-size: .78rem; white-space: pre-wrap; word-break: break-all; }
+
+  .pie { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e3e6ea; color: #9aa2ad; font-size: .78rem; }
+</style>
+</head>
+<body>
+  <div class="barra-superior">
+    <div>
+      <h1>k0Pot · Informe de actividad</h1>
+      <p class="sub">Del {{.Desde}} al {{.Hasta}} · generado el {{.Generado}}</p>
+    </div>
+    <button class="imprimir" onclick="window.print()">Imprimir / Guardar PDF</button>
+  </div>
+
+  <div class="veredicto {{.NivelClase}}">
+    <strong>{{.Semaforo}}</strong>
+    {{range .Informe}}<p>{{.}}</p>{{end}}
+  </div>
+
+  <div class="cifras">
+    <div class="cifra"><div class="n">{{.Total}}</div><div class="et">eventos</div></div>
+    <div class="cifra"><div class="n">{{.IPsUnicas}}</div><div class="et">IPs distintas</div></div>
+    <div class="cifra"><div class="n">{{.NumAtaques}}</div><div class="et">ataques</div></div>
+    {{if .Intrusiones}}<div class="cifra"><div class="n">{{.Intrusiones}}</div><div class="et">intrusiones</div></div>{{end}}
+  </div>
+
+  <h2>Ataques</h2>
+  <p class="sub">Los mas graves primero. Cada uno con su secuencia completa, tal y como se capturo.</p>
+  {{range .Ataques}}
+  <div class="ataque">
+    <div class="ataque-cab">
+      <div>
+        <span class="mono">{{.IP}}</span>
+        <span class="sub">{{.Origen}}</span>
+      </div>
+      <span class="sev sev-{{.SevClase}}">{{.Severidad}}</span>
+    </div>
+    <p class="ataque-resumen">{{.Resumen}}</p>
+    <p class="sub">{{.Cuando}}</p>
+    {{range .Pasos}}
+    <div class="paso {{if .Clave}}clave{{end}}">
+      <span class="paso-hora">{{.Hora}}</span>
+      <span class="paso-texto">{{.Texto}}
+        {{if .Nota}}<span class="paso-nota">{{.Nota}}</span>{{end}}
+        {{if .Crudo}}<span class="paso-crudo">{{.Crudo}}</span>{{end}}
+      </span>
+    </div>
+    {{end}}
+  </div>
+  {{else}}
+  <p class="sub">No se registro ningun ataque en este periodo.</p>
+  {{end}}
+
+  {{if .TopIPs}}
+  <h2>IPs mas activas</h2>
+  <table>
+    <thead><tr><th>IP</th><th>Eventos</th><th>Contexto</th></tr></thead>
+    <tbody>{{range .TopIPs}}<tr><td class="mono">{{.IP}}</td><td class="num">{{.Eventos}}</td><td>{{.Contexto}}</td></tr>{{end}}</tbody>
+  </table>
+  {{end}}
+
+  {{if .Credenciales}}
+  <h2>Credenciales probadas</h2>
+  <table>
+    <thead><tr><th>Usuario</th><th>Contrasena</th><th>Veces</th></tr></thead>
+    <tbody>{{range .Credenciales}}<tr><td class="mono">{{.Usuario}}</td><td class="mono">{{.Password}}</td><td class="num">{{.Veces}}</td></tr>{{end}}</tbody>
+  </table>
+  {{end}}
+
+  <div class="pie">
+    Generado por k0Pot. Los datos entre comillas o en monoespaciado los escriben
+    atacantes; se muestran tal cual como evidencia. Este sistema es un senuelo:
+    que registre esta actividad es su funcion.
+  </div>
+</body>
+</html>
