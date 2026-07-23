@@ -333,6 +333,26 @@ Tres detalles pensados:
 Si un ataque **continua** despues de darlo por visto, vuelve a contar como
 nuevo. No es lo mismo un ataque terminado que uno que sigue pasando.
 
+## Ubicar los ataques por ciudad
+
+De serie, las lineas de ataque salen del centro del pais del atacante: cientos
+de kilometros de imprecision, y todas las IP de un mismo pais amontonadas en el
+mismo punto. AbuseIPDB solo da el pais, asi que para afinar hace falta otra
+fuente.
+
+Con una base **GeoLite2-City de MaxMind** -un fichero local, sin llamadas a
+terceros ni limites de consultas- cada IP se situa en su ciudad exacta:
+
+1. Crea una cuenta gratuita en [maxmind.com](https://www.maxmind.com) y descarga
+   `GeoLite2-City.mmdb`.
+2. Ponlo en el servidor e indica su ruta en Ajustes → General → *Base GeoIP*.
+
+Es **opcional**: sin fichero, k0Pot funciona igual y el mapa se conforma con el
+pais. La ubicacion de ciudad no gasta cuota de AbuseIPDB —es una consulta a un
+fichero local— y no envia la IP a nadie mas.
+
+El lector de la base es Go puro: no rompe la compilacion sin CGO.
+
 ## Situar el honeypot en el mapa
 
 El mapa traza las lineas de ataque hacia donde esta la maquina. Con solo el

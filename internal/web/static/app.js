@@ -124,15 +124,22 @@ function pintarAtaques(lienzo, m, recientes, paisPropio, propio) {
   }
 
   for (const ev of recientes) {
-    const origen = m.paises[ev.pais]?.c;
-    if (!origen || ev.pais === paisPropio || vistas.has(ev.ip)) continue;
+    if (ev.pais === paisPropio || vistas.has(ev.ip)) continue;
     if (dibujados >= 18) break; // mas lineas solo ensucian
-    vistas.add(ev.ip);
 
-    // Desvio estable por IP: el mismo atacante cae siempre en el mismo
-    // sitio -no baila entre refrescos- pero separado de sus compatriotas.
-    const desvio = dispersar(ev.ip);
-    const salida = [origen[0] + desvio[0], origen[1] + desvio[1]];
+    // Si la IP esta situada por ciudad, la linea sale de sus coordenadas
+    // exactas. Si no, del centroide del pais con un desvio por IP para no
+    // amontonar todas las de un mismo pais en el mismo punto.
+    let salida;
+    if (ev.latitud || ev.longitud) {
+      salida = aLienzo(ev.latitud, ev.longitud, m);
+    } else {
+      const origen = m.paises[ev.pais]?.c;
+      if (!origen) continue;
+      const desvio = dispersar(ev.ip);
+      salida = [origen[0] + desvio[0], origen[1] + desvio[1]];
+    }
+    vistas.add(ev.ip);
 
     const clase = peorDe.get(ev.ip);
     const linea = svg("path", {
@@ -143,7 +150,10 @@ function pintarAtaques(lienzo, m, recientes, paisPropio, propio) {
     linea.style.animationDelay = `${(dibujados * 0.14).toFixed(2)}s`;
     // Cada linea es ya un atacante concreto: al pasar el raton dice quien es.
     const quien = svg("title");
-    quien.textContent = `${ev.ip}${ev.pais ? ` (${nombrePais(ev.pais)})` : ""}`;
+    const donde = ev.ciudad
+      ? `${ev.ciudad}, ${nombrePais(ev.pais)}`
+      : ev.pais ? nombrePais(ev.pais) : "origen desconocido";
+    quien.textContent = `${ev.ip} — ${donde}`;
     linea.appendChild(quien);
     capa.appendChild(linea);
     dibujados++;
@@ -1063,6 +1073,7 @@ const CAMPOS = {
   "c-url-base": "url_base",
   "c-refresco": "refresco_segundos",
   "c-pais": "pais_propio",
+  "c-ruta-geoip": "ruta_geoip",
   "c-latitud": "latitud_propia",
   "c-longitud": "longitud_propia",
   "c-retencion": "retencion_dias",

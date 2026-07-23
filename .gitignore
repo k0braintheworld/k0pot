@@ -26,3 +26,8 @@
 
 # Paquetes construidos.
 /dist/
+
+# Bases GeoIP descargadas (el usuario las obtiene de MaxMind). El fichero de
+# prueba de internal/geoip/testdata SI se versiona: es de dominio publico.
+/data/*.mmdb
+GeoLite2-City.mmdb

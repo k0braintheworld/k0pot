@@ -28,8 +28,12 @@ type Config struct {
 
 	// Enriquecimiento de IPs.
 	EnriquecerActivo bool `json:"enriquecer_activo"`
-	CaducidadIPDias  int  `json:"caducidad_ip_dias"`
-	ReservaCuota     int  `json:"reserva_cuota"`
+	// RutaGeoIP es la base GeoLite2-City de MaxMind, para situar cada IP en
+	// su ciudad. Vacia = sin geolocalizacion de ciudad; el mapa se conforma
+	// con el pais. No es una clave, asi que va tal cual.
+	RutaGeoIP       string `json:"ruta_geoip"`
+	CaducidadIPDias int    `json:"caducidad_ip_dias"`
+	ReservaCuota    int    `json:"reserva_cuota"`
 
 	// Informes.
 	UsarLLM bool `json:"usar_llm"`

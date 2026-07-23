@@ -28,6 +28,7 @@ import (
 	"github.com/k0braintheworld/k0pot/internal/config"
 	"github.com/k0braintheworld/k0pot/internal/enrich"
 	"github.com/k0braintheworld/k0pot/internal/episodio"
+	"github.com/k0braintheworld/k0pot/internal/geoip"
 	"github.com/k0braintheworld/k0pot/internal/model"
 	"github.com/k0braintheworld/k0pot/internal/report"
 	"github.com/k0braintheworld/k0pot/internal/retencion"
@@ -184,11 +185,22 @@ func ejecutar(almacen *store.Store, ajustes *config.Gestor, rutaLog string, sinE
 
 	// El enriquecimiento va por su cuenta a proposito: depende de una API
 	// externa, y ni su lentitud ni su caida deben frenar la captura.
+	// La base GeoIP se abre una vez y se comparte. Si no hay fichero queda
+	// inactiva, y k0Pot funciona igual con la ubicacion a nivel de pais.
+	geo, err := geoip.Abrir(ajustes.Actual().RutaGeoIP)
+	if err != nil {
+		log.Printf("GeoIP: %v (se seguira sin ubicacion de ciudad)", err)
+		geo, _ = geoip.Abrir("")
+	} else if geo.Activo() {
+		log.Printf("GeoIP activo: %s", ajustes.Actual().RutaGeoIP)
+	}
+	defer geo.Cerrar()
+
 	if !sinEnriquecer {
 		grupo.Add(1)
 		go func() {
 			defer grupo.Done()
-			enriquecerEnBucle(ctx, almacen, ajustes)
+			enriquecerEnBucle(ctx, almacen, ajustes, geo)
 		}()
 	}
 
@@ -207,7 +219,7 @@ func ejecutar(almacen *store.Store, ajustes *config.Gestor, rutaLog string, sinE
 		mantenimiento(ctx, almacen, ajustes, sup)
 	}()
 
-	err := ingerir(ctx, almacen, ajustes, rutaLog)
+	err = ingerir(ctx, almacen, ajustes, rutaLog)
 	parar()
 	grupo.Wait()
 	return err
@@ -546,16 +558,23 @@ func guardarEvento(almacen *store.Store, ajustes *config.Gestor, ev *model.Event
 }
 
 // enriquecerEnBucle resuelve por tandas las IPs que aun no tienen contexto.
-func enriquecerEnBucle(ctx context.Context, almacen *store.Store, ajustes *config.Gestor) {
+func enriquecerEnBucle(ctx context.Context, almacen *store.Store, ajustes *config.Gestor, geo *geoip.Localizador) {
 	const (
 		intervalo = 30 * time.Second
 		porTanda  = 20
 	)
 	var cliente *enrich.AbuseIPDB
 	var claveActiva string
+	rutaGeoActiva := ajustes.Actual().RutaGeoIP
 
 	for {
 		c := ajustes.Actual()
+		if c.RutaGeoIP != rutaGeoActiva {
+			rutaGeoActiva = c.RutaGeoIP
+			if err := geo.Recargar(c.RutaGeoIP); err != nil {
+				log.Printf("GeoIP: %v", err)
+			}
+		}
 		switch {
 		case !c.EnriquecerActivo || c.ClaveAbuseIPDB == "":
 			cliente = nil
@@ -579,7 +598,7 @@ func enriquecerEnBucle(ctx context.Context, almacen *store.Store, ajustes *confi
 		}
 
 		caducidad := time.Duration(c.CaducidadIPDias) * 24 * time.Hour
-		if n, err := enriquecerTanda(ctx, almacen, cliente, caducidad, porTanda); err != nil {
+		if n, err := enriquecerTanda(ctx, almacen, cliente, geo, caducidad, porTanda); err != nil {
 			if errors.Is(err, context.Canceled) {
 				return
 			}
@@ -597,7 +616,7 @@ func enriquecerEnBucle(ctx context.Context, almacen *store.Store, ajustes *confi
 }
 
 func enriquecerTanda(ctx context.Context, almacen *store.Store,
-	e enrich.Enriquecedor, caducidad time.Duration, limite int) (int, error) {
+	e enrich.Enriquecedor, geo *geoip.Localizador, caducidad time.Duration, limite int) (int, error) {
 
 	ips, err := almacen.IPsPendientes(caducidad, limite)
 	if err != nil {
@@ -627,6 +646,17 @@ func enriquecerTanda(ctx context.Context, almacen *store.Store,
 		if err != nil {
 			log.Printf("no se pudo enriquecer %s: %v", ip, err)
 			continue
+		}
+		// La ciudad y las coordenadas salen de la base local, no de la API:
+		// no gasta cuota. El pais de GeoIP solo se usa si AbuseIPDB no dio
+		// uno; ante discrepancia manda AbuseIPDB, que es quien clasifica.
+		if lugar, ok := geo.Situar(ip); ok {
+			origen.Ciudad = lugar.Ciudad
+			origen.Latitud = lugar.Latitud
+			origen.Longitud = lugar.Longitud
+			if origen.Pais == "" {
+				origen.Pais = lugar.Pais
+			}
 		}
 		if err := almacen.GuardarOrigen(origen); err != nil {
 			return hechas, err

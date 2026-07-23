@@ -37,6 +37,7 @@ type entradaAjustes struct {
 	ReputacionAlta         *int                       `json:"reputacion_alta"`
 	DenunciasAltas         *int                       `json:"denuncias_altas"`
 	EnriquecerActivo       *bool                      `json:"enriquecer_activo"`
+	RutaGeoIP              *string                    `json:"ruta_geoip"`
 	CaducidadIPDias        *int                       `json:"caducidad_ip_dias"`
 	ReservaCuota           *int                       `json:"reserva_cuota"`
 	UsarLLM                *bool                      `json:"usar_llm"`
@@ -105,6 +106,7 @@ func (s *Servidor) guardarAjustes(w http.ResponseWriter, r *http.Request) {
 			*destino = *origen
 		}
 	}
+	aplicarTexto(&c.RutaGeoIP, e.RutaGeoIP)
 	aplicarTexto(&c.AvisoCanal, e.AvisoCanal)
 	aplicarTexto(&c.AvisoDestino, e.AvisoDestino)
 	aplicarTexto(&c.AvisoServidor, e.AvisoServidor)

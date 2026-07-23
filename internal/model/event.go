@@ -42,15 +42,20 @@ const (
 // un bot) de una conexion domestica (mas probable que sea una persona o
 // una maquina infectada).
 type Origen struct {
-	IP            string    `json:"ip"`
-	Pais          string    `json:"pais,omitempty"`     // codigo ISO: "CN", "RU"...
-	ISP           string    `json:"isp,omitempty"`      // "Google LLC"
-	TipoUso       string    `json:"tipo_uso,omitempty"` // "Data Center/Web Hosting"
-	Reputacion    int       `json:"reputacion"`         // 0-100, mayor = peor
-	TotalReportes int       `json:"total_reportes"`     // denuncias acumuladas
-	Tor           bool      `json:"tor"`
-	Enriquecido   bool      `json:"enriquecido"`
-	ConsultadoEn  time.Time `json:"consultado_en,omitempty"`
+	IP            string `json:"ip"`
+	Pais          string `json:"pais,omitempty"`     // codigo ISO: "CN", "RU"...
+	ISP           string `json:"isp,omitempty"`      // "Google LLC"
+	TipoUso       string `json:"tipo_uso,omitempty"` // "Data Center/Web Hosting"
+	Reputacion    int    `json:"reputacion"`         // 0-100, mayor = peor
+	TotalReportes int    `json:"total_reportes"`     // denuncias acumuladas
+	Tor           bool   `json:"tor"`
+	// Ciudad y coordenadas, si hay base GeoIP. El pais viene de AbuseIPDB;
+	// esto lo afina a nivel de ciudad para el mapa.
+	Ciudad       string    `json:"ciudad,omitempty"`
+	Latitud      float64   `json:"latitud,omitempty"`
+	Longitud     float64   `json:"longitud,omitempty"`
+	Enriquecido  bool      `json:"enriquecido"`
+	ConsultadoEn time.Time `json:"consultado_en,omitempty"`
 }
 
 // Evento es la unidad normalizada que recorre todo el pipeline:

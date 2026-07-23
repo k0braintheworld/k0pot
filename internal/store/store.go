@@ -55,6 +55,9 @@ CREATE TABLE IF NOT EXISTS ips (
     reputacion     INTEGER NOT NULL DEFAULT 0,
     total_reportes INTEGER NOT NULL DEFAULT 0,
     tor            INTEGER NOT NULL DEFAULT 0,
+    ciudad         TEXT NOT NULL DEFAULT '',
+    latitud        REAL NOT NULL DEFAULT 0,
+    longitud       REAL NOT NULL DEFAULT 0,
     consultado_en  TEXT NOT NULL
 );
 `
@@ -118,6 +121,15 @@ func migrar(db *sql.DB) error {
 	}
 	if err := anadirColumna(db, "episodios", "explicacion", "TEXT NOT NULL DEFAULT ''"); err != nil {
 		return err
+	}
+	for _, col := range []struct{ nombre, tipo string }{
+		{"ciudad", "TEXT NOT NULL DEFAULT ''"},
+		{"latitud", "REAL NOT NULL DEFAULT 0"},
+		{"longitud", "REAL NOT NULL DEFAULT 0"},
+	} {
+		if err := anadirColumna(db, "ips", col.nombre, col.tipo); err != nil {
+			return err
+		}
 	}
 	// Columnas que aparecieron despues de la primera version.
 	if err := anadirColumna(db, "eventos", "motivo", "TEXT"); err != nil {
@@ -207,14 +219,17 @@ func (s *Store) GuardarOrigen(o model.Origen) error {
 	}
 	_, err := s.db.Exec(
 		`INSERT INTO ips (ip, pais, isp, tipo_uso, reputacion,
-		                  total_reportes, tor, consultado_en)
-		 VALUES (?,?,?,?,?,?,?,?)
+		                  total_reportes, tor, ciudad, latitud, longitud, consultado_en)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?)
 		 ON CONFLICT(ip) DO UPDATE SET
 		   pais=excluded.pais, isp=excluded.isp, tipo_uso=excluded.tipo_uso,
 		   reputacion=excluded.reputacion, total_reportes=excluded.total_reportes,
-		   tor=excluded.tor, consultado_en=excluded.consultado_en`,
+		   tor=excluded.tor, ciudad=excluded.ciudad,
+		   latitud=excluded.latitud, longitud=excluded.longitud,
+		   consultado_en=excluded.consultado_en`,
 		o.IP, o.Pais, o.ISP, o.TipoUso, o.Reputacion,
-		o.TotalReportes, o.Tor, cuando.UTC().Format(time.RFC3339Nano))
+		o.TotalReportes, o.Tor, o.Ciudad, o.Latitud, o.Longitud,
+		cuando.UTC().Format(time.RFC3339Nano))
 	if err != nil {
 		return fmt.Errorf("guardando origen de %s: %w", o.IP, err)
 	}
@@ -397,10 +412,12 @@ func (s *Store) OrigenDe(ip string) (model.Origen, bool, error) {
 	var consultado string
 	err := s.db.QueryRow(
 		`SELECT ip, COALESCE(pais,''), COALESCE(isp,''), COALESCE(tipo_uso,''),
-		        reputacion, total_reportes, tor, consultado_en
+		        reputacion, total_reportes, tor,
+		        COALESCE(ciudad,''), COALESCE(latitud,0), COALESCE(longitud,0),
+		        consultado_en
 		   FROM ips WHERE ip = ?`, ip).
 		Scan(&o.IP, &o.Pais, &o.ISP, &o.TipoUso, &o.Reputacion,
-			&o.TotalReportes, &o.Tor, &consultado)
+			&o.TotalReportes, &o.Tor, &o.Ciudad, &o.Latitud, &o.Longitud, &consultado)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.Origen{IP: ip}, false, nil
 	}
@@ -588,9 +605,14 @@ func (s *Store) SerieTemporal(desde time.Time, g Granularidad) ([]PuntoSerie, er
 
 // Reciente es una linea del feed en vivo.
 type Reciente struct {
-	Timestamp     time.Time           `json:"timestamp"`
-	IP            string              `json:"ip"`
-	Pais          string              `json:"pais"`
+	Timestamp time.Time `json:"timestamp"`
+	IP        string    `json:"ip"`
+	Pais      string    `json:"pais"`
+	// Ciudad y coordenadas, si la IP esta situada. El mapa dibuja desde
+	// aqui cuando las hay, y desde el centroide del pais cuando no.
+	Ciudad        string              `json:"ciudad,omitempty"`
+	Latitud       float64             `json:"latitud,omitempty"`
+	Longitud      float64             `json:"longitud,omitempty"`
 	Protocolo     string              `json:"protocolo"`
 	Tipo          model.TipoEvento    `json:"tipo"`
 	Clasificacion model.Clasificacion `json:"clasificacion"`
@@ -602,7 +624,8 @@ type Reciente struct {
 func (s *Store) Recientes(limite int) ([]Reciente, error) {
 	filas, err := s.db.Query(
 		`SELECT e.timestamp, e.ip, COALESCE(i.pais,''), COALESCE(e.protocolo,''),
-		        e.tipo, e.clasificacion, COALESCE(e.detalle,'')
+		        e.tipo, e.clasificacion, COALESCE(e.detalle,''),
+		        COALESCE(i.ciudad,''), COALESCE(i.latitud,0), COALESCE(i.longitud,0)
 		   FROM eventos e
 		   LEFT JOIN ips i ON i.ip = e.ip
 		  ORDER BY e.id DESC
@@ -616,7 +639,8 @@ func (s *Store) Recientes(limite int) ([]Reciente, error) {
 	for filas.Next() {
 		var r Reciente
 		var ts, tipo, clas, detalle string
-		if err := filas.Scan(&ts, &r.IP, &r.Pais, &r.Protocolo, &tipo, &clas, &detalle); err != nil {
+		if err := filas.Scan(&ts, &r.IP, &r.Pais, &r.Protocolo, &tipo, &clas, &detalle,
+			&r.Ciudad, &r.Latitud, &r.Longitud); err != nil {
 			return nil, err
 		}
 		r.Timestamp, _ = time.Parse(time.RFC3339Nano, ts)
