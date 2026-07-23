@@ -851,6 +851,9 @@ const CAMPOS = {
   "c-refresco": "refresco_segundos",
   "c-pais": "pais_propio",
   "c-retencion": "retencion_dias",
+  "c-retencion-ataques": "retencion_episodios_dias",
+  "c-tls-cert": "tls_cert",
+  "c-tls-clave": "tls_clave",
   "c-informe-tope": "informe_tope_diario",
   "c-aviso-canal": "aviso_canal",
   "c-aviso-destino": "aviso_destino",
@@ -862,6 +865,7 @@ const INTERRUPTORES = {
   "c-enriquecer": "enriquecer_activo",
   "c-usar-llm": "usar_llm",
   "c-avisos-activos": "avisos_activos",
+  "c-panel-https": "panel_https",
 };
 
 function volcarAjustes(c) {
@@ -1172,6 +1176,16 @@ async function abrirAjustes() {
     await cargarRed();
   } catch (err) {
     $("estado-red").textContent = `No se pudo leer la red: ${err.message}`;
+  }
+
+  // Elegir un plazo sin saber cuanto ocupa es elegir a ojo.
+  try {
+    const u = await pedirJSON("/api/uso");
+    $("uso-disco").textContent =
+      `Ahora mismo ocupa ${u.legible.total}: base de datos ${u.legible.base_datos}, ` +
+      `grabaciones ${u.legible.grabaciones}, descargas ${u.legible.descargas}.`;
+  } catch {
+    $("uso-disco").textContent = "";
   }
 
   irAPestana("servicios");

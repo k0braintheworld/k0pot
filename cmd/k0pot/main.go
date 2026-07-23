@@ -5,6 +5,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 	"github.com/k0braintheworld/k0pot/internal/episodio"
 	"github.com/k0braintheworld/k0pot/internal/model"
 	"github.com/k0braintheworld/k0pot/internal/report"
+	"github.com/k0braintheworld/k0pot/internal/retencion"
 	"github.com/k0braintheworld/k0pot/internal/store"
 	"github.com/k0braintheworld/k0pot/internal/trampa"
 	"github.com/k0braintheworld/k0pot/internal/web"
@@ -112,7 +114,7 @@ func main() {
 	}
 
 	if *escuchar != "" {
-		if err := servirPanel(almacen, ajustes, *escuchar, *sinLLM); err != nil {
+		if err := servirPanel(almacen, ajustes, *escuchar, *rutaBD, *sinLLM); err != nil {
 			log.Fatalf("panel: %v", err)
 		}
 		return
@@ -298,16 +300,19 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 		sup.Aplicar(ctx, c.EscuchaHoneypots, deseadoDe(c))
 
 		// La purga es cara y no urge: una vez por hora basta.
-		if dias := ajustes.Actual().RetencionDias; dias > 0 && time.Since(ultimaPurga) > time.Hour {
+		if time.Since(ultimaPurga) > time.Hour {
 			ultimaPurga = time.Now()
-			corte := time.Now().AddDate(0, 0, -dias)
-			if n, err := almacen.PurgarEventos(corte); err != nil {
-				log.Printf("purga por retencion: %v", err)
-			} else if n > 0 {
-				log.Printf("retencion: %d eventos de mas de %d dias borrados", n, dias)
-			}
-			if _, err := almacen.PurgarEpisodios(corte); err != nil {
-				log.Printf("purga de episodios: %v", err)
+			c := ajustes.Actual()
+			r, err := retencion.Aplicar(almacen, retencion.Politica{
+				EventosDias:   c.RetencionDias,
+				EpisodiosDias: c.RetencionEpisodiosDias,
+				DirCowrie:     "data/cowrie/lib",
+			}, time.Now())
+			switch {
+			case err != nil:
+				log.Printf("retencion: %v", err)
+			case !r.Vacio():
+				log.Printf("retencion: borrados %s", r)
 			}
 		}
 
@@ -384,6 +389,56 @@ func reconstruirEpisodios(almacen *store.Store, ultimoID int64) (int64, error) {
 		return ultimoID, err
 	}
 	return maxID, nil
+}
+
+// certificadoDelPanel carga el certificado configurado, o genera uno.
+//
+// Si el usuario ha puesto los suyos se usan tal cual: querra uno emitido
+// por su propia autoridad y no que se lo sustituyamos. Si no, se genera un
+// autofirmado que incluye la direccion por la que se esta sirviendo, para
+// que el aviso del navegador sea el de "autofirmado" y no el mas alarmante
+// de "este certificado no es para este sitio".
+func certificadoDelPanel(c config.Config, direccion string) (tls.Certificate, error) {
+	if c.TLSCert != "" && c.TLSClave != "" {
+		cert, err := tls.LoadX509KeyPair(c.TLSCert, c.TLSClave)
+		if err != nil {
+			return tls.Certificate{}, fmt.Errorf(
+				"no se pudo cargar el certificado configurado: %w", err)
+		}
+		return cert, nil
+	}
+	// Solo la direccion por la que se sirve el panel.
+	//
+	// Enumerar todas las interfaces seria comodo, pero un certificado
+	// publica lo que contiene: quien abra el panel veria ahi la IP expuesta
+	// del honeypot y las redes internas de Docker. Es un mapa de la maquina
+	// a cambio de ahorrarse escribir bien una direccion.
+	var nombres []string
+	host, _, err := net.SplitHostPort(direccion)
+	if err == nil && host != "" && host != "0.0.0.0" && host != "::" {
+		nombres = append(nombres, host)
+	} else if dirs, err := net.InterfaceAddrs(); err == nil {
+		// Atado a todas: no queda mas remedio que enumerar, pero se dejan
+		// fuera las locales de enlace y las de los puentes de contenedores,
+		// que nadie va a usar para abrir el panel.
+		for _, d := range dirs {
+			ipnet, ok := d.(*net.IPNet)
+			if !ok || ipnet.IP.IsLoopback() || ipnet.IP.IsLinkLocalUnicast() {
+				continue
+			}
+			if v4 := ipnet.IP.To4(); v4 == nil || v4[0] == 172 {
+				continue
+			}
+			// La interfaz expuesta, fuera: el panel no se sirve por ahi
+			// -el cortafuegos lo impide- y anunciarla en el certificado
+			// del panel de gestion es regalar el mapa de la maquina.
+			if ipnet.IP.String() == c.EscuchaHoneypots {
+				continue
+			}
+			nombres = append(nombres, ipnet.IP.String())
+		}
+	}
+	return web.CertificadoAuto("data/tls", nombres)
 }
 
 // deseadoDe traduce la configuracion a lo que el supervisor entiende.
@@ -724,7 +779,7 @@ func leerContrasena() (string, error) {
 }
 
 // servirPanel levanta el panel web.
-func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion string, sinLLM bool) error {
+func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion, rutaBD string, sinLLM bool) error {
 	// La direccion del flag es el punto de partida, pero manda la
 	// configuracion si la hay: es lo que se edita desde el panel.
 	direccion = direccionDelPanel(direccion, ajustes.Actual().EscuchaPanel)
@@ -737,6 +792,8 @@ func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion string,
 		// Donde Cowrie deja lo que consigue capturar. Que el directorio no
 		// exista es lo normal hasta que alguien descargue algo.
 		DirDescargas: "data/cowrie/lib/downloads",
+		RutaBD:       rutaBD,
+		DirCowrie:    "data/cowrie/lib",
 	}
 	// Al guardar ajustes se rehace el generador, para que cambiar de modelo
 	// o de clave surta efecto sin reiniciar el servicio.
@@ -761,7 +818,23 @@ func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion string,
 		http.Shutdown(cierre)
 	}()
 
+	if c := ajustes.Actual(); c.PanelHTTPS {
+		cert, err := certificadoDelPanel(c, direccion)
+		if err != nil {
+			return err
+		}
+		log.Printf("k0Pot %s | panel en https://%s", version, direccion)
+		log.Printf("quien entre por http sera redirigido; el navegador avisara " +
+			"del certificado autofirmado la primera vez")
+		if err := web.ServirTLS(direccion, srv.Rutas(), cert); err != nil {
+			return fmt.Errorf("panel: %w", err)
+		}
+		return nil
+	}
+
 	log.Printf("k0Pot %s | panel en http://%s", version, direccion)
+	log.Printf("sin cifrar: la contrasena del panel viaja en claro. " +
+		"Se activa HTTPS en Ajustes → General")
 	if err := http.ListenAndServe(); err != nil && err != nethttp.ErrServerClosed {
 		return err
 	}

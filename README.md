@@ -213,6 +213,26 @@ Comparte el tope diario con el informe, y **una llamada que falla no gasta
 cuota**: si el proveedor la rechaza no ha consumido nada suyo, y descontarla
 igual gastaria tu presupuesto en sus averias.
 
+## Retencion
+
+Dos plazos, no uno, porque no cuestan lo mismo:
+
+- **Eventos** (Ajustes → General): el detalle de cada linea capturada, con
+  las grabaciones de sesion y los binarios que descargue Cowrie. Es lo que
+  ocupa de verdad —un evento son cientos de bytes, una grabacion puede ser
+  megas— y caduca pronto: nadie consulta la linea exacta de un escaneo de
+  hace tres meses.
+- **Ataques**: el resumen agrupado. Ocupa una fraccion y es lo que responde
+  *"¿esta IP ya habia venido?"* meses despues, asi que conviene un plazo
+  bastante mas largo.
+
+Tirar los dos con el mismo plazo es lo intuitivo y lo peor: se pierde la
+memoria larga para ahorrar lo que no ocupaba. `0` conserva para siempre.
+
+El panel ensena **cuanto ocupa cada cosa** al abrir los ajustes, porque
+elegir un plazo sin ese dato es elegir a ojo. Y cuenta el fichero `-wal` de
+SQLite, que puede ser mayor que la propia base.
+
 ## Los informes automaticos no cuestan nada
 
 El panel pide el informe en cada refresco. Que esa peticion llamara a un
@@ -271,6 +291,32 @@ Tres detalles pensados:
 
 Si un ataque **continua** despues de darlo por visto, vuelve a contar como
 nuevo. No es lo mismo un ataque terminado que uno que sigue pasando.
+
+## Panel por HTTPS
+
+El panel pide una contrasena y devuelve todo lo capturado. Sin cifrar, eso
+viaja en claro por la red —incluida la propia contrasena.
+
+Se activa en **Ajustes → General** y requiere reiniciar el panel. Si no
+indicas certificado propio, k0Pot **genera uno autofirmado** la primera vez,
+valido dos anos y renovado antes de caducar. El navegador avisara la primera
+vez, y es correcto: no hay ninguna autoridad que pueda verificar un panel de
+red interna. Lo que si cambia es que el trafico va cifrado.
+
+Detalles que evitan los tropiezos tipicos:
+
+- **El puerto atiende los dos protocolos.** Quien llegue con el enlace viejo
+  `http://…` recibe un 308 hacia `https://` en vez de un error ilegible o un
+  timeout. Se mira el primer byte de la conexion: `0x16` es el saludo de TLS.
+- **La cookie de sesion se marca `Secure`** automaticamente, y se anade
+  `Strict-Transport-Security`.
+- **El certificado solo incluye la direccion del panel.** Enumerar todas las
+  interfaces seria comodo, pero un certificado publica lo que contiene: ahi
+  apareceria la IP expuesta del honeypot y las redes de Docker. Es un mapa de
+  la maquina a cambio de ahorrarse escribir bien una direccion.
+
+Con certificado propio: pon las rutas del `.crt` y el `.key` en esos mismos
+ajustes y se usaran tal cual.
 
 ## Avisos
 

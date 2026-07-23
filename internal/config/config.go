@@ -58,6 +58,15 @@ type Config struct {
 	Servicios map[string]Servicio `json:"servicios"`
 
 	// Panel.
+	//
+	// PanelHTTPS cifra el acceso. El panel pide una contrasena y devuelve
+	// todo lo capturado: sin TLS eso viaja en claro por la red, incluida
+	// la propia contrasena. Si no se dan certificado y clave, k0Pot genera
+	// uno autofirmado la primera vez.
+	PanelHTTPS bool   `json:"panel_https"`
+	TLSCert    string `json:"tls_cert"`
+	TLSClave   string `json:"tls_clave"`
+
 	RefrescoSegundos int `json:"refresco_segundos"`
 	// PaisPropio es donde esta el honeypot, en codigo ISO de dos letras.
 	// El mapa traza hacia ahi las lineas de ataque.
@@ -79,8 +88,14 @@ type Config struct {
 	// AvisoEnlace es la direccion del panel que se incluye en el aviso.
 	AvisoEnlace string `json:"aviso_enlace"`
 
-	// Retencion: 0 significa conservar para siempre.
-	RetencionDias int `json:"retencion_dias"`
+	// Retencion. 0 significa conservar para siempre.
+	//
+	// Dos plazos y no uno: los eventos son el detalle y ocupan mucho -con
+	// sus grabaciones y binarios-, mientras que los episodios son el
+	// resumen y ocupan una fraccion. Conservarlos mas tiempo es lo que
+	// permite responder "¿esta IP ya habia venido?" meses despues.
+	RetencionDias          int `json:"retencion_dias"`
+	RetencionEpisodiosDias int `json:"retencion_episodios_dias"`
 
 	// Claves de API. Nunca salen en claro del servidor.
 	ClaveAbuseIPDB  string `json:"clave_abuseipdb"`
@@ -122,13 +137,14 @@ func PorDefecto() Config {
 		PaisPropio:        "ES",
 		// Vacio = todas las interfaces. Se concreta desde el panel en
 		// cuanto la red este separada de verdad.
-		EscuchaPanel:     "0.0.0.0",
-		EscuchaHoneypots: "0.0.0.0",
-		Servicios:        map[string]Servicio{},
-		RetencionDias:    0,
-		AvisosActivos:    false,
-		AvisoCanal:       "ntfy",
-		AvisoMinima:      "acceso",
+		EscuchaPanel:           "0.0.0.0",
+		EscuchaHoneypots:       "0.0.0.0",
+		Servicios:              map[string]Servicio{},
+		RetencionDias:          0,
+		RetencionEpisodiosDias: 0,
+		AvisosActivos:          false,
+		AvisoCanal:             "ntfy",
+		AvisoMinima:            "acceso",
 	}
 }
 
@@ -147,7 +163,8 @@ func (c *Config) Validar() error {
 	acotar("la caducidad de IP", &c.CaducidadIPDias, 1, 365)
 	acotar("la reserva de cuota", &c.ReservaCuota, 0, 1000)
 	acotar("el refresco del panel", &c.RefrescoSegundos, 5, 3600)
-	acotar("la retencion", &c.RetencionDias, 0, 3650)
+	acotar("la retencion de eventos", &c.RetencionDias, 0, 3650)
+	acotar("la retencion de ataques", &c.RetencionEpisodiosDias, 0, 3650)
 	acotar("el tope diario de informes", &c.InformeTopeDiario, 0, 10000)
 
 	if c.Modelo == "" {

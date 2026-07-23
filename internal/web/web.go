@@ -42,6 +42,9 @@ type Servidor struct {
 	// inyecta en vez de deducirse para poder probarlo con un directorio
 	// temporal.
 	DirDescargas string
+	// RutaBD y DirCowrie sirven para medir cuanto ocupa cada cosa.
+	RutaBD    string
+	DirCowrie string
 	// AlCambiarConfig avisa a quien haya que reconfigurar (el generador de
 	// informes, el enriquecedor) cuando se guardan ajustes nuevos.
 	AlCambiarConfig func(config.Config)
@@ -83,6 +86,7 @@ func (s *Servidor) Rutas() http.Handler {
 	mux.HandleFunc("/api/episodio", s.protegido(s.episodio))
 	mux.HandleFunc("/api/episodio/explicar", s.protegido(s.explicarEpisodio))
 	mux.HandleFunc("/api/ip", s.protegido(s.perfilIP))
+	mux.HandleFunc("/api/uso", s.protegido(s.uso))
 	mux.HandleFunc("/api/campanas", s.protegido(s.campanas))
 	mux.HandleFunc("/api/artefactos", s.protegido(s.artefactos))
 	mux.HandleFunc("/api/aviso/probar", s.protegido(s.probarAviso))

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/k0braintheworld/k0pot/internal/config"
+	"github.com/k0braintheworld/k0pot/internal/retencion"
 )
 
 // ajustes lee y escribe la configuracion.
@@ -33,21 +34,25 @@ func (s *Servidor) ajustes(w http.ResponseWriter, r *http.Request) {
 // mandaron el valor cero". Sin eso, no enviar un campo lo pondria a cero y
 // dejar una clave vacia seria indistinguible de no querer tocarla.
 type entradaAjustes struct {
-	ReputacionAlta   *int                       `json:"reputacion_alta"`
-	DenunciasAltas   *int                       `json:"denuncias_altas"`
-	EnriquecerActivo *bool                      `json:"enriquecer_activo"`
-	CaducidadIPDias  *int                       `json:"caducidad_ip_dias"`
-	ReservaCuota     *int                       `json:"reserva_cuota"`
-	UsarLLM          *bool                      `json:"usar_llm"`
-	Proveedor        *string                    `json:"proveedor"`
-	Modelo           *string                    `json:"modelo"`
-	URLBase          *string                    `json:"url_base"`
-	RefrescoSegundos *int                       `json:"refresco_segundos"`
-	PaisPropio       *string                    `json:"pais_propio"`
-	RetencionDias    *int                       `json:"retencion_dias"`
-	EscuchaPanel     *string                    `json:"escucha_panel"`
-	EscuchaHoneypots *string                    `json:"escucha_honeypots"`
-	Servicios        map[string]config.Servicio `json:"servicios"`
+	ReputacionAlta         *int                       `json:"reputacion_alta"`
+	DenunciasAltas         *int                       `json:"denuncias_altas"`
+	EnriquecerActivo       *bool                      `json:"enriquecer_activo"`
+	CaducidadIPDias        *int                       `json:"caducidad_ip_dias"`
+	ReservaCuota           *int                       `json:"reserva_cuota"`
+	UsarLLM                *bool                      `json:"usar_llm"`
+	Proveedor              *string                    `json:"proveedor"`
+	Modelo                 *string                    `json:"modelo"`
+	URLBase                *string                    `json:"url_base"`
+	RefrescoSegundos       *int                       `json:"refresco_segundos"`
+	PanelHTTPS             *bool                      `json:"panel_https"`
+	TLSCert                *string                    `json:"tls_cert"`
+	TLSClave               *string                    `json:"tls_clave"`
+	PaisPropio             *string                    `json:"pais_propio"`
+	RetencionDias          *int                       `json:"retencion_dias"`
+	RetencionEpisodiosDias *int                       `json:"retencion_episodios_dias"`
+	EscuchaPanel           *string                    `json:"escucha_panel"`
+	EscuchaHoneypots       *string                    `json:"escucha_honeypots"`
+	Servicios              map[string]config.Servicio `json:"servicios"`
 
 	InformeTopeDiario *int `json:"informe_tope_diario"`
 
@@ -90,6 +95,7 @@ func (s *Servidor) guardarAjustes(w http.ResponseWriter, r *http.Request) {
 	aplicarInt(&c.ReservaCuota, e.ReservaCuota)
 	aplicarInt(&c.RefrescoSegundos, e.RefrescoSegundos)
 	aplicarInt(&c.RetencionDias, e.RetencionDias)
+	aplicarInt(&c.RetencionEpisodiosDias, e.RetencionEpisodiosDias)
 	aplicarInt(&c.InformeTopeDiario, e.InformeTopeDiario)
 
 	aplicarTexto := func(destino *string, origen *string) {
@@ -121,6 +127,11 @@ func (s *Servidor) guardarAjustes(w http.ResponseWriter, r *http.Request) {
 	if e.URLBase != nil {
 		c.URLBase = *e.URLBase
 	}
+	if e.PanelHTTPS != nil {
+		c.PanelHTTPS = *e.PanelHTTPS
+	}
+	aplicarTexto(&c.TLSCert, e.TLSCert)
+	aplicarTexto(&c.TLSClave, e.TLSClave)
 	if e.PaisPropio != nil {
 		c.PaisPropio = *e.PaisPropio
 	}
@@ -248,4 +259,14 @@ func interfacesDelSistema() []interfazPanel {
 		}
 	}
 	return out
+}
+
+// uso publica cuanto ocupa cada cosa en disco.
+//
+// Elegir un plazo de retencion sin saber cuanto ocupa es elegir a ojo. Y lo
+// que ocupa no es lo que uno esperaria: el fichero -wal de SQLite puede ser
+// mayor que la propia base, y una sola grabacion de sesion pesa mas que
+// miles de eventos.
+func (s *Servidor) uso(w http.ResponseWriter, r *http.Request) {
+	responderJSON(w, retencion.Medir(s.RutaBD, s.DirCowrie))
 }

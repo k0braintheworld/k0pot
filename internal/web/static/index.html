@@ -199,7 +199,36 @@
         <input type="text" id="c-pais" maxlength="2" autocomplete="off">
       </label>
       <p class="ayuda">Destino de las lineas de ataque en el mapa.</p>
-      <label>Retencion de eventos (dias, 0 = sin limite)<input type="number" id="c-retencion" min="0" max="3650"></label>
+      <label class="interruptor">
+        <input type="checkbox" id="c-panel-https"> Servir el panel por HTTPS
+      </label>
+      <p class="nota-grupo">
+        El panel pide una contrasena y devuelve todo lo capturado. Sin cifrar,
+        eso viaja en claro por tu red. Si no indicas certificado propio, k0Pot
+        genera uno autofirmado: el navegador avisara la primera vez —no hay
+        autoridad que lo verifique— pero el trafico ya va cifrado.
+        <strong>Requiere reiniciar el panel.</strong>
+      </p>
+      <label>Certificado (opcional)
+        <input type="text" id="c-tls-cert" autocomplete="off" placeholder="ruta al fichero .crt">
+        <small>Dejalo vacio para que se genere uno solo.</small>
+      </label>
+      <label>Clave del certificado (opcional)
+        <input type="text" id="c-tls-clave" autocomplete="off" placeholder="ruta al fichero .key">
+      </label>
+
+      <label>Conservar eventos (dias)
+        <input type="number" id="c-retencion" min="0" max="3650">
+        <small>El detalle: cada linea capturada, con sus grabaciones de sesion y
+        los binarios descargados. Es lo que mas ocupa. 0 = para siempre.</small>
+      </label>
+      <label>Conservar ataques (dias)
+        <input type="number" id="c-retencion-ataques" min="0" max="3650">
+        <small>El resumen agrupado. Ocupa una fraccion y es lo que responde
+        "¿esta IP ya habia venido?" meses despues, asi que conviene un plazo
+        mas largo que el de los eventos. 0 = para siempre.</small>
+      </label>
+      <p id="uso-disco" class="sub"></p>
     </div>
 
     <div class="grupo" data-pestana="general">
