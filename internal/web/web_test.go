@@ -441,13 +441,23 @@ func TestElHTMLNoUsaClasesQueApaganElRaton(t *testing.T) {
 		t.Skip("ninguna clase apaga el raton; nada que comprobar")
 	}
 
+	// Se comparan las clases DE VERDAD, no subcadenas del HTML: buscar
+	// " ataques\"" tambien casa con aria-label="Buscar ataques", y el test
+	// acusaba de una colision que no existia.
+	usadas := map[string]bool{}
+	for _, trozo := range strings.Split(string(html), `class="`)[1:] {
+		fin := strings.Index(trozo, `"`)
+		if fin < 0 {
+			continue
+		}
+		for _, c := range strings.Fields(trozo[:fin]) {
+			usadas[c] = true
+		}
+	}
 	for _, clase := range sordas {
-		for _, uso := range []string{`class="` + clase + `"`, `class="` + clase + ` `, ` ` + clase + `"`} {
-			if strings.Contains(string(html), uso) {
-				t.Errorf("index.html usa la clase %q, que lleva pointer-events: none; "+
-					"si es una clase nueva, ha chocado con una del mapa", clase)
-				break
-			}
+		if usadas[clase] {
+			t.Errorf("index.html usa la clase %q, que lleva pointer-events: none; "+
+				"si es una clase nueva, ha chocado con una del mapa", clase)
 		}
 	}
 }

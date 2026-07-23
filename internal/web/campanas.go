@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/k0braintheworld/k0pot/internal/campana"
+	"github.com/k0braintheworld/k0pot/internal/store"
 )
 
 // campanas agrupa los ataques que comparten guion.
 func (s *Servidor) campanas(w http.ResponseWriter, r *http.Request) {
 	desde := time.Now().AddDate(0, 0, -dias(r))
-	eps, err := s.Almacen.Episodios(desde, 500)
+	eps, err := s.Almacen.Episodios(store.FiltroEpisodios{Desde: desde, Limite: 500})
 	if err != nil {
 		http.Error(w, "no se pudieron leer los ataques", http.StatusInternalServerError)
 		return
@@ -40,7 +41,7 @@ type Artefacto struct {
 // la descarga no llegara a completarse.
 func (s *Servidor) artefactos(w http.ResponseWriter, r *http.Request) {
 	desde := time.Now().AddDate(0, 0, -dias(r))
-	eps, err := s.Almacen.Episodios(desde, 500)
+	eps, err := s.Almacen.Episodios(store.FiltroEpisodios{Desde: desde, Limite: 500})
 	if err != nil {
 		http.Error(w, "no se pudieron leer los ataques", http.StatusInternalServerError)
 		return

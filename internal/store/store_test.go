@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"github.com/k0braintheworld/k0pot/internal/episodio"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -306,5 +307,76 @@ func TestEscriturasConcurrentes(t *testing.T) {
 	close(fallos)
 	for err := range fallos {
 		t.Error(err)
+	}
+}
+
+// guardarAtaque deja un episodio listo para probar los filtros.
+func guardarAtaque(t *testing.T, s *Store, ip, proto string, sev episodio.Severidad, resumen string) {
+	t.Helper()
+	ahora := time.Now()
+	err := s.GuardarEpisodios([]episodio.Episodio{{
+		Clave: ip + "|" + proto, IP: ip, Protocolo: proto, Severidad: sev,
+		Inicio: ahora.Add(-time.Hour), Fin: ahora, Eventos: 3, Resumen: resumen,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Un honeypot expuesto acumula cientos de ataques: sin poder acotar, la
+// lista deja de servir para consultar y solo sirve para mirar lo ultimo.
+func TestLosFiltrosAcotanLaListaDeAtaques(t *testing.T) {
+	s := almacenTemporal(t)
+	guardarAtaque(t, s, "1.1.1.1", "ssh", episodio.Intrusion, "Entro y uso el servidor de pasarela")
+	guardarAtaque(t, s, "2.2.2.2", "redis", episodio.Tanteo, "Sondeo el servicio")
+	guardarAtaque(t, s, "3.3.3.3", "ssh", episodio.Roce, "Solo conecto")
+
+	desde := time.Now().Add(-24 * time.Hour)
+	casos := []struct {
+		nombre string
+		f      FiltroEpisodios
+		quiero int
+	}{
+		{"sin filtro", FiltroEpisodios{Desde: desde}, 3},
+		{"solo intrusiones", FiltroEpisodios{Desde: desde, Minima: "intrusion"}, 1},
+		{"acceso o mas", FiltroEpisodios{Desde: desde, Minima: "acceso"}, 1},
+		{"tanteo o mas", FiltroEpisodios{Desde: desde, Minima: "tanteo"}, 2},
+		{"por servicio", FiltroEpisodios{Desde: desde, Protocolo: "ssh"}, 2},
+		{"por IP entera", FiltroEpisodios{Desde: desde, Texto: "2.2.2.2"}, 1},
+		{"por trozo de IP", FiltroEpisodios{Desde: desde, Texto: "1.1"}, 1},
+		{"por lo que hizo", FiltroEpisodios{Desde: desde, Texto: "pasarela"}, 1},
+		{"por servicio en el texto", FiltroEpisodios{Desde: desde, Texto: "redis"}, 1},
+		{"combinado", FiltroEpisodios{Desde: desde, Protocolo: "ssh", Minima: "intrusion"}, 1},
+		{"sin coincidencias", FiltroEpisodios{Desde: desde, Texto: "no-existe"}, 0},
+	}
+	for _, c := range casos {
+		t.Run(c.nombre, func(t *testing.T) {
+			eps, err := s.Episodios(c.f)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(eps) != c.quiero {
+				t.Errorf("devolvio %d ataques, se esperaban %d", len(eps), c.quiero)
+			}
+		})
+	}
+}
+
+// Buscar no puede ser una via para colar SQL, ni romper por un caracter
+// raro: el texto viene de una caja donde se escribe cualquier cosa.
+func TestBuscarNoRompeConTextoRaro(t *testing.T) {
+	s := almacenTemporal(t)
+	guardarAtaque(t, s, "1.1.1.1", "ssh", episodio.Tanteo, "normal")
+
+	for _, texto := range []string{"'; DROP TABLE episodios; --", "%", "_", "100%", "'"} {
+		eps, err := s.Episodios(FiltroEpisodios{Desde: time.Now().Add(-time.Hour), Texto: texto})
+		if err != nil {
+			t.Errorf("busqueda %q fallo: %v", texto, err)
+		}
+		_ = eps
+	}
+	// Y la tabla sigue ahi.
+	if _, err := s.Episodios(FiltroEpisodios{Desde: time.Now().Add(-time.Hour)}); err != nil {
+		t.Fatalf("la tabla no sobrevivio: %v", err)
 	}
 }

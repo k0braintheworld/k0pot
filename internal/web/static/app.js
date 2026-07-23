@@ -361,14 +361,45 @@ function horaCorta(iso) {
 // Los destacados desaparecieron del panel: contaban lo mismo que los
 // ataques pero evento a evento, y tener las dos listas era la mitad del
 // desorden. El endpoint sigue existiendo por si vuelve a hacer falta.
+// filtrosDeAtaques recoge lo que hay puesto en la barra.
+function filtrosDeAtaques() {
+  return {
+    q: $("f-texto").value.trim(),
+    severidad: $("f-severidad").value,
+    protocolo: $("f-protocolo").value,
+  };
+}
+
+function hayFiltro() {
+  const f = filtrosDeAtaques();
+  return Boolean(f.q || f.severidad || f.protocolo);
+}
+
 async function cargarAtaques() {
-  const lista = await traer("/api/episodios");
+  const f = filtrosDeAtaques();
+  const params = new URLSearchParams({ dias: rango() });
+  for (const [k, v] of Object.entries(f)) if (v) params.set(k, v);
+
+  const resp = await fetch(`/api/episodios?${params}`);
+  if (!resp.ok) throw new Error(`/api/episodios respondio ${resp.status}`);
+  const lista = await resp.json();
+
   const cont = $("ataques");
   cont.replaceChildren();
+  $("f-limpiar").hidden = !hayFiltro();
 
   if (!lista.length) {
-    cont.appendChild(nodo("p", "vacio", "Todavia no se ha registrado ningun ataque."));
+    cont.appendChild(nodo("p", "vacio", hayFiltro()
+      ? "Ningun ataque casa con el filtro."
+      : "Todavia no se ha registrado ningun ataque."));
     return;
+  }
+
+  // Con filtro puesto hay que decirlo: una lista corta sin explicacion se
+  // lee como "no ha pasado nada", que es justo lo contrario.
+  if (hayFiltro()) {
+    cont.appendChild(nodo("p", "aviso-filtrado",
+      `${lista.length} ataque${lista.length > 1 ? "s" : ""} con el filtro puesto`));
   }
 
   for (const a of lista) {
@@ -440,7 +471,18 @@ async function abrirAtaque(clave) {
   pintarExplicacion(d.explicacion);
   $("explicar-ataque").textContent = d.explicacion ? "Volver a explicar" : "Explicar con IA";
 
-  $("ataque-titulo").textContent = `${d.protocolo} desde ${d.ip}`;
+  const titulo = $("ataque-titulo");
+  titulo.replaceChildren();
+  titulo.appendChild(nodo("span", null, `${d.protocolo} desde `));
+  const enlaceIP = nodo("button", "enlace-ip", d.ip);
+  enlaceIP.type = "button";
+  enlaceIP.title = "Ver todo lo de esta IP";
+  enlaceIP.addEventListener("click", () => {
+    $("f-texto").value = d.ip;
+    $("dialogo-ataque").close();
+    refrescar();
+  });
+  titulo.appendChild(enlaceIP);
   const donde = [d.pais, d.isp].filter(Boolean).join(" · ");
   const rep = d.reputacion > 0 ? ` · reputacion ${d.reputacion}/100` : "";
   $("ataque-sub").textContent = `${donde}${rep} — ${d.resumen}`;
@@ -682,6 +724,25 @@ $("rango").addEventListener("change", refrescar);
 $("regenerar").addEventListener("click", regenerarInforme);
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
 $("explicar-ataque").addEventListener("click", explicarAtaque);
+
+// Los filtros recargan solo la lista, no el panel entero: cambiar de
+// gravedad no tiene por que volver a pedir el mapa ni el informe.
+for (const id of ["f-severidad", "f-protocolo"]) {
+  $(id).addEventListener("change", () => cargarAtaques().catch(() => {}));
+}
+let tecleando = null;
+$("f-texto").addEventListener("input", () => {
+  // Se espera a que pare de escribir: una consulta por tecla llenaria el
+  // servidor de peticiones que nadie llega a ver.
+  clearTimeout(tecleando);
+  tecleando = setTimeout(() => cargarAtaques().catch(() => {}), 250);
+});
+$("f-limpiar").addEventListener("click", () => {
+  $("f-texto").value = "";
+  $("f-severidad").value = "";
+  $("f-protocolo").value = "";
+  cargarAtaques().catch(() => {});
+});
 $("c-aviso-canal").addEventListener("change", camposDelCanal);
 $("probar-aviso").addEventListener("click", probarAviso);
 $("novedades").addEventListener("click", marcarVisto);

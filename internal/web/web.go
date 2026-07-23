@@ -278,7 +278,7 @@ func (s *Servidor) informe(w http.ResponseWriter, r *http.Request) {
 
 	// Los ataques ya agrupados son el material principal del informe: sin
 	// ellos el modelo solo puede parafrasear recuentos.
-	ataques, err := s.Almacen.Episodios(desde, 50)
+	ataques, err := s.Almacen.Episodios(store.FiltroEpisodios{Desde: desde, Limite: 50})
 	if err != nil {
 		http.Error(w, "no se pudieron leer los ataques", http.StatusInternalServerError)
 		return

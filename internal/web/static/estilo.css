@@ -604,3 +604,47 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .explicacion p { margin: 0 0 .6rem; }
 .explicacion p:last-child { margin-bottom: 0; }
 .explicacion .sub { font-size: .74rem; }
+
+/* ── Filtros de la lista de ataques ─────────────────────────────────────
+   Van dentro del bloque y no en la cabecera del panel: acotan esta lista y
+   solo esta, y ponerlos arriba haria pensar que afectan a todo. */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-bottom: .6rem;
+}
+.filtros input[type="search"] {
+  flex: 1 1 12rem;
+  min-width: 0;
+  font: inherit;
+  font-size: .82rem;
+  padding: .3rem .55rem;
+  background: var(--panel-alto);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: .4rem;
+}
+.filtros select { font-size: .78rem; }
+.filtros .boton-menor { margin-left: 0; }
+
+/* Cuando hay filtro puesto, la lista tiene que dejar claro que NO es todo
+   lo capturado: una lista corta sin explicacion se lee como "no ha pasado
+   nada", que es lo contrario de lo que dice. */
+.aviso-filtrado {
+  margin: 0 0 .5rem;
+  font-size: .76rem;
+  color: var(--acento);
+}
+
+/* La IP del titulo es pulsable: filtra por ella. Es la forma mas corta de
+   "todo lo de esta IP" sin construir una pantalla aparte. */
+.enlace-ip {
+  font: inherit;
+  color: var(--acento);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}

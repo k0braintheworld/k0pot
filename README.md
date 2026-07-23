@@ -150,6 +150,26 @@ Para comprobarlo desde fuera: `deploy/comprobar-aislamiento.sh <IP-expuesta>
 <IP-gestion>`, ejecutado **desde otra maquina**. Desde el propio servidor no
 demuestra nada.
 
+## Consultar: filtrar y buscar
+
+Un honeypot expuesto acumula cientos de ataques. Sin poder acotar, la lista
+deja de servir para consultar y solo sirve para mirar lo ultimo.
+
+Sobre la lista hay una barra con tres cosas:
+
+- **Buscar** por IP -entera o a trozos-, pais, proveedor, servicio o por lo
+  que hicieron. Se busca en todos esos campos a la vez, porque quien
+  consulta recuerda un dato, no en que columna esta guardado.
+- **Gravedad minima**: de "toda" a "solo intrusiones".
+- **Servicio**: SSH, Telnet, HTTP, Redis o FTP.
+
+Con filtro puesto la lista **lo dice**: una lista corta sin explicacion se
+lee como "no ha pasado nada", que es justo lo contrario.
+
+Y al abrir un ataque, **la IP es pulsable**: filtra por ella y ensena todo
+lo que ha hecho esa direccion. Es la forma mas corta de responder "¿esta
+IP ya habia venido antes?" sin construir una pantalla aparte.
+
 ## Explicar un ataque concreto
 
 El momento en que alguien quiere entender algo no es leyendo el resumen del

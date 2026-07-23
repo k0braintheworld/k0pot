@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/k0braintheworld/k0pot/internal/episodio"
@@ -173,15 +174,64 @@ func (s *Store) GuardarEpisodios(es []episodio.Episodio) error {
 	return tx.Commit()
 }
 
-// Episodios devuelve los ataques del periodo, los mas graves primero.
-func (s *Store) Episodios(desde time.Time, limite int) ([]EpisodioFila, error) {
-	filas, err := s.db.Query(selectEpisodio+
-		` WHERE e.fin >= ?
+// FiltroEpisodios acota que ataques se piden.
+//
+// Un honeypot expuesto acumula cientos de ataques: sin poder acotar, la
+// lista deja de servir para consultar y solo sirve para mirar lo ultimo.
+type FiltroEpisodios struct {
+	Desde time.Time
+	// Minima descarta lo que no llegue a esa gravedad. Vacio = todo.
+	Minima string
+	// Protocolo acota a un servicio. Vacio = todos.
+	Protocolo string
+	// Texto busca en IP, pais, proveedor y resumen a la vez. Quien
+	// consulta no sabe -ni tiene por que- en cual de esos campos esta lo
+	// que recuerda.
+	Texto  string
+	Limite int
+}
+
+// Episodios devuelve los ataques que casan con el filtro, los mas graves
+// primero.
+func (s *Store) Episodios(f FiltroEpisodios) ([]EpisodioFila, error) {
+	consulta := selectEpisodio + ` WHERE e.fin >= ?`
+	args := []any{f.Desde.UTC().Format(time.RFC3339Nano)}
+
+	if f.Minima != "" {
+		consulta += fmt.Sprintf(" AND %s >= %s",
+			fmt.Sprintf(rangoSeveridad, "e.severidad"), fmt.Sprintf(rangoSeveridad, "?"))
+		args = append(args, f.Minima)
+	}
+	if f.Protocolo != "" {
+		consulta += " AND e.protocolo = ?"
+		args = append(args, f.Protocolo)
+	}
+	if t := strings.TrimSpace(f.Texto); t != "" {
+		// Se busca en varios campos a la vez y por trozos: quien escribe
+		// "195.178" o "Censys" no deberia tener que acertar el campo ni la
+		// cadena entera.
+		//
+		// El patron se repite en vez de usar ?1: mezclar parametros
+		// numerados con posicionales rompe con este driver, y el fallo sale
+		// como un 500 sin pista de donde.
+		consulta += ` AND (e.ip LIKE ? OR e.resumen LIKE ? OR e.protocolo LIKE ?
+		                   OR COALESCE(i.pais,'') LIKE ? OR COALESCE(i.isp,'') LIKE ?)`
+		patron := "%" + t + "%"
+		args = append(args, patron, patron, patron, patron, patron)
+	}
+	consulta += `
 		  ORDER BY CASE e.severidad
 		             WHEN 'intrusion' THEN 3 WHEN 'acceso' THEN 2
 		             WHEN 'tanteo'    THEN 1 ELSE 0 END DESC,
 		           e.fin DESC
-		  LIMIT ?`, desde.UTC().Format(time.RFC3339Nano), limite)
+		  LIMIT ?`
+	limite := f.Limite
+	if limite <= 0 {
+		limite = 200
+	}
+	args = append(args, limite)
+
+	filas, err := s.db.Query(consulta, args...)
 	if err != nil {
 		return nil, fmt.Errorf("consultando episodios: %w", err)
 	}

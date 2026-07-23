@@ -10,15 +10,36 @@ import (
 	"github.com/k0braintheworld/k0pot/internal/store"
 )
 
-// episodios lista los ataques del periodo, los mas graves primero.
+// episodios lista los ataques que casan con el filtro, los mas graves
+// primero.
 func (s *Servidor) episodios(w http.ResponseWriter, r *http.Request) {
-	desde := time.Now().AddDate(0, 0, -dias(r))
-	lista, err := s.Almacen.Episodios(desde, 200)
+	q := r.URL.Query()
+	lista, err := s.Almacen.Episodios(store.FiltroEpisodios{
+		Desde:     time.Now().AddDate(0, 0, -dias(r)),
+		Minima:    severidadValida(q.Get("severidad")),
+		Protocolo: q.Get("protocolo"),
+		Texto:     q.Get("q"),
+		Limite:    200,
+	})
 	if err != nil {
 		http.Error(w, "no se pudieron leer los ataques", http.StatusInternalServerError)
 		return
 	}
 	responderJSON(w, lista)
+}
+
+// severidadValida descarta lo que no sea una severidad conocida.
+//
+// Va contra una lista blanca y no contra la cadena recibida: el valor entra
+// en la consulta y, aunque vaya como parametro, aceptar cualquier cosa
+// haria que un filtro mal escrito devolviera la lista entera en silencio,
+// que es peor que no filtrar.
+func severidadValida(s string) string {
+	switch s {
+	case "tanteo", "acceso", "intrusion":
+		return s
+	}
+	return ""
 }
 
 // PasoNarrado es una linea de la narracion de un ataque.
