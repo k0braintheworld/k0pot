@@ -561,6 +561,22 @@ async function pintarMapaUbicacion() {
   lienzo.appendChild(marca);
   caja.appendChild(lienzo);
 
+  // El zoom es MOVER el viewBox, no escalar la imagen: el dibujo sigue
+  // siendo vectorial -no se pixela- y las coordenadas del SVG no cambian,
+  // asi que el clic sigue convirtiendose igual sin tocar nada mas. La vista
+  // es la parte del mapa que se ve; empieza en el mapa entero.
+  const vista = { x: 0, y: 0, w: m.ancho, h: m.alto };
+  const ZOOM_MAX = 40;     // cuanto se puede acercar respecto al mapa entero
+  const aplicarVista = () => {
+    lienzo.setAttribute("viewBox", `${vista.x} ${vista.y} ${vista.w} ${vista.h}`);
+    // El radio de la marca se encoge al acercar: un circulo de 7 unidades
+    // sobre una vista de medio pais taparia media region.
+    const escala = vista.w / m.ancho;
+    marca.querySelectorAll("circle").forEach((c, i) => {
+      c.setAttribute("r", (i === 0 ? 7 : 3) * Math.max(escala, 0.05));
+    });
+  };
+
   const situar = () => {
     marca.replaceChildren();
     const lat = parseFloat($("c-latitud").value);
@@ -574,18 +590,83 @@ async function pintarMapaUbicacion() {
     if (!punto) return;
     marca.appendChild(svg("circle", { cx: punto[0], cy: punto[1], r: 7, class: "diana" }));
     marca.appendChild(svg("circle", { cx: punto[0], cy: punto[1], r: 3, class: "centro" }));
+    aplicarVista();
   };
 
-  lienzo.addEventListener("click", (ev) => {
-    // Del pixel de pantalla a las coordenadas del SVG: el mapa se escala
-    // con el ancho del dialogo, asi que no se puede usar el pixel directo.
-    const caja = lienzo.getBoundingClientRect();
-    const x = ((ev.clientX - caja.left) / caja.width) * m.ancho;
-    const y = ((ev.clientY - caja.top) / caja.height) * m.alto;
+  // pixelAMapa convierte la posicion del raton a coordenadas del SVG
+  // teniendo en cuenta el zoom: se parte de la VISTA, no del mapa entero.
+  const pixelAMapa = (ev) => {
+    const c = lienzo.getBoundingClientRect();
+    return [
+      vista.x + ((ev.clientX - c.left) / c.width) * vista.w,
+      vista.y + ((ev.clientY - c.top) / c.height) * vista.h,
+    ];
+  };
+
+  // arrastrar distingue un clic de situar de un arrastre para desplazar: si
+  // el raton se movio mas de unos pocos pixeles entre pulsar y soltar, era
+  // un desplazamiento y no hay que mover la marca.
+  let inicio = null;
+  lienzo.addEventListener("pointerdown", (ev) => {
+    inicio = { px: ev.clientX, py: ev.clientY, vx: vista.x, vy: vista.y, movido: false };
+    lienzo.setPointerCapture(ev.pointerId);
+  });
+  lienzo.addEventListener("pointermove", (ev) => {
+    if (!inicio) return;
+    const c = lienzo.getBoundingClientRect();
+    const dx = (ev.clientX - inicio.px) / c.width * vista.w;
+    const dy = (ev.clientY - inicio.py) / c.height * vista.h;
+    if (Math.abs(ev.clientX - inicio.px) + Math.abs(ev.clientY - inicio.py) > 4) {
+      inicio.movido = true;
+    }
+    vista.x = acotar(inicio.vx - dx, 0, m.ancho - vista.w);
+    vista.y = acotar(inicio.vy - dy, 0, m.alto - vista.h);
+    aplicarVista();
+  });
+  lienzo.addEventListener("pointerup", (ev) => {
+    const fue = inicio;
+    inicio = null;
+    if (!fue || fue.movido) return; // era un arrastre, no un clic
+    const [x, y] = pixelAMapa(ev);
     const [lat, lon] = delLienzo(x, y, m);
     $("c-latitud").value = lat.toFixed(4);
     $("c-longitud").value = lon.toFixed(4);
     situar();
+  });
+
+  // La rueda hace zoom sobre el punto donde esta el raton, que es lo que uno
+  // espera: acercarse a lo que se esta mirando, no al centro.
+  lienzo.addEventListener("wheel", (ev) => {
+    ev.preventDefault();
+    const [fx, fy] = pixelAMapa(ev);
+    const factor = ev.deltaY < 0 ? 0.8 : 1.25;
+    const nuevoW = acotar(vista.w * factor, m.ancho / ZOOM_MAX, m.ancho);
+    const nuevoH = nuevoW * (m.alto / m.ancho);
+    // Se mantiene el punto bajo el raton fijo mientras cambia el zoom.
+    vista.x = acotar(fx - (fx - vista.x) * (nuevoW / vista.w), 0, m.ancho - nuevoW);
+    vista.y = acotar(fy - (fy - vista.y) * (nuevoH / vista.h), 0, m.alto - nuevoH);
+    vista.w = nuevoW;
+    vista.h = nuevoH;
+    aplicarVista();
+  }, { passive: false });
+
+  // Botones de zoom, para quien no tenga rueda o este en tactil.
+  const zoom = (factor) => {
+    const cx = vista.x + vista.w / 2;
+    const cy = vista.y + vista.h / 2;
+    const nuevoW = acotar(vista.w * factor, m.ancho / ZOOM_MAX, m.ancho);
+    const nuevoH = nuevoW * (m.alto / m.ancho);
+    vista.x = acotar(cx - nuevoW / 2, 0, m.ancho - nuevoW);
+    vista.y = acotar(cy - nuevoH / 2, 0, m.alto - nuevoH);
+    vista.w = nuevoW;
+    vista.h = nuevoH;
+    aplicarVista();
+  };
+  $("zoom-mas").addEventListener("click", () => zoom(0.6));
+  $("zoom-menos").addEventListener("click", () => zoom(1 / 0.6));
+  $("zoom-reset").addEventListener("click", () => {
+    Object.assign(vista, { x: 0, y: 0, w: m.ancho, h: m.alto });
+    aplicarVista();
   });
 
   for (const id of ["c-latitud", "c-longitud", "c-pais"]) {
@@ -598,6 +679,12 @@ async function pintarMapaUbicacion() {
   });
 
   situar();
+}
+
+// acotar limita un valor a un rango. Se usa para no dejar que la vista del
+// mapa se salga de sus bordes.
+function acotar(v, min, max) {
+  return Math.min(Math.max(v, min), max);
 }
 
 // ── Novedades ───────────────────────────────────────────────────────────

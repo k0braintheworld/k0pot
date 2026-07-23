@@ -691,3 +691,28 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 }
 .coordenadas label { flex: 1 1 7rem; margin: 0; }
 .coordenadas input { width: 100%; }
+
+/* Zoom del mapa de ubicacion. El SVG se recorta con la envoltura y los
+   botones flotan en una esquina, para no robarle sitio al mapa. */
+.mapa-envoltura { position: relative; }
+.controles-zoom {
+  position: absolute;
+  top: .4rem;
+  right: .4rem;
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+}
+.controles-zoom button {
+  width: 1.7rem;
+  height: 1.7rem;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--texto);
+  background: var(--panel-alto);
+  border: 1px solid var(--borde);
+  border-radius: .3rem;
+  cursor: pointer;
+}
+.controles-zoom button:hover { border-color: var(--acento); }
+.mapa-ubicacion { touch-action: none; }  /* el arrastre lo maneja el JS */

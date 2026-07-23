@@ -204,7 +204,14 @@
         <p class="ayuda">Situalo con precision: <strong>pincha en el mapa</strong>.
         Sin coordenadas la marca va al centro del pais, que en uno grande queda a
         cientos de kilometros de donde esta la maquina.</p>
-        <div id="mapa-ubicacion" class="mapa-ubicacion"></div>
+        <div class="mapa-envoltura">
+    <div id="mapa-ubicacion" class="mapa-ubicacion"></div>
+    <div class="controles-zoom">
+      <button id="zoom-mas" type="button" title="Acercar" aria-label="Acercar">+</button>
+      <button id="zoom-menos" type="button" title="Alejar" aria-label="Alejar">−</button>
+      <button id="zoom-reset" type="button" title="Ver todo" aria-label="Ver todo">↺</button>
+    </div>
+  </div>
         <div class="coordenadas">
           <label>Latitud<input type="number" id="c-latitud" step="0.0001" min="-90" max="90"></label>
           <label>Longitud<input type="number" id="c-longitud" step="0.0001" min="-180" max="180"></label>
