@@ -90,17 +90,25 @@ main.rejilla-panel {
 .bloque-ataques { grid-column: span 7; }
 .bloque-informe { grid-column: span 5; }
 .bloque-serie   { grid-column: span 12; }
-.bloque-campanas   { grid-column: span 7; }
-.bloque-artefactos { grid-column: span 5; }
-.bloque-tabla   { grid-column: span 3; }
+/* Campanas y artefactos van a lo ancho y se ocultan cuando no hay nada,
+   asi no dejan un cuadro vacio ni descuadran la fila de abajo. */
+.bloque-campanas   { grid-column: span 12; }
+.bloque-artefactos { grid-column: span 12; }
+/* La fila final cuadra exacta: IPs ancha para que no se parta el proveedor,
+   paises estrecha, y credenciales -usuarios y contrasenas juntas- al lado. */
+.bloque-ips          { grid-column: span 5; }
+.bloque-tabla        { grid-column: span 3; }
+.bloque-credenciales { grid-column: span 4; }
 
 @media (max-width: 88rem) {
   .bloque-ataques, .bloque-informe { grid-column: span 12; }
-  .bloque-campanas, .bloque-artefactos { grid-column: span 12; }
+  .bloque-ips { grid-column: span 12; }
   .bloque-tabla { grid-column: span 6; }
+  .bloque-credenciales { grid-column: span 6; }
 }
 @media (max-width: 62rem) {
-  .bloque-mapa, .bloque-vivo, .bloque-tabla { grid-column: span 12; }
+  .bloque-mapa, .bloque-vivo, .bloque-tabla,
+  .bloque-ips, .bloque-credenciales { grid-column: span 12; }
 }
 
 /* ── Semaforo ───────────────────────────────────────────────── */
@@ -779,3 +787,18 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   border-bottom: 1px dotted var(--sub);
 }
 .celda-ip .enlace-ip:hover { color: var(--acento); border-bottom-color: var(--acento); }
+
+
+/* Usuarios y contrasenas comparten bloque: son la misma pregunta -que
+   credenciales probaron- y separarlos en dos cuadros cortos descuadraba la
+   fila. Van en dos columnas dentro del mismo bloque. */
+.par-tablas { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.par-tablas > div { min-width: 0; }
+.mini-titulo {
+  margin: 0 0 .3rem;
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--sub);
+}
+@media (max-width: 30rem) { .par-tablas { grid-template-columns: 1fr; } }

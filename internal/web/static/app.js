@@ -1092,11 +1092,14 @@ async function cargarArtefactos() {
   const cont = $("artefactos");
   cont.replaceChildren();
 
+  // Se oculta el bloque entero mientras nadie descargue nada: es lo normal
+  // durante mucho tiempo, y un cuadro vacio permanente descuadra la fila.
+  const seccion = document.querySelector(".bloque-artefactos");
   if (!lista.length) {
-    cont.appendChild(nodo("p", "vacio",
-      "Nadie ha intentado descargar nada todavia."));
+    if (seccion) seccion.hidden = true;
     return;
   }
+  if (seccion) seccion.hidden = false;
 
   for (const a of lista) {
     const caja = nodo("div", "artefacto");

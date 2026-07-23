@@ -386,7 +386,7 @@
     <div id="campanas" class="lista-campanas"><p class="cargando">Cargando…</p></div>
   </section>
 
-  <section class="bloque bloque-artefactos">
+  <section class="bloque bloque-artefactos" hidden>
     <div class="cabecera-bloque">
       <h2>Artefactos</h2>
       <p class="sub">Lo que intentaron traerse al sistema</p>
@@ -394,10 +394,15 @@
     <div id="artefactos" class="lista-artefactos"><p class="cargando">Cargando…</p></div>
   </section>
 
-  <section class="bloque bloque-tabla"><h2>IPs mas activas</h2><table id="tabla-ips"><tbody></tbody></table></section>
+  <section class="bloque bloque-ips"><h2>IPs mas activas</h2><table id="tabla-ips"><tbody></tbody></table></section>
   <section class="bloque bloque-tabla"><h2>Paises</h2><table id="tabla-paises"><tbody></tbody></table></section>
-  <section class="bloque bloque-tabla"><h2>Usuarios probados</h2><table id="tabla-usuarios"><tbody></tbody></table></section>
-  <section class="bloque bloque-tabla"><h2>Contrasenas probadas</h2><table id="tabla-passwords"><tbody></tbody></table></section>
+  <section class="bloque bloque-credenciales">
+    <h2>Credenciales probadas</h2>
+    <div class="par-tablas">
+      <div><p class="mini-titulo">usuarios</p><table id="tabla-usuarios"><tbody></tbody></table></div>
+      <div><p class="mini-titulo">contrasenas</p><table id="tabla-passwords"><tbody></tbody></table></div>
+    </div>
+  </section>
 </main>
 
 <footer>
