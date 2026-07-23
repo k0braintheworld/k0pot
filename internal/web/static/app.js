@@ -64,8 +64,26 @@ function arco(desde, hasta) {
 //
 // Se redibuja en cada refresco: la animacion CSS se reproduce entonces de
 // nuevo y el mapa "late" con la actividad, que es el efecto buscado.
-function pintarAtaques(lienzo, m, recientes, paisPropio) {
-  const destino = m.paises[paisPropio]?.c;
+// aLienzo convierte latitud y longitud a coordenadas del SVG.
+//
+// El mapa es equirectangular -la misma proyeccion que usa tools/genmapa.py
+// al generarlo-, asi que la conversion es directa. Si las dos formulas
+// dejaran de coincidir, la marca apareceria desplazada respecto al dibujo.
+function aLienzo(lat, lon, m) {
+  return [((lon + 180) / 360) * m.ancho, ((90 - lat) / 180) * m.alto];
+}
+
+// delLienzo hace el camino inverso, para poder elegir el sitio pinchando.
+function delLienzo(x, y, m) {
+  return [90 - (y / m.alto) * 180, (x / m.ancho) * 360 - 180];
+}
+
+function pintarAtaques(lienzo, m, recientes, paisPropio, propio) {
+  // Las coordenadas mandan sobre el pais: el centroide de un pais grande
+  // deja la marca a cientos de kilometros de donde esta la maquina.
+  const destino = (propio && (propio.lat || propio.lon))
+    ? aLienzo(propio.lat, propio.lon, m)
+    : m.paises[paisPropio]?.c;
   if (!destino) return 0;
 
   const capa = svg("g", { class: "ataques" });
@@ -93,14 +111,16 @@ function pintarAtaques(lienzo, m, recientes, paisPropio) {
   casa.appendChild(svg("circle", { cx: destino[0], cy: destino[1], r: 9, class: "diana" }));
   casa.appendChild(svg("circle", { cx: destino[0], cy: destino[1], r: 3.5, class: "centro" }));
   const t = svg("title");
-  t.textContent = `Aqui esta el honeypot (${m.paises[paisPropio].n})`;
+  t.textContent = (propio && (propio.lat || propio.lon))
+    ? `Aqui esta el honeypot (${propio.lat.toFixed(2)}, ${propio.lon.toFixed(2)})`
+    : `Aqui esta el honeypot (${m.paises[paisPropio]?.n || paisPropio})`;
   casa.appendChild(t);
   lienzo.appendChild(casa);
 
   return dibujados;
 }
 
-async function pintarMapa(porPais, recientes, paisPropio) {
+async function pintarMapa(porPais, recientes, paisPropio, propio) {
   const m = await cargarMundo();
   const cont = $("mapa");
   cont.replaceChildren();
@@ -147,7 +167,7 @@ async function pintarMapa(porPais, recientes, paisPropio) {
     lienzo.appendChild(g);
   }
 
-  const lineas = pintarAtaques(lienzo, m, recientes || [], paisPropio || "ES");
+  const lineas = pintarAtaques(lienzo, m, recientes || [], paisPropio || "ES", propio);
   cont.appendChild(lienzo);
 
   $("leyenda-mapa").textContent = total === 0
@@ -292,7 +312,8 @@ async function cargarEstado(recientes) {
   $("m-revisar").textContent = e.niveles?.revisar ?? 0;
   $("m-notable").textContent = e.niveles?.notable ?? 0;
 
-  await pintarMapa(e.por_pais || [], recientes, e.pais_propio);
+  await pintarMapa(e.por_pais || [], recientes, e.pais_propio,
+    { lat: e.latitud_propia || 0, lon: e.longitud_propia || 0 });
 
   pintarTabla("tabla-ips", (e.top_ips || []).map((ip) => [
     { valor: ip.ip }, { valor: ip.eventos, clase: "num" }, { valor: contextoIP(ip), clase: "sub" },
@@ -517,6 +538,66 @@ async function abrirAtaque(clave) {
     cuerpo.appendChild(nodo("p", "vacio", "Sin detalle: los eventos ya se purgaron."));
   }
   dlg.showModal();
+}
+
+// ── Situar el honeypot ──────────────────────────────────────────────────
+
+// Un mapa pulsable en vez de una lista de regiones: es mas preciso, no
+// depende de tener datos de subdivisiones de cada pais -que son 3.000 y
+// cambian- y no hay que explicar como se usa.
+async function pintarMapaUbicacion() {
+  const m = await cargarMundo();
+  const caja = $("mapa-ubicacion");
+  caja.replaceChildren();
+
+  const lienzo = svg("svg", {
+    viewBox: `0 0 ${m.ancho} ${m.alto}`,
+    preserveAspectRatio: "xMidYMid meet",
+  });
+  for (const [iso, p] of Object.entries(m.paises)) {
+    lienzo.appendChild(svg("path", { d: p.d, class: "pais", "data-iso": iso }));
+  }
+  const marca = svg("g", { class: "marca-propia" });
+  lienzo.appendChild(marca);
+  caja.appendChild(lienzo);
+
+  const situar = () => {
+    marca.replaceChildren();
+    const lat = parseFloat($("c-latitud").value);
+    const lon = parseFloat($("c-longitud").value);
+    let punto;
+    if (Number.isFinite(lat) && Number.isFinite(lon) && (lat || lon)) {
+      punto = aLienzo(lat, lon, m);
+    } else {
+      punto = m.paises[$("c-pais").value.toUpperCase()]?.c;
+    }
+    if (!punto) return;
+    marca.appendChild(svg("circle", { cx: punto[0], cy: punto[1], r: 7, class: "diana" }));
+    marca.appendChild(svg("circle", { cx: punto[0], cy: punto[1], r: 3, class: "centro" }));
+  };
+
+  lienzo.addEventListener("click", (ev) => {
+    // Del pixel de pantalla a las coordenadas del SVG: el mapa se escala
+    // con el ancho del dialogo, asi que no se puede usar el pixel directo.
+    const caja = lienzo.getBoundingClientRect();
+    const x = ((ev.clientX - caja.left) / caja.width) * m.ancho;
+    const y = ((ev.clientY - caja.top) / caja.height) * m.alto;
+    const [lat, lon] = delLienzo(x, y, m);
+    $("c-latitud").value = lat.toFixed(4);
+    $("c-longitud").value = lon.toFixed(4);
+    situar();
+  });
+
+  for (const id of ["c-latitud", "c-longitud", "c-pais"]) {
+    $(id).addEventListener("input", situar);
+  }
+  $("quitar-ubicacion").addEventListener("click", () => {
+    $("c-latitud").value = 0;
+    $("c-longitud").value = 0;
+    situar();
+  });
+
+  situar();
 }
 
 // ── Novedades ───────────────────────────────────────────────────────────
@@ -850,6 +931,8 @@ const CAMPOS = {
   "c-url-base": "url_base",
   "c-refresco": "refresco_segundos",
   "c-pais": "pais_propio",
+  "c-latitud": "latitud_propia",
+  "c-longitud": "longitud_propia",
   "c-retencion": "retencion_dias",
   "c-retencion-ataques": "retencion_episodios_dias",
   "c-tls-cert": "tls_cert",
@@ -1186,6 +1269,13 @@ async function abrirAjustes() {
       `grabaciones ${u.legible.grabaciones}, descargas ${u.legible.descargas}.`;
   } catch {
     $("uso-disco").textContent = "";
+  }
+
+  try {
+    await pintarMapaUbicacion();
+  } catch {
+    // El mapa es una ayuda, no un requisito: si no carga, quedan los
+    // campos de latitud y longitud.
   }
 
   irAPestana("servicios");

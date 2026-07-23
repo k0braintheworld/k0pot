@@ -71,6 +71,14 @@ type Config struct {
 	// PaisPropio es donde esta el honeypot, en codigo ISO de dos letras.
 	// El mapa traza hacia ahi las lineas de ataque.
 	PaisPropio string `json:"pais_propio"`
+	// LatitudPropia y LongitudPropia situan la marca con precision. Sin
+	// ellas se usa el centroide del pais, que en un pais grande deja la
+	// marca a cientos de kilometros de donde esta la maquina.
+	//
+	// Cero en ambas significa "sin definir": la isla Null, en el golfo de
+	// Guinea, no es donde esta el honeypot de nadie.
+	LatitudPropia  float64 `json:"latitud_propia"`
+	LongitudPropia float64 `json:"longitud_propia"`
 
 	// Avisos. Un panel solo funciona para quien lo tiene abierto: sin esto,
 	// una intrusion espera a que alguien se acuerde de mirar.
@@ -163,6 +171,12 @@ func (c *Config) Validar() error {
 	acotar("la caducidad de IP", &c.CaducidadIPDias, 1, 365)
 	acotar("la reserva de cuota", &c.ReservaCuota, 0, 1000)
 	acotar("el refresco del panel", &c.RefrescoSegundos, 5, 3600)
+	if c.LatitudPropia < -90 || c.LatitudPropia > 90 {
+		problemas = append(problemas, "la latitud debe estar entre -90 y 90")
+	}
+	if c.LongitudPropia < -180 || c.LongitudPropia > 180 {
+		problemas = append(problemas, "la longitud debe estar entre -180 y 180")
+	}
 	acotar("la retencion de eventos", &c.RetencionDias, 0, 3650)
 	acotar("la retencion de ataques", &c.RetencionEpisodiosDias, 0, 3650)
 	acotar("el tope diario de informes", &c.InformeTopeDiario, 0, 10000)

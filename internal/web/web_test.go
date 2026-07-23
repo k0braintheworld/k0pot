@@ -605,3 +605,36 @@ func TestCadaPestanaDeAjustesTieneSuContenido(t *testing.T) {
 		}
 	}
 }
+
+// La marca del honeypot se situa con la misma proyeccion con la que se
+// dibuja el mapa. Si las dos formulas divergieran, la marca apareceria
+// desplazada respecto a los paises y nadie sabria por que.
+func TestLaProyeccionDelMapaEsLaMismaEnLosDosSitios(t *testing.T) {
+	js, err := estaticos.ReadFile("static/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	codigo := string(js)
+
+	// Equirectangular, tal y como la genera tools/genmapa.py:
+	//   x = (lon + 180) / 360 * ancho
+	//   y = (90 - lat) / 180 * alto
+	for _, formula := range []string{
+		"((lon + 180) / 360) * m.ancho",
+		"((90 - lat) / 180) * m.alto",
+	} {
+		if !strings.Contains(codigo, formula) {
+			t.Errorf("app.js no proyecta con %q; si cambia la proyeccion del "+
+				"mapa hay que cambiarla aqui tambien", formula)
+		}
+	}
+	// Y la inversa, para poder elegir el sitio pinchando.
+	for _, formula := range []string{
+		"90 - (y / m.alto) * 180",
+		"(x / m.ancho) * 360 - 180",
+	} {
+		if !strings.Contains(codigo, formula) {
+			t.Errorf("falta la conversion inversa %q", formula)
+		}
+	}
+}

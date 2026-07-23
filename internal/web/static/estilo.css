@@ -668,3 +668,26 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 }
 .dato .valor { font-size: .92rem; word-break: break-word; }
 .dato .valor.malo { color: var(--rojo); font-weight: 600; }
+
+/* ── Situar el honeypot en el mapa ──────────────────────────────────────
+   Un mapa pequeno y pulsable vale mas que una lista de regiones: es mas
+   preciso, no depende de tener datos de subdivisiones de cada pais, y se
+   entiende sin explicar nada. */
+.ubicacion { margin: .3rem 0 .9rem; }
+.mapa-ubicacion {
+  background: var(--mar);
+  border: 1px solid var(--borde);
+  border-radius: .4rem;
+  overflow: hidden;
+  cursor: crosshair;
+}
+.mapa-ubicacion svg { display: block; width: 100%; height: auto; }
+.coordenadas {
+  display: flex;
+  gap: .5rem;
+  align-items: flex-end;
+  margin-top: .5rem;
+  flex-wrap: wrap;
+}
+.coordenadas label { flex: 1 1 7rem; margin: 0; }
+.coordenadas input { width: 100%; }

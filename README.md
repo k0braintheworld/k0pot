@@ -333,6 +333,27 @@ Tres detalles pensados:
 Si un ataque **continua** despues de darlo por visto, vuelve a contar como
 nuevo. No es lo mismo un ataque terminado que uno que sigue pasando.
 
+## Situar el honeypot en el mapa
+
+El mapa traza las lineas de ataque hacia donde esta la maquina. Con solo el
+pais, la marca va al **centroide**, que en un pais grande queda a cientos de
+kilometros de donde esta de verdad.
+
+En Ajustes → General hay un mapa pequeno: **pincha donde estas** y se
+guardan latitud y longitud. Tambien se pueden escribir a mano, y "Usar solo
+el pais" vuelve al centroide.
+
+Se eligio un mapa pulsable en vez de una lista de comunidades o regiones
+porque es mas preciso —dentro de una region tambien hay cientos de
+kilometros—, no depende de mantener datos de subdivisiones de doscientos
+paises, y no hay que explicar como se usa.
+
+La conversion entre coordenadas y el lienzo usa la misma proyeccion
+equirectangular con la que se genera el mapa en `tools/genmapa.py`. Un test
+comprueba que las dos formulas siguen coincidiendo: si divergieran, la marca
+apareceria desplazada respecto a los paises y no habria forma de saber por
+que.
+
 ## Panel por HTTPS
 
 El panel pide una contrasena y devuelve todo lo capturado. Sin cifrar, eso

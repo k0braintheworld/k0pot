@@ -199,6 +199,18 @@
         <input type="text" id="c-pais" maxlength="2" autocomplete="off">
       </label>
       <p class="ayuda">Destino de las lineas de ataque en el mapa.</p>
+
+      <div class="ubicacion">
+        <p class="ayuda">Situalo con precision: <strong>pincha en el mapa</strong>.
+        Sin coordenadas la marca va al centro del pais, que en uno grande queda a
+        cientos de kilometros de donde esta la maquina.</p>
+        <div id="mapa-ubicacion" class="mapa-ubicacion"></div>
+        <div class="coordenadas">
+          <label>Latitud<input type="number" id="c-latitud" step="0.0001" min="-90" max="90"></label>
+          <label>Longitud<input type="number" id="c-longitud" step="0.0001" min="-180" max="180"></label>
+          <button id="quitar-ubicacion" type="button" class="boton-menor">Usar solo el pais</button>
+        </div>
+      </div>
       <label class="interruptor">
         <input type="checkbox" id="c-panel-https"> Servir el panel por HTTPS
       </label>

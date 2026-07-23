@@ -148,8 +148,12 @@ func responderJSON(w http.ResponseWriter, v any) {
 
 // Estado es lo que necesita la pantalla principal.
 type Estado struct {
-	Nivel        report.Nivel                `json:"nivel"`
-	PaisPropio   string                      `json:"pais_propio"`
+	Nivel      report.Nivel `json:"nivel"`
+	PaisPropio string       `json:"pais_propio"`
+	// Latitud y Longitud situan la marca del honeypot con precision. Cero
+	// en ambas significa que no se han definido y manda el pais.
+	Latitud      float64                     `json:"latitud_propia"`
+	Longitud     float64                     `json:"longitud_propia"`
 	Frase        string                      `json:"frase"`
 	Dias         int                         `json:"dias"`
 	Total        int                         `json:"total"`
@@ -182,6 +186,8 @@ func (s *Servidor) estado(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, Estado{
 		Nivel:        report.NivelDe(niveles),
 		PaisPropio:   s.Config.Actual().PaisPropio,
+		Latitud:      s.Config.Actual().LatitudPropia,
+		Longitud:     s.Config.Actual().LongitudPropia,
 		Frase:        report.FraseSemaforo(niveles),
 		Dias:         d,
 		Total:        resumen.Total,
