@@ -171,23 +171,52 @@ h2 { margin: 0 0 .8rem; font-size: .82rem; text-transform: uppercase; letter-spa
 /* ── Feed en vivo ───────────────────────────────────────────── */
 /* Con tope: sin el, 40 eventos estiran la fila entera y dejan un hueco
    enorme bajo el mapa. El scroll se queda dentro del bloque. */
+/* ── Feed en vivo, con forma de terminal ────────────────────────────────
+   No es una simulacion: es lo que de verdad llega, con la gramatica de la
+   consola del atacante -redis>, ftp>, GET, un $- para que se lea como una
+   sesion en directo. El monoespaciado y el cursor lo venden; el color por
+   gravedad hace que una intrusion salte entre el ruido. */
 .bloque-vivo .vivo {
-  display: flex; flex-direction: column; gap: 1px;
+  display: flex; flex-direction: column;
   min-height: 12rem; max-height: 34rem; overflow-y: auto;
-  font-size: .78rem;
+  padding: .5rem .6rem;
+  background: #0a0c10;
+  border: 1px solid var(--borde);
+  border-radius: .4rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .76rem;
+  line-height: 1.55;
 }
-.bloque-vivo .linea-viva {
-  display: grid; grid-template-columns: 4.6rem 9rem 1fr; gap: .5rem;
-  padding: .25rem .4rem; border-radius: .25rem;
-  border-left: 2px solid transparent;
+:root[data-theme="light"] .bloque-vivo .vivo { background: #10141c; }
+
+.tl {
+  display: grid;
+  grid-template-columns: 4rem auto 1fr;
+  gap: .55rem;
+  align-items: baseline;
+  padding: .05rem 0;
 }
-.linea-viva:nth-child(odd) { background: var(--panel-alto); }
-.linea-viva.revisar { border-left-color: var(--ambar); }
-.linea-viva.notable { border-left-color: var(--rojo); }
-.linea-viva .hora { color: var(--sub); font-variant-numeric: tabular-nums; }
-.linea-viva .ip { color: var(--sub); font-family: ui-monospace, Menlo, monospace; font-size: .72rem; overflow: hidden; text-overflow: ellipsis; }
-.linea-viva .que { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.linea-viva.notable .que { color: var(--rojo); }
+.tl-hora { color: #4b5563; font-variant-numeric: tabular-nums; }
+.tl-prompt { white-space: nowrap; }
+.tl-ip { color: #6b7d97; }
+.tl-pais { color: #3f4a5a; margin-left: .3rem; }
+.tl-sigilo { color: #5a6577; margin: 0 .35rem; }
+.tl-cuerpo { color: #a9b4c4; word-break: break-all; }
+
+/* El color de la accion sube con la gravedad: el ruido queda apagado, lo
+   que merece mirarse brilla. */
+.tl.revisar .tl-cuerpo { color: #e3b341; }
+.tl.revisar .tl-sigilo { color: #e3b341; }
+.tl.notable .tl-cuerpo { color: #ff6b5e; }
+.tl.notable .tl-sigilo { color: #ff6b5e; }
+
+.tl-cursor { display: grid; grid-template-columns: 4rem auto 1fr; gap: .55rem; }
+.tl-cursor .tl-sigilo { grid-column: 2; color: #5a6577; }
+.tl-caret {
+  color: #7dd3a8;
+  animation: parpadeo 1.1s steps(2, start) infinite;
+}
+@keyframes parpadeo { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
 
 /* ── Destacados ─────────────────────────────────────────────── */
 

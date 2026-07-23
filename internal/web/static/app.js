@@ -292,33 +292,129 @@ function pintarSerie(datos) {
 
 // ─── Feed en vivo ──────────────────────────────────────────────────────
 
-const RESUMEN_EVENTO = {
-  conexion: (d) => "abrio una conexion",
-  huella_cliente: (d) => `cliente: ${d?.cliente || "desconocido"}`,
-  login_fallido: (d) => `probo ${d?.usuario || "?"} / ${d?.password || "?"}`,
-  login_exitoso: (d) => `entro como ${d?.usuario || "?"}`,
-  comando_ejecutado: (d) => `ejecuto: ${d?.comando || "?"}`,
-  descarga_fichero: (d) => `descargo ${d?.url || "un fichero"}`,
-  peticion_http: (d) => `pidio ${d?.ruta || "/"}`,
-};
+// visibleJS hace legible un texto con bytes de control o basura binaria.
+// Es el gemelo en el navegador de visible() en Go: un escaner no siempre
+// habla el protocolo del puerto -un "cliente SSH" puede ser un saludo RDP-
+// y volcar esos bytes rompe el render (los cuadraditos que se veian). Se
+// escapan a \xNN, que ademas deja ver que HABIA bytes no imprimibles.
+function visibleJS(s) {
+  if (!s) return "";
+  let out = "";
+  for (const ch of s) {
+    const c = ch.codePointAt(0);
+    if (ch === "\t") out += "\\t";
+    else if (c < 0x20 || c === 0x7f) out += "\\x" + c.toString(16).padStart(2, "0");
+    else if (c === 0xfffd) out += "\\x??";
+    // Rango de control C1 (0x80-0x9f): invisible y sospechoso, se escapa.
+    else if (c >= 0x80 && c <= 0x9f) out += "\\x" + c.toString(16).padStart(2, "0");
+    else out += ch;
+  }
+  return out;
+}
+
+// terminalDe traduce un evento a como se veria en la consola del atacante.
+// No inventa nada: es lo mismo que capturamos, con la gramatica del
+// protocolo real -redis-cli muestra "127.0.0.1:6379>", ftp usa comandos en
+// mayusculas, una shell un "$"-, para que se lea como lo que de verdad fue.
+function terminalDe(ev) {
+  const d = ev.detalle || {};
+  switch (ev.tipo) {
+    case "conexion": {
+      const p = d.puerto ? `:${d.puerto}` : "";
+      return { sigilo: "•", cuerpo: `connect${p}`, tecleado: false };
+    }
+    case "huella_cliente":
+      return { sigilo: "→", cuerpo: `client: ${visibleJS(d.cliente)}`, tecleado: false };
+    case "login_fallido":
+      return { sigilo: "✗", cuerpo: `login ${visibleJS(d.usuario)}:${visibleJS(d.password)} denied`, tecleado: true };
+    case "login_exitoso":
+      return { sigilo: "✓", cuerpo: `login ${visibleJS(d.usuario)}:${visibleJS(d.password)} OK`, tecleado: true };
+    case "comando_ejecutado": {
+      // Un verbo de Redis/FTP no es una shell: se muestra con su prompt real.
+      const prompt = ev.protocolo === "redis" ? "redis>" : ev.protocolo === "ftp" ? "ftp>" : "$";
+      return { sigilo: prompt, cuerpo: visibleJS(d.comando), tecleado: true };
+    }
+    case "tunel_solicitado":
+      return { sigilo: "⇄", cuerpo: `forward → ${visibleJS(d.destino)}`, tecleado: true };
+    case "descarga_fichero":
+      return { sigilo: "↓", cuerpo: `fetch ${visibleJS(d.url || d.fichero)}`, tecleado: true };
+    case "peticion_http": {
+      const linea = `${d.metodo || "GET"} ${visibleJS(d.ruta) || "/"}`;
+      return { sigilo: "»", cuerpo: linea, tecleado: true };
+    }
+    default:
+      return { sigilo: "·", cuerpo: ev.tipo, tecleado: false };
+  }
+}
+
+// vistos guarda las lineas ya pintadas -por id de evento aproximado- para
+// teclear SOLO las nuevas: reteclear todo en cada refresco marearia.
+const vistosVivo = new Set();
 
 function pintarVivo(lista) {
   const cont = $("vivo");
   cont.replaceChildren();
 
   if (!lista.length) {
-    cont.appendChild(nodo("p", "cargando", "Sin actividad todavia."));
+    cont.appendChild(nodo("p", "cargando", "esperando actividad…"));
     return;
   }
 
-  for (const ev of lista) {
-    const fila = nodo("div", `linea-viva ${ev.clasificacion}`);
-    fila.appendChild(nodo("span", "hora", new Date(ev.timestamp).toLocaleTimeString("es")));
-    fila.appendChild(nodo("span", "ip", ev.ip + (ev.pais ? ` ${ev.pais}` : "")));
-    const resumen = RESUMEN_EVENTO[ev.tipo];
-    fila.appendChild(nodo("span", "que", resumen ? resumen(ev.detalle) : ev.tipo));
+  // Se pintan del mas antiguo al mas nuevo, como una consola que crece
+  // hacia abajo; la lista llega al reves.
+  const orden = [...lista].reverse();
+  for (const ev of orden) {
+    const t = terminalDe(ev);
+    const clave = `${ev.timestamp}|${ev.ip}|${t.cuerpo}`;
+    const esNuevo = !vistosVivo.has(clave);
+    vistosVivo.add(clave);
+
+    const fila = nodo("div", `tl ${ev.clasificacion}`);
+    fila.appendChild(nodo("span", "tl-hora", horaCorta(ev.timestamp)));
+    // El prompt lleva la IP del atacante, como en una sesion real.
+    const prompt = nodo("span", "tl-prompt");
+    prompt.appendChild(nodo("span", "tl-ip", ev.ip));
+    if (ev.pais) prompt.appendChild(nodo("span", "tl-pais", ev.pais.toLowerCase()));
+    prompt.appendChild(nodo("span", "tl-sigilo", t.sigilo));
+    fila.appendChild(prompt);
+
+    const cuerpo = nodo("span", "tl-cuerpo");
+    if (esNuevo && t.tecleado && t.cuerpo.length <= 80) {
+      teclear(cuerpo, t.cuerpo);
+    } else {
+      cuerpo.textContent = t.cuerpo;
+    }
+    fila.appendChild(cuerpo);
     cont.appendChild(fila);
   }
+
+  // Cursor parpadeante al final: la senal de que la consola esta viva.
+  const cursor = nodo("div", "tl-cursor");
+  cursor.appendChild(nodo("span", "tl-sigilo", "▸"));
+  cursor.appendChild(nodo("span", "tl-caret", "█"));
+  cont.appendChild(cursor);
+
+  // Se mantiene el scroll abajo, donde esta lo ultimo.
+  cont.scrollTop = cont.scrollHeight;
+
+  // No dejar crecer el set sin fin.
+  if (vistosVivo.size > 500) {
+    const sobran = [...vistosVivo].slice(0, vistosVivo.size - 300);
+    for (const k of sobran) vistosVivo.delete(k);
+  }
+}
+
+// teclear revela el texto caracter a caracter, rapido: la sensacion de
+// estar viendo a alguien escribir en directo. Se cancela si la fila se
+// reemplaza, para no dejar temporizadores colgando.
+function teclear(nodo, texto) {
+  let i = 0;
+  const paso = () => {
+    if (!nodo.isConnected) return;
+    nodo.textContent = texto.slice(0, i);
+    if (i++ < texto.length) setTimeout(paso, 18);
+  };
+  paso();
 }
 
 // ─── Tablas y resto ────────────────────────────────────────────────────
