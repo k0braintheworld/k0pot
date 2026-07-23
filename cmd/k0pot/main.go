@@ -773,7 +773,11 @@ func leerContrasena() (string, error) {
 	}
 	linea, err := entradaEstandar.ReadString(0x0a)
 	if err != nil && linea == "" {
-		return "", err
+		// Sin terminal y sin nada en la entrada. Un "EOF" pelado no le dice
+		// a nadie que le falta escribir la contrasena: pasa al ejecutarlo
+		// desde un script o con la entrada redirigida.
+		return "", fmt.Errorf("no hay contrasena en la entrada: ejecutalo desde " +
+			"una terminal, o pasala por tuberia (echo 'tuClave' | k0pot -crear-usuario ...)")
 	}
 	return strings.TrimSpace(linea), nil
 }

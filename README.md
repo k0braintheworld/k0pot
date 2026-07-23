@@ -75,40 +75,52 @@ unico episodio que habia que mirar.
 Se activan y desactivan desde el panel. Los puertos son configurables; el
 panel indica a cuales hay que redirigir el trafico.
 
-## Requisitos
-
-- Go 1.24 o superior para compilar. Sin CGO: no hace falta gcc.
-- Docker y Docker Compose para Cowrie.
-- Opcional: clave de [AbuseIPDB](https://www.abuseipdb.com) (1.000 consultas
-  gratis al dia) para saber quien esta detras de cada IP.
-- Opcional: cualquier API compatible con OpenAI (Groq, OpenRouter, Mistral,
-  Ollama en local) o Anthropic, para los informes en lenguaje natural.
-
-**k0Pot funciona sin ninguna de las dos claves.** Sin AbuseIPDB no enriquece
-las IPs; sin proveedor de IA los informes los redactan las reglas, que son
-deterministas, instantaneas y gratis.
-
-## Primeros pasos
+## Instalacion
 
 ```sh
 git clone https://github.com/k0braintheworld/k0pot.git
 cd k0pot
-cp .env.ejemplo .env        # opcional: claves de API
+./instalar.sh
+```
 
-# Los volumenes de Cowrie tienen que existir y ser tuyos. Si los crea
-# Docker seran de root y Cowrie no podra escribir sus claves de host.
+El instalador comprueba el entorno, te pregunta las dos IP -la de gestion y
+la expuesta-, prepara los volumenes con los permisos correctos, compila,
+levanta Cowrie, instala los servicios y crea la primera cuenta. Avisa si las
+dos IP estan en la misma red, que es el error que anula el aislamiento.
+
+**No aplica el cortafuegos**: eso exige root y un error puede dejarte fuera
+del servidor, asi que prepara el fichero con tus direcciones y te dice como
+aplicarlo con la red de seguridad. Al terminar lista lo que queda por hacer
+a mano, en orden.
+
+### Requisitos
+
+- **Go 1.24 o superior** para compilar. Sin CGO: no hace falta gcc.
+- **Docker y Docker Compose**, con tu usuario en el grupo `docker`.
+- **Dos interfaces de red**, en redes distintas. Con una sola no hay
+  aislamiento posible: el honeypot quedaria escuchando en tu propia red.
+- Opcional: clave de [AbuseIPDB](https://www.abuseipdb.com) y de algun
+  proveedor de IA. k0Pot funciona sin ninguna de las dos.
+
+### A mano, si lo prefieres
+
+```sh
+cp .env.ejemplo .env
+$EDITOR .env                 # K0POT_IP_EXPUESTA es OBLIGATORIA
 mkdir -p data/cowrie/lib/{downloads,tty,snapshots} data/cowrie/log
-
 go build -o k0pot ./cmd/k0pot
 docker compose up -d
 ./k0pot -crear-usuario tunombre
-./k0pot -web 127.0.0.1:8080
+cp deploy/k0pot-*.service ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now k0pot-collector k0pot-panel
+sudo loginctl enable-linger $USER    # si no, mueren al cerrar la sesion
 ```
 
-El panel queda en `http://127.0.0.1:8080`. Para dejarlo corriendo solo, en
-`deploy/` hay unidades de systemd de usuario.
+Los volumenes tienen que existir **antes** de `docker compose up`: si los
+crea Docker seran de root, Cowrie no podra escribir sus claves de host y ni
+SSH ni Telnet arrancaran —con el contenedor apareciendo como `Up`.
 
-Otras ordenes utiles:
+### Ordenes utiles
 
 ```sh
 ./k0pot -resumen -dias 7      # resumen por consola
