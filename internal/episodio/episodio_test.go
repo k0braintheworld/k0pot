@@ -288,3 +288,19 @@ func TestProtocoloDesconocidoAlerta(t *testing.T) {
 		t.Errorf("lo desconocido deberia alertar, dio %s", e.Severidad)
 	}
 }
+
+// Servirse de la maquina pesa como una intrusion aunque no se teclee un
+// solo comando: no buscan tus datos, buscan tu conexion.
+func TestPedirUnTunelEsIntrusion(t *testing.T) {
+	e := Agrupar([]model.Evento{
+		ev(0, "1.1.1.1", "ssh", model.LoginExitoso, map[string]string{"usuario": "root", "password": "admin"}),
+		ev(1, "1.1.1.1", "ssh", model.TunelSolicitado, map[string]string{"destino": "8.8.8.8:443"}),
+	}, HuecoPorDefecto)[0]
+
+	if e.Severidad != Intrusion {
+		t.Errorf("severidad = %s, se esperaba intrusion", e.Severidad)
+	}
+	if !contiene(e.Resumen, "pasarela") {
+		t.Errorf("el resumen deberia decirlo: %q", e.Resumen)
+	}
+}

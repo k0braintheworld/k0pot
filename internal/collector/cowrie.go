@@ -32,6 +32,9 @@ type lineaCowrie struct {
 	URL      string  `json:"url"`
 	Shasum   string  `json:"shasum"`
 	Duration float64 `json:"duration"`
+	// Destino del tunel que piden abrir.
+	DstIP   string `json:"dst_ip"`
+	DstPort int    `json:"dst_port"`
 }
 
 // tiposCowrie mapea los eventid de Cowrie a nuestro esquema. Lo que no
@@ -44,6 +47,12 @@ var tiposCowrie = map[string]model.TipoEvento{
 	"cowrie.command.input":         model.ComandoEjecutado,
 	"cowrie.session.file_download": model.DescargaFichero,
 	"cowrie.client.version":        model.HuellaCliente,
+	// Pedir un canal direct-tcpip es intentar usar la maquina de pasarela
+	// para reenviar trafico ajeno. Es de lo mas valioso que registra un
+	// honeypot: no buscan tus datos, buscan tu conexion para esconder la
+	// suya. Se descartaba por no estar en esta tabla.
+	"cowrie.direct-tcpip.request": model.TunelSolicitado,
+	"cowrie.direct-tcpip.data":    model.TunelSolicitado,
 }
 
 // ErrIgnorado indica que la linea era valida pero de un tipo que no
@@ -104,6 +113,9 @@ func detalleDe(lc lineaCowrie) map[string]string {
 	poner("cliente", lc.Version)
 	poner("url", lc.URL)
 	poner("sha256", lc.Shasum)
+	if lc.DstIP != "" && lc.DstPort > 0 {
+		poner("destino", fmt.Sprintf("%s:%d", lc.DstIP, lc.DstPort))
+	}
 
 	if len(d) == 0 {
 		return nil

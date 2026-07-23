@@ -30,6 +30,9 @@ const (
 	// HuellaCliente identifica el software que usa el atacante. Vale su
 	// propio tipo porque delata a que familia de bot pertenece.
 	HuellaCliente TipoEvento = "huella_cliente"
+	// TunelSolicitado: pidieron reenviar trafico a traves de la maquina.
+	// No es reconocimiento: es usar el servidor, y por eso va aparte.
+	TunelSolicitado TipoEvento = "tunel_solicitado"
 )
 
 // Origen describe quien esta detras de una IP, una vez enriquecida.

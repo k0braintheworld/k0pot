@@ -83,6 +83,8 @@ type Episodio struct {
 	Comandos       []string `json:"comandos,omitempty"`
 	Rutas          []string `json:"rutas,omitempty"`
 	Descargas      []string `json:"descargas,omitempty"`
+	// Tuneles son los destinos a los que pidieron reenviar trafico.
+	Tuneles []string `json:"tuneles,omitempty"`
 
 	// Motivos son los veredictos del clasificador que elevaron el episodio.
 	// Se guardan para poder explicar una severidad que no se deduce de los
@@ -191,6 +193,12 @@ func (e *Episodio) absorber(ev model.Evento) {
 			break
 		}
 		e.Severidad = Peor(e.Severidad, Intrusion)
+	case model.TunelSolicitado:
+		// Pedir un tunel no es tantear: es servirse de la maquina. Pesa
+		// como una intrusion aunque no llegue a teclearse un solo comando.
+		e.Severidad = Peor(e.Severidad, Intrusion)
+		anadir(&e.Tuneles, ev.Detalle["destino"], 20)
+
 	case model.DescargaFichero:
 		e.Severidad = Peor(e.Severidad, Intrusion)
 		anadir(&e.Descargas, primero(ev.Detalle, "url", "fichero"), 20)
@@ -233,6 +241,10 @@ func (e *Episodio) redactar() string {
 	}
 	if n := len(e.Descargas); n > 0 {
 		partes = append(partes, fmt.Sprintf("intento descargar %s", plural(n, "fichero", "ficheros")))
+	}
+	if n := len(e.Tuneles); n > 0 {
+		partes = append(partes, fmt.Sprintf(
+			"intento usar el servidor de pasarela hacia %s", strings.Join(recorta(e.Tuneles, 2), ", ")))
 	}
 	if e.LoginsFallidos > 0 {
 		partes = append(partes, fmt.Sprintf("probo %s",
@@ -319,4 +331,12 @@ func mayuscula(s string) string {
 		return s
 	}
 	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+// recorta limita una lista para citarla en una frase.
+func recorta(v []string, n int) []string {
+	if len(v) <= n {
+		return v
+	}
+	return append(append([]string(nil), v[:n]...), "...")
 }

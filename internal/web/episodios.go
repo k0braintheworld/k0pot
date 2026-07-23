@@ -133,6 +133,12 @@ func narrar(ev model.Evento) (string, bool) {
 			return "envia: " + c, hay && v.Grave
 		}
 		return "ejecuta: " + c, true
+	case model.TunelSolicitado:
+		if d := d["destino"]; d != "" {
+			return "pide reenviar trafico hacia " + d, true
+		}
+		return "pide reenviar trafico a traves del servidor", true
+
 	case model.DescargaFichero:
 		if u := d["url"]; u != "" {
 			return "intenta descargar " + u, true
@@ -173,6 +179,13 @@ func notaDe(ev model.Evento) *saber.Nota {
 		n, hay = saber.DeComando(d["comando"])
 	case model.HuellaCliente:
 		n, hay = saber.DeCliente(d["cliente"])
+	case model.TunelSolicitado:
+		n, hay = saber.Nota{
+			Que: "intento de usar el servidor como pasarela",
+			Por: "no buscan tus datos, buscan tu conexion para esconder la suya: " +
+				"spam, fuerza bruta contra terceros o trafico que no quieren " +
+				"que salga de su IP",
+		}, true
 	case model.LoginFallido, model.LoginExitoso:
 		n, hay = saber.DeCredencial(d["usuario"], d["password"])
 	}

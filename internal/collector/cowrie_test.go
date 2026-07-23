@@ -185,3 +185,24 @@ func TestIDExternoEsEstable(t *testing.T) {
 			primero.IDExterno, segundo.IDExterno)
 	}
 }
+
+// Pedir un canal direct-tcpip es intentar usar la maquina de pasarela.
+// Se descartaba en silencio por no estar en la tabla de tipos, y es de lo
+// mas valioso que registra un honeypot: el primer acceso real que capturo
+// k0Pot no tecleo ni un comando, solo pidio un tunel hacia 8.8.8.8:443.
+func TestSeCapturaLaPeticionDeTunel(t *testing.T) {
+	linea := []byte(`{"eventid":"cowrie.direct-tcpip.request","src_ip":"203.0.113.9",` +
+		`"dst_ip":"8.8.8.8","dst_port":443,"session":"abc","protocol":"ssh",` +
+		`"timestamp":"2026-07-23T11:40:07.000Z"}`)
+
+	ev, err := ParsearCowrie(linea)
+	if err != nil {
+		t.Fatalf("deberia capturarse: %v", err)
+	}
+	if ev.Tipo != model.TunelSolicitado {
+		t.Errorf("tipo = %s", ev.Tipo)
+	}
+	if ev.Detalle["destino"] != "8.8.8.8:443" {
+		t.Errorf("destino = %q, se esperaba 8.8.8.8:443", ev.Detalle["destino"])
+	}
+}

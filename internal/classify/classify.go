@@ -86,6 +86,14 @@ func (c *Clasificador) porAccion(ev *model.Evento) (Resultado, bool) {
 				"quien quiere dejar malware instalado",
 		}, true
 
+	case model.TunelSolicitado:
+		destino := ev.Detalle["destino"]
+		motivo := "intento usar el servidor de pasarela para reenviar trafico ajeno"
+		if destino != "" {
+			motivo += " hacia " + destino
+		}
+		return Resultado{Clasificacion: model.Notable, Motivo: motivo}, true
+
 	case model.ComandoEjecutado:
 		comando := ev.Detalle["comando"]
 		if patron, desc := patronMalicioso(comando); patron != "" {
