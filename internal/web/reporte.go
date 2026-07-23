@@ -1,7 +1,9 @@
 package web
 
 import (
+	"crypto/rand"
 	_ "embed"
+	"encoding/base64"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -56,18 +58,45 @@ func (s *Servidor) reporte(w http.ResponseWriter, r *http.Request) {
 
 	modelo := datosReporte(desde, resumen, niveles, ataques, res.Texto, s.Almacen)
 
+	// El informe es un documento AUTOCONTENIDO: el estilo va en linea para
+	// que siga funcionando al guardarlo y abrirlo sin servidor. La CSP del
+	// panel -style-src 'self'- bloquea el estilo en linea, asi que aqui se
+	// pone una propia con un nonce por peticion: permite justo este bloque
+	// de estilo y script, y nada mas. No se afloja a 'unsafe-inline': los
+	// datos de atacante ya los escapa html/template, pero un nonce no deja
+	// margen ni a un descuido futuro.
+	nonce, err := nonceAleatorio()
+	if err != nil {
+		http.Error(w, "no se pudo generar el informe", http.StatusInternalServerError)
+		return
+	}
+	modelo.Nonce = template.HTMLAttr(fmt.Sprintf(`nonce="%s"`, nonce))
+
+	w.Header().Set("Content-Security-Policy", fmt.Sprintf(
+		"default-src 'none'; style-src 'nonce-%s'; script-src 'nonce-%s'; img-src data:",
+		nonce, nonce))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tplReporte.Execute(w, modelo); err != nil {
-		// Ya se han escrito cabeceras; solo queda registrarlo.
 		fmt.Printf("reporte: %v\n", err)
 	}
+}
+
+// nonceAleatorio devuelve un valor de un solo uso para la CSP del informe.
+func nonceAleatorio() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(b), nil
 }
 
 // ── Modelo de la plantilla ──────────────────────────────────────────────
 
 type reporteVista struct {
+	Nonce                   template.HTMLAttr
 	Desde, Hasta, Generado  string
-	Semaforo, NivelClase    string
+	Nivel                   string
+	NivelClase              string
 	Informe                 []string
 	Total, IPsUnicas        int
 	NumAtaques, Intrusiones int
@@ -103,7 +132,7 @@ func datosReporte(desde time.Time, r *store.Resumen, niveles map[model.Clasifica
 		Desde:      desde.Local().Format("02/01/2006 15:04"),
 		Hasta:      time.Now().Local().Format("02/01/2006 15:04"),
 		Generado:   time.Now().Local().Format("02/01/2006 15:04"),
-		Semaforo:   report.FraseSemaforo(niveles),
+		Nivel:      strings.ToUpper(string(nivel)),
 		NivelClase: strings.ToLower(string(nivel)),
 		Total:      r.Total,
 		IPsUnicas:  r.IPsUnicas,
