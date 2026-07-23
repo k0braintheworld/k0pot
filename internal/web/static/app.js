@@ -1109,15 +1109,17 @@ function pintarGravedad(severidades) {
     ["tanteo", "Tanteo — probaron credenciales o rutas"],
     ["roce", "Roce — solo tocaron el puerto"],
   ];
-  const total = orden.reduce((s, [k]) => s + (severidades?.[k] || 0), 0);
+  const cuenta = (k) => severidades?.[k] || 0;
+  const total = orden.reduce((s, [k]) => s + cuenta(k), 0);
   if (!total) {
     cont.appendChild(nodo("p", "vacio", "Sin ataques en este periodo."));
     return;
   }
-  const max = Math.max(...orden.map(([k]) => severidades?.[k] || 0), 1);
+  const max = Math.max(...orden.map(([k]) => cuenta(k)), 1);
 
+  const barras = nodo("div", "barras-sev");
   for (const [clave, etiqueta] of orden) {
-    const n = severidades?.[clave] || 0;
+    const n = cuenta(clave);
     const barra = nodo("div", `barra-sev ${clave}`);
     const fila = nodo("div", "fila");
     fila.appendChild(nodo("span", "nombre", etiqueta));
@@ -1129,8 +1131,45 @@ function pintarGravedad(severidades) {
     relleno.style.width = `${(n / max) * 100}%`;
     canal.appendChild(relleno);
     barra.appendChild(canal);
-    cont.appendChild(barra);
+    barras.appendChild(barra);
   }
+  cont.appendChild(barras);
+
+  // Cierre: el embudo de las cuatro gravedades en dos bloques, ruido contra
+  // lo que de verdad importa. Es lo que separa a k0Pot de mirar un log crudo:
+  // casi todo rebota solo, y lo poco que entra queda a la vista.
+  const ruido = cuenta("roce") + cuenta("tanteo");
+  const serio = cuenta("acceso") + cuenta("intrusion");
+  const pctRuido = Math.round((ruido / total) * 100);
+
+  const embudo = nodo("div", "embudo");
+  const split = nodo("div", "split");
+  const segRuido = nodo("div", "seg ruido");
+  segRuido.style.width = `${(ruido / total) * 100}%`;
+  const segSerio = nodo("div", "seg serio");
+  segSerio.style.width = `${(serio / total) * 100}%`;
+  split.appendChild(segRuido);
+  split.appendChild(segSerio);
+  embudo.appendChild(split);
+
+  const leyenda = nodo("div", "leyenda-split");
+  const marca = (clase, texto, n) => {
+    const it = nodo("div", `marca ${clase}`);
+    it.appendChild(nodo("span", "punto"));
+    it.appendChild(nodo("span", "txt", texto));
+    it.appendChild(nodo("span", "n", String(n)));
+    return it;
+  };
+  leyenda.appendChild(marca("ruido", "Ruido de fondo", ruido));
+  leyenda.appendChild(marca("serio", "Llegaron a algo", serio));
+  embudo.appendChild(leyenda);
+
+  const frase = serio === 0
+    ? `Los ${total} son ruido: escaneos y pruebas que rebotan solas.`
+    : `De ${total} ataques, el ${pctRuido}% es ruido. ${serio} ` +
+      `${serio === 1 ? "consiguio" : "consiguieron"} entrar o actuar: esos son los que miras.`;
+  embudo.appendChild(nodo("p", "nota", frase));
+  cont.appendChild(embudo);
 }
 
 async function refrescar() {

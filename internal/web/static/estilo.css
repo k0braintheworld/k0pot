@@ -88,7 +88,7 @@ main.rejilla-panel {
 .bloque-mapa    { grid-column: span 8; }
 .bloque-vivo    { grid-column: span 4; }
 .bloque-ataques { grid-column: span 7; }
-.bloque-grafica { grid-column: span 5; }
+.bloque-grafica { grid-column: span 5; align-self: stretch; display: flex; flex-direction: column; }
 .bloque-serie   { grid-column: span 12; }
 /* Campanas y artefactos van a lo ancho y se ocultan cuando no hay nada,
    asi no dejan un cuadro vacio ni descuadran la fila de abajo. */
@@ -829,7 +829,8 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
    Barras horizontales que resumen de un vistazo el reparto que da sentido
    a k0Pot: mucho roce (ruido), y estrechandose hasta la intrusion. El color
    es el mismo del resto del panel, para que "rojo" siga significando grave. */
-.grafica-gravedad { display: flex; flex-direction: column; gap: .7rem; padding-top: .3rem; }
+.grafica-gravedad { display: flex; flex-direction: column; padding-top: .3rem; flex: 1 1 auto; }
+.barras-sev { display: flex; flex-direction: column; gap: .7rem; }
 .barra-sev { }
 .barra-sev .fila { display: flex; justify-content: space-between; font-size: .8rem; margin-bottom: .2rem; }
 .barra-sev .nombre { color: var(--texto); }
@@ -841,3 +842,23 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .barra-sev.acceso    .relleno { background: #d98a3a; }
 .barra-sev.intrusion .relleno { background: var(--rojo); }
 .barra-sev.intrusion .nombre { color: var(--rojo); font-weight: 600; }
+
+/* Cierre: el embudo en dos, ruido contra lo que importa. Va anclado abajo
+   (margin-top:auto) para que el bloque iguale la altura de la lista de
+   ataques sin estirar las barras. */
+.embudo { margin-top: auto; padding-top: 1.4rem; }
+.embudo .split {
+  display: flex; height: .8rem; border-radius: 1rem; overflow: hidden;
+  background: var(--panel-alto);
+}
+.embudo .seg { height: 100%; transition: width .5s ease; }
+.embudo .seg.ruido { background: #5f7d86; }
+.embudo .seg.serio { background: var(--rojo); }
+.leyenda-split { display: flex; gap: 1.4rem; margin-top: .6rem; font-size: .8rem; }
+.leyenda-split .marca { display: flex; align-items: center; gap: .4rem; }
+.leyenda-split .punto { width: .6rem; height: .6rem; border-radius: 50%; flex: none; }
+.leyenda-split .marca.ruido .punto { background: #5f7d86; }
+.leyenda-split .marca.serio .punto { background: var(--rojo); }
+.leyenda-split .txt { color: var(--sub); }
+.leyenda-split .n { color: var(--texto); font-variant-numeric: tabular-nums; font-weight: 600; }
+.embudo .nota { margin: .8rem 0 0; font-size: .82rem; color: var(--sub); line-height: 1.5; }
