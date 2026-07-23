@@ -716,3 +716,20 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 }
 .controles-zoom button:hover { border-color: var(--acento); }
 .mapa-ubicacion { touch-action: none; }  /* el arrastre lo maneja el JS */
+
+/* El dato crudo del paso: lo que envio el atacante, tal cual. Monoespaciado
+   para que se lea como lo que es -texto de maquina, no prosa- y con
+   ruptura por si trae una linea larga. */
+.paso-crudo {
+  margin: .2rem 0 0;
+  padding: .3rem .5rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .76rem;
+  color: var(--texto);
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: .3rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+}

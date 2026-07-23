@@ -1,7 +1,9 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/k0braintheworld/k0pot/internal/model"
@@ -59,6 +61,12 @@ type PasoNarrado struct {
 	// dice "GET /SDK/webLanguage" solo lo entiende quien ya sabia la
 	// respuesta; es el resto de la gente la que necesita el panel.
 	Nota *saber.Nota `json:"nota,omitempty"`
+	// Crudo es lo que el atacante envio EXACTAMENTE, con los bytes de
+	// control ya escapados para que se puedan leer. La narracion cuenta
+	// que fue; esto es la prueba literal, que a veces dice mas: un cliente
+	// SSH que en realidad manda un saludo RDP, un comando con rutas
+	// concretas, un user-agent con la version del bot.
+	Crudo string `json:"crudo,omitempty"`
 }
 
 // DetalleEpisodio es un ataque con su narracion completa.
@@ -118,6 +126,7 @@ func (s *Servidor) episodio(w http.ResponseWriter, r *http.Request) {
 		pasos = append(pasos, PasoNarrado{
 			Momento: ev.Timestamp, Tipo: string(ev.Tipo),
 			Texto: texto, Destacado: destacado, Nota: notaDe(ev),
+			Crudo: crudoDe(ev),
 		})
 	}
 	det := DetalleEpisodio{EpisodioFila: ep, Pasos: pasos}
@@ -140,7 +149,7 @@ func narrar(ev model.Evento) (string, bool) {
 		return "abre conexion", false
 	case model.HuellaCliente:
 		if c := d["cliente"]; c != "" {
-			return "se identifica como " + c, false
+			return "se identifica como " + visible(c), false
 		}
 		return "se identifica", false
 	case model.LoginFallido:
@@ -315,4 +324,62 @@ func (s *Servidor) explicarEpisodio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	responderJSON(w, map[string]string{"explicacion": texto})
+}
+
+// crudoDe devuelve lo que el atacante envio EXACTAMENTE en ese paso, o vacio
+// si el evento no tiene un contenido literal que ensenar (una conexion a
+// secas no lo tiene).
+//
+// Es la prueba, frente a la narracion que la interpreta. A veces dice mas:
+// el "cliente" que en realidad es un saludo de otro protocolo, el comando
+// con sus rutas, el user-agent con la version del bot.
+func crudoDe(ev model.Evento) string {
+	d := ev.Detalle
+	switch ev.Tipo {
+	case model.ComandoEjecutado:
+		return visible(d["comando"])
+	case model.HuellaCliente:
+		return visible(d["cliente"])
+	case model.PeticionHTTP:
+		linea := strings.TrimSpace(d["metodo"] + " " + d["ruta"])
+		if ua := d["cliente"]; ua != "" {
+			linea += "\n" + ua
+		}
+		return visible(linea)
+	case model.LoginFallido, model.LoginExitoso:
+		return visible(d["usuario"] + ":" + d["password"])
+	case model.DescargaFichero:
+		if u := d["url"]; u != "" {
+			return visible(u)
+		}
+		return visible(d["fichero"])
+	case model.TunelSolicitado:
+		return visible(d["destino"])
+	}
+	return ""
+}
+
+// visible hace legible un texto que puede traer bytes de control o basura
+// binaria: los escaneres no siempre hablan el protocolo del puerto, asi que
+// el "cliente SSH" puede ser en realidad un saludo RDP con bytes crudos.
+// Volcarlos tal cual rompe el render -salen como cuadraditos y mojibake- y
+// puede colar caracteres que confundan a quien lo lee. Se escapan a \xNN,
+// que ademas deja ver que habia bytes no imprimibles, que es un dato en si.
+func visible(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r == '\t':
+			b.WriteString("\\t")
+		case r == '\n' || r == '\r':
+			b.WriteRune(r) // los saltos de linea reales se respetan
+		case r < 0x20 || r == 0x7f:
+			fmt.Fprintf(&b, "\\x%02x", r)
+		case r == 0xfffd:
+			b.WriteString("\\x??") // byte que ni siquiera era UTF-8 valido
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }

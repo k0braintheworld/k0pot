@@ -586,6 +586,16 @@ async function abrirAtaque(clave) {
       if (p.nota.por) nota.appendChild(nodo("span", null, ` — ${p.nota.por}`));
       texto.appendChild(nota);
     }
+    // El dato crudo -lo que envio EXACTAMENTE- se ensena en monoespaciado
+    // debajo, salvo cuando la narracion ya ES el comando literal: repetir
+    // "ejecuta: uname -a" y luego "uname -a" es ruido. Se muestra cuando
+    // aporta algo que la narracion no dice: el user-agent, los bytes de un
+    // saludo de otro protocolo, la ruta completa.
+    if (p.crudo && !p.texto.includes(p.crudo)) {
+      const pre = nodo("pre", "paso-crudo");
+      pre.textContent = p.crudo;
+      texto.appendChild(pre);
+    }
     fila.appendChild(texto);
     cuerpo.appendChild(fila);
   }
