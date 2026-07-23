@@ -2,6 +2,7 @@ package collector
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"os"
 	"testing"
@@ -204,5 +205,44 @@ func TestSeCapturaLaPeticionDeTunel(t *testing.T) {
 	}
 	if ev.Detalle["destino"] != "8.8.8.8:443" {
 		t.Errorf("destino = %q, se esperaba 8.8.8.8:443", ev.Detalle["destino"])
+	}
+}
+
+// Tras un apagado abrupto el sistema de ficheros deja un hueco de ceros en
+// el log. Como ahi tampoco sobrevive el salto de linea, el relleno y el
+// evento siguiente llegan como una sola linea, y descartarla entera tira un
+// evento legible por culpa de la basura que lo precede.
+//
+// Paso de verdad al reiniciar el servidor: 13.353 ceros y, justo detras,
+// una conexion real que se perdio.
+func TestSeRecuperaElEventoQueSigueAlRellenoDeCeros(t *testing.T) {
+	bueno := []byte(`{"eventid":"cowrie.session.connect","src_ip":"114.66.37.86",` +
+		`"session":"abc","protocol":"ssh","timestamp":"2026-07-23T13:40:00.000Z"}`)
+	linea := append(bytes.Repeat([]byte{0}, 13353), bueno...)
+
+	ev, err := ParsearCowrie(linea)
+	if err != nil {
+		t.Fatalf("deberia recuperarse: %v", err)
+	}
+	if ev.IP != "114.66.37.86" {
+		t.Errorf("IP = %q", ev.IP)
+	}
+}
+
+// Una linea de puros ceros no es un evento y debe rechazarse: aqui no se
+// adivina nada, solo se descarta el relleno.
+func TestUnaLineaDeSoloCerosSigueSiendoIlegible(t *testing.T) {
+	if _, err := ParsearCowrie(bytes.Repeat([]byte{0}, 500)); err == nil {
+		t.Error("deberia rechazarse")
+	}
+}
+
+// Y una linea normal no se toca.
+func TestUnaLineaSinCerosNoSeAltera(t *testing.T) {
+	linea := []byte(`{"eventid":"cowrie.session.connect","src_ip":"1.2.3.4",` +
+		`"session":"x","protocol":"ssh","timestamp":"2026-07-23T13:40:00.000Z"}`)
+	ev, err := ParsearCowrie(linea)
+	if err != nil || ev.IP != "1.2.3.4" {
+		t.Errorf("ev=%v err=%v", ev, err)
 	}
 }

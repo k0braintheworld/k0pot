@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -55,6 +56,28 @@ var tiposCowrie = map[string]model.TipoEvento{
 	"cowrie.direct-tcpip.data":    model.TunelSolicitado,
 }
 
+// sinRelleno recupera el evento que haya detras de un bloque de ceros.
+//
+// Tras un apagado abrupto, el sistema de ficheros puede haber guardado el
+// tamano del log pero no su contenido, y el hueco queda relleno de bytes
+// nulos. Como en ese hueco tampoco sobrevive el salto de linea, los ceros y
+// el evento siguiente llegan aqui como una sola linea: descartarla entera
+// -que es lo que pasaba- tira un evento perfectamente legible por culpa de
+// la basura que lo precede.
+//
+// Ocurrio de verdad al reiniciar el servidor: 13.353 ceros y, justo
+// detras, una conexion real que se perdio.
+func sinRelleno(linea []byte) []byte {
+	i := bytes.LastIndexByte(linea, 0)
+	if i < 0 {
+		return linea
+	}
+	// Lo que quede tras el ultimo cero. Si no empieza por "{" no es un
+	// evento y lo rechazara el propio json.Unmarshal, que es lo correcto:
+	// aqui no se adivina, solo se descarta el relleno.
+	return bytes.TrimLeft(linea[i+1:], "\x00")
+}
+
 // ErrIgnorado indica que la linea era valida pero de un tipo que no
 // registramos. No es un fallo: es el caso normal para buena parte del log.
 var ErrIgnorado = fmt.Errorf("evento ignorado")
@@ -62,6 +85,8 @@ var ErrIgnorado = fmt.Errorf("evento ignorado")
 // ParsearCowrie traduce una linea de cowrie.json a un model.Evento.
 // Devuelve ErrIgnorado si el evento no es de los que nos interesan.
 func ParsearCowrie(linea []byte) (*model.Evento, error) {
+	linea = sinRelleno(linea)
+
 	var lc lineaCowrie
 	if err := json.Unmarshal(linea, &lc); err != nil {
 		return nil, fmt.Errorf("json invalido: %w", err)
