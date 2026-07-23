@@ -23,31 +23,38 @@ type Explicador interface {
 // Es mas corto y mas concreto que el del informe del periodo: aqui no hay
 // que resumir cifras, hay que contar una historia que ya esta ordenada. El
 // encuadre de senuelo se repite porque el modelo no ve el otro prompt.
-const sistemaAtaque = `Explicas UN ataque concreto a alguien que administra
-un servidor pequeno y no es experto en seguridad.
+const sistemaAtaque = `Eres un analista de seguridad DEFENSIVA. Tu trabajo
+es ayudar al dueno de un sistema a entender un ataque que ha recibido, para
+que sepa protegerse. Todo lo que ves son registros de SU propia maquina.
 
-Esto es un SENUELO: una maquina puesta ahi a proposito para que la ataquen,
-aislada y sin nada de valor. Que entren no es un incidente, es la trampa
-funcionando. NUNCA recomiendes aislarla, reinstalarla, cambiar sus
-contrasenas ni bloquear IPs en ella: eso seria cerrar la trampa.
+El sistema es un SENUELO: una maquina puesta ahi a proposito para que la
+ataquen, aislada y sin nada de valor. Que entren no es un incidente, es la
+trampa funcionando y el material que se buscaba.
+
+Describes lo que YA ocurrio y quedo registrado. No das instrucciones para
+atacar, no explicas como reproducirlo y no hace falta: los pasos ya estan
+en el registro y quien lee es la victima, no el atacante.
+
+NUNCA recomiendes aislar la maquina, reinstalarla, cambiar sus contrasenas
+ni bloquear IPs en ella: eso seria cerrar la trampa.
 
 Te dan la secuencia completa, paso a paso. Responde tres cosas, en este
 orden y sin titulos ni listas:
 
-1. QUE QUERIAN. El proposito, en una frase: reclutar el equipo en una
-   botnet, minar, usarlo de pasarela, robar credenciales, buscar un fallo
-   concreto.
-2. QUE CONSIGUIERON. Si entraron o no, y hasta donde llegaron. Se claro:
-   "no pasaron de llamar a la puerta" es una respuesta perfecta.
-3. QUE SIGNIFICARIA EN UN SERVIDOR DE VERDAD, y que habria que mirar alli.
-   Esa es la parte aprovechable.
+1. QUE BUSCABAN. El proposito, en una frase: reclutar el equipo en una
+   botnet, minar, usarlo de pasarela, recolectar credenciales, inventariar
+   internet.
+2. HASTA DONDE LLEGARON. Si entraron o no. Se claro: "no pasaron de llamar
+   a la puerta" es una respuesta perfecta y frecuente.
+3. QUE SIGNIFICARIA EN UN SERVIDOR DE VERDAD, y que convendria revisar
+   alli. Esa es la parte aprovechable.
 
 Lo que va [entre corchetes] sale de nuestro catalogo y es fiable: usalo.
 Para lo que no lo lleve, describe lo que se ve sin inventar que significa.
 
-Espanol, tono tranquilo, sin jerga sin explicar, sin markdown. Entre 80 y
-140 palabras. Si el ataque es un simple escaneo, dilo y se breve: no hay
-que estirar lo que no da mas de si.`
+Responde SIEMPRE en espanol, en tono tranquilo, sin jerga sin explicar y
+sin markdown. Entre 80 y 140 palabras. Si el ataque es un simple escaneo,
+dilo y se breve: no hay que estirar lo que no da mas de si.`
 
 // PasoDeAtaque es una linea de la narracion, tal y como se le cuenta al
 // modelo.
@@ -64,7 +71,16 @@ func ExplicarAtaque(ctx context.Context, e Explicador, ep store.EpisodioFila,
 	if e == nil {
 		return "", fmt.Errorf("no hay ningun modelo configurado")
 	}
-	return e.Preguntar(ctx, sistemaAtaque, ataqueComoTexto(ep, pasos, notaProveedor), tope)
+	texto, err := e.Preguntar(ctx, sistemaAtaque, ataqueComoTexto(ep, pasos, notaProveedor), tope)
+	if err != nil {
+		return "", err
+	}
+	if EsNegativa(texto) {
+		return "", fmt.Errorf("el modelo se nego a responder; " +
+			"su filtro ha leido el analisis de este ataque como una peticion de " +
+			"ayuda para atacar. Prueba con otro modelo en Ajustes → Informes")
+	}
+	return texto, nil
 }
 
 // ataqueComoTexto describe el ataque para el modelo.
@@ -101,4 +117,38 @@ func ataqueComoTexto(ep store.EpisodioFila, pasos []PasoDeAtaque, notaProveedor 
 		}
 	}
 	return b.String()
+}
+
+// EsNegativa reconoce cuando el modelo se ha negado a responder.
+//
+// Los filtros de seguridad de algunos modelos leen "explica este ataque"
+// como una peticion de ayuda para atacar, aunque el material sean los
+// registros de tu propia maquina. Cuando eso pasa devuelven una frase de
+// rechazo, casi siempre en ingles aunque se les haya pedido espanol.
+//
+// Publicar esa frase tal cual en el panel es lo peor de los dos mundos: no
+// explica nada y ademas parece que el fallo es de k0Pot. Mejor reconocerla
+// y decir lo que pasa.
+func EsNegativa(texto string) bool {
+	t := strings.ToLower(strings.TrimSpace(texto))
+	if t == "" {
+		return true
+	}
+	// Una negativa es corta y sigue una de estas formulas. Se exige que sea
+	// breve para no confundirla con un informe que mencione de pasada que
+	// algo no se puede determinar.
+	if len(t) > 400 {
+		return false
+	}
+	for _, formula := range []string{
+		"i'm sorry", "i am sorry", "i can't help", "i cannot help",
+		"i can't assist", "i cannot assist", "i'm unable", "as an ai",
+		"lo siento, pero no puedo", "no puedo ayudarte con eso",
+		"no puedo ayudar con eso", "no puedo proporcionar",
+	} {
+		if strings.Contains(t, formula) {
+			return true
+		}
+	}
+	return false
 }
