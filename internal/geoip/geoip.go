@@ -139,3 +139,60 @@ func (l *Localizador) Cerrar() error {
 	}
 	return nil
 }
+
+// Validar comprueba que un fichero es una base GeoLite2 de CIUDAD utilizable.
+//
+// Se llama antes de dar por buena una subida: sin esto, subir por error una
+// base de solo-pais -o un fichero cualquiera- se aceptaria y el mapa
+// seguiria sin ciudades sin que nadie supiera por que. Devuelve el tipo de
+// base para poder decirlo.
+func Validar(ruta string) (tipo string, err error) {
+	bd, err := maxminddb.Open(ruta)
+	if err != nil {
+		return "", fmt.Errorf("no es una base MaxMind valida: %w", err)
+	}
+	defer bd.Close()
+
+	tipo = bd.Metadata.DatabaseType
+	if !contieneCiudad(tipo) {
+		return tipo, fmt.Errorf("es una base %q, no de ciudad: el mapa necesita "+
+			"GeoLite2-City para situar por ciudad", tipo)
+	}
+
+	// Una comprobacion real: una IP publica cualquiera tiene que devolver
+	// coordenadas. Un fichero con el tipo correcto pero corrupto o vacio no
+	// serviria, y mejor descubrirlo aqui que cuando llegue el primer ataque.
+	var r registro
+	if err := bd.Lookup(net.ParseIP("8.8.8.8"), &r); err != nil {
+		return tipo, fmt.Errorf("la base no se puede consultar: %w", err)
+	}
+	return tipo, nil
+}
+
+func contieneCiudad(tipo string) bool {
+	for i := 0; i+4 <= len(tipo); i++ {
+		if igualSinMayus(tipo[i:i+4], "city") {
+			return true
+		}
+	}
+	return false
+}
+
+func igualSinMayus(a, b string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		ca, cb := a[i], b[i]
+		if 'A' <= ca && ca <= 'Z' {
+			ca += 32
+		}
+		if 'A' <= cb && cb <= 'Z' {
+			cb += 32
+		}
+		if ca != cb {
+			return false
+		}
+	}
+	return true
+}

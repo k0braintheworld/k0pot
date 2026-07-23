@@ -653,3 +653,37 @@ func (s *Store) Recientes(limite int) ([]Reciente, error) {
 	}
 	return out, filas.Err()
 }
+
+// IPsSinUbicar devuelve las IPs que tienen ficha pero aun no tienen
+// coordenadas. Son las que se pueden situar cuando llega una base GeoIP
+// nueva, sin gastar cuota de AbuseIPDB: la geolocalizacion es local.
+func (s *Store) IPsSinUbicar(limite int) ([]string, error) {
+	filas, err := s.db.Query(
+		`SELECT ip FROM ips WHERE latitud = 0 AND longitud = 0 LIMIT ?`, limite)
+	if err != nil {
+		return nil, fmt.Errorf("buscando IPs sin ubicar: %w", err)
+	}
+	defer filas.Close()
+	var out []string
+	for filas.Next() {
+		var ip string
+		if err := filas.Scan(&ip); err != nil {
+			return nil, err
+		}
+		out = append(out, ip)
+	}
+	return out, filas.Err()
+}
+
+// ActualizarUbicacion pone ciudad y coordenadas de una IP sin tocar nada
+// mas. A proposito no cambia consultado_en: situar no es re-enriquecer, y no
+// debe adelantar la proxima consulta a AbuseIPDB.
+func (s *Store) ActualizarUbicacion(ip, ciudad string, lat, lon float64) error {
+	_, err := s.db.Exec(
+		`UPDATE ips SET ciudad = ?, latitud = ?, longitud = ? WHERE ip = ?`,
+		ciudad, lat, lon, ip)
+	if err != nil {
+		return fmt.Errorf("actualizando la ubicacion de %s: %w", ip, err)
+	}
+	return nil
+}

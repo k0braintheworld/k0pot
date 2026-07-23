@@ -98,11 +98,15 @@
       <label class="fila"><input type="checkbox" id="c-enriquecer"> Consultar AbuseIPDB</label>
       <label>Caducidad del dato (dias)<input type="number" id="c-caducidad" min="1" max="365"></label>
       <label>Base GeoIP (opcional)
-        <input type="text" id="c-ruta-geoip" autocomplete="off" placeholder="ruta al fichero GeoLite2-City.mmdb">
-        <small>Situa cada IP en su ciudad en vez de solo su pais. Descarga
-        gratis GeoLite2-City de MaxMind (cuenta gratuita) y pon aqui la ruta
-        del .mmdb. Sin ella, el mapa se conforma con el pais.</small>
+        <input type="text" id="c-ruta-geoip" autocomplete="off" placeholder="(ninguna: el mapa usa el pais)" readonly>
+        <small>Situa cada IP en su ciudad, no solo en su pais. Descarga gratis
+        GeoLite2-City de MaxMind (cuenta gratuita) y subela con el boton.</small>
       </label>
+      <div class="fila-acciones">
+        <input type="file" id="f-geoip" accept=".mmdb" hidden>
+        <button id="subir-geoip" type="button" class="boton-menor">Subir base GeoIP…</button>
+        <span id="estado-geoip" class="sub"></span>
+      </div>
       <label>Reserva de cuota diaria<input type="number" id="c-reserva" min="0" max="1000"></label>
       <label>Clave de AbuseIPDB
         <input type="password" id="c-clave-abuse" autocomplete="off" placeholder="sin cambios">

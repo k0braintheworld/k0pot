@@ -565,7 +565,11 @@ func enriquecerEnBucle(ctx context.Context, almacen *store.Store, ajustes *confi
 	)
 	var cliente *enrich.AbuseIPDB
 	var claveActiva string
-	rutaGeoActiva := ajustes.Actual().RutaGeoIP
+	// Arranca vacia a proposito: si ya hay base configurada, el primer ciclo
+	// la trata como "recien puesta" y sitúa de una vez las IP que se
+	// conocian de una ejecucion anterior pero llegaron sin base. Empezar
+	// con la ruta real dejaria esas IP sin ubicar hasta que caducaran.
+	rutaGeoActiva := ""
 
 	for {
 		c := ajustes.Actual()
@@ -573,6 +577,13 @@ func enriquecerEnBucle(ctx context.Context, almacen *store.Store, ajustes *confi
 			rutaGeoActiva = c.RutaGeoIP
 			if err := geo.Recargar(c.RutaGeoIP); err != nil {
 				log.Printf("GeoIP: %v", err)
+			} else if geo.Activo() {
+				// Base nueva: se sitúan las IP que ya se conocian pero no
+				// tenian coordenadas, para que el mapa se ilumine ya y no
+				// dentro de una semana cuando caduque su enriquecimiento.
+				if n := situarConocidas(almacen, geo); n > 0 {
+					log.Printf("GeoIP: %d IPs ya conocidas situadas por ciudad", n)
+				}
 			}
 		}
 		switch {
@@ -669,6 +680,30 @@ func enriquecerTanda(ctx context.Context, almacen *store.Store,
 		hechas++
 	}
 	return hechas, nil
+}
+
+// situarConocidas rellena ciudad y coordenadas de las IP que ya tenian
+// ficha pero llegaron antes de haber base GeoIP. Es gratis: consulta un
+// fichero local, no la API.
+func situarConocidas(almacen *store.Store, geo *geoip.Localizador) int {
+	ips, err := almacen.IPsSinUbicar(5000)
+	if err != nil {
+		log.Printf("GeoIP: %v", err)
+		return 0
+	}
+	var hechas int
+	for _, ip := range ips {
+		lugar, ok := geo.Situar(ip)
+		if !ok || !lugar.TieneCoordenadas() {
+			continue // privada, o la base no la conoce: se deja como esta
+		}
+		if err := almacen.ActualizarUbicacion(ip, lugar.Ciudad, lugar.Latitud, lugar.Longitud); err != nil {
+			log.Printf("GeoIP: %v", err)
+			continue
+		}
+		hechas++
+	}
+	return hechas
 }
 
 // reclasificarIP repasa los eventos de una IP con su contexto ya resuelto.

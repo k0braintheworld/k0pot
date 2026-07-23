@@ -605,6 +605,29 @@ async function abrirAtaque(clave) {
   dlg.showModal();
 }
 
+// ── Subir la base GeoIP ─────────────────────────────────────────────────
+
+// El fichero .mmdb ronda los 60 MB. Se envia como cuerpo crudo del POST -no
+// multipart- para no duplicarlo en memoria montando un formulario: el
+// servidor lo copia a disco segun llega.
+async function subirGeoIP(fichero) {
+  const estado = $("estado-geoip");
+  const boton = $("subir-geoip");
+  boton.disabled = true;
+  estado.textContent = `Subiendo ${(fichero.size / 1048576).toFixed(0)} MB…`;
+  try {
+    const resp = await fetch("/api/geoip", { method: "POST", body: fichero });
+    const r = await resp.json();
+    if (!resp.ok) throw new Error(r.error || `respondio ${resp.status}`);
+    $("c-ruta-geoip").value = r.ruta;
+    estado.textContent = `Base ${r.tipo} cargada. ${r.aviso}`;
+  } catch (e) {
+    estado.textContent = `No se pudo subir: ${e.message}`;
+  } finally {
+    boton.disabled = false;
+  }
+}
+
 // ── Situar el honeypot ──────────────────────────────────────────────────
 
 // Un mapa pulsable en vez de una lista de regiones: es mas preciso, no
@@ -737,7 +760,13 @@ async function pintarMapaUbicacion() {
   for (const id of ["c-latitud", "c-longitud", "c-pais"]) {
     $(id).addEventListener("input", situar);
   }
-  $("quitar-ubicacion").addEventListener("click", () => {
+  $("subir-geoip").addEventListener("click", () => $("f-geoip").click());
+$("f-geoip").addEventListener("change", (ev) => {
+  const f = ev.target.files[0];
+  if (f) subirGeoIP(f);
+  ev.target.value = ""; // permite volver a subir el mismo fichero
+});
+$("quitar-ubicacion").addEventListener("click", () => {
     $("c-latitud").value = 0;
     $("c-longitud").value = 0;
     situar();
@@ -1083,7 +1112,6 @@ const CAMPOS = {
   "c-url-base": "url_base",
   "c-refresco": "refresco_segundos",
   "c-pais": "pais_propio",
-  "c-ruta-geoip": "ruta_geoip",
   "c-latitud": "latitud_propia",
   "c-longitud": "longitud_propia",
   "c-retencion": "retencion_dias",

@@ -345,7 +345,13 @@ terceros ni limites de consultas- cada IP se situa en su ciudad exacta:
 
 1. Crea una cuenta gratuita en [maxmind.com](https://www.maxmind.com) y descarga
    `GeoLite2-City.mmdb`.
-2. Ponlo en el servidor e indica su ruta en Ajustes → General → *Base GeoIP*.
+2. En Ajustes → General → *Base GeoIP*, pulsa **Subir base GeoIP** y elige el
+   fichero. k0Pot lo valida -que sea de ciudad y no otra cosa-, lo deja en su
+   sitio y lo activa. No hay que tocar el servidor ni teclear rutas.
+
+Al subir una base, las IP que ya se conocian de ataques anteriores se situan
+en el acto -es una consulta al fichero local, no gasta cuota de AbuseIPDB-,
+asi que el mapa se ilumina enseguida en vez de dentro de una semana.
 
 Es **opcional**: sin fichero, k0Pot funciona igual y el mapa se conforma con el
 pais. La ubicacion de ciudad no gasta cuota de AbuseIPDB —es una consulta a un

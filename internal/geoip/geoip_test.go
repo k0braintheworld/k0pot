@@ -1,6 +1,9 @@
 package geoip
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 const base = "testdata/GeoLite2-City-Test.mmdb"
 
@@ -97,3 +100,26 @@ func TestRecargarActivaYDesactiva(t *testing.T) {
 // Situar acepta un *Localizador nil-safe: el bucle de enriquecimiento lo
 // llama siempre, tenga base o no.
 func Situar(l *Localizador, ip string) (Lugar, bool) { return l.Situar(ip) }
+
+func TestValidarAceptaUnaBaseDeCiudad(t *testing.T) {
+	tipo, err := Validar(base)
+	if err != nil {
+		t.Fatalf("la base de prueba deberia valer: %v", err)
+	}
+	if tipo == "" {
+		t.Error("deberia devolver el tipo de base")
+	}
+}
+
+func TestValidarRechazaLoQueNoEsUnaBase(t *testing.T) {
+	// Un fichero cualquiera no es una base MaxMind.
+	tmp := t.TempDir() + "/basura.mmdb"
+	if err := writeFile(tmp, []byte("esto no es una base geoip")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Validar(tmp); err == nil {
+		t.Error("un fichero basura deberia rechazarse")
+	}
+}
+
+func writeFile(ruta string, datos []byte) error { return os.WriteFile(ruta, datos, 0o644) }
