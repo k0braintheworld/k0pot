@@ -324,13 +324,13 @@ func (s *Store) Resumir(desde time.Time) (*Resumen, error) {
 		{&r.PorPais, `SELECT i.pais, COUNT(*) n FROM eventos e
 		              JOIN ips i ON i.ip = e.ip
 		              WHERE e.timestamp >= ? AND i.pais <> ''
-		              GROUP BY i.pais ORDER BY n DESC LIMIT 10`},
+		              GROUP BY i.pais ORDER BY n DESC LIMIT 30`},
 		{&r.TopUsuarios, `SELECT json_extract(detalle,'$.usuario') u, COUNT(*) n
 		                  FROM eventos WHERE timestamp >= ? AND u IS NOT NULL
-		                  GROUP BY u ORDER BY n DESC LIMIT 10`},
+		                  GROUP BY u ORDER BY n DESC LIMIT 30`},
 		{&r.TopPasswords, `SELECT json_extract(detalle,'$.password') p, COUNT(*) n
 		                   FROM eventos WHERE timestamp >= ? AND p IS NOT NULL
-		                   GROUP BY p ORDER BY n DESC LIMIT 10`},
+		                   GROUP BY p ORDER BY n DESC LIMIT 30`},
 	}
 	for _, c := range consultas {
 		rec, err := s.recuentos(c.sql, corte)
@@ -356,7 +356,7 @@ func (s *Store) topIPs(corte string) ([]IPActiva, error) {
 		   FROM eventos e
 		   LEFT JOIN ips i ON i.ip = e.ip
 		  WHERE e.timestamp >= ?
-		  GROUP BY e.ip ORDER BY n DESC LIMIT 10`, corte)
+		  GROUP BY e.ip ORDER BY n DESC LIMIT 30`, corte)
 	if err != nil {
 		return nil, fmt.Errorf("consultando ips activas: %w", err)
 	}

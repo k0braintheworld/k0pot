@@ -100,6 +100,23 @@ main.rejilla-panel {
 .bloque-tabla        { grid-column: span 3; }
 .bloque-credenciales { grid-column: span 4; }
 
+/* La fila de abajo se iguala en alto -todos como el mas alto- en vez de que
+   cada bloque tome su alto natural y queden escalonados. Si el contenido
+   pasa del tope, se desplaza DENTRO del bloque sin descuadrar la fila. */
+.bloque-ips, .bloque-tabla, .bloque-credenciales {
+  align-self: stretch;
+  max-height: 27rem;
+  overflow-y: auto;
+}
+/* Al desplazar, el titulo se queda pegado arriba y no se pierde de vista. */
+.bloque-ips > h2, .bloque-tabla > h2, .bloque-credenciales > h2 {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  padding-bottom: .4rem;
+  z-index: 1;
+}
+
 @media (max-width: 88rem) {
   .bloque-ataques, .bloque-informe { grid-column: span 12; }
   .bloque-ips { grid-column: span 12; }

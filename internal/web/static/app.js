@@ -428,7 +428,7 @@ function pintarTabla(id, filas) {
     cuerpo.appendChild(tr);
     return;
   }
-  for (const fila of filas.slice(0, 10)) {
+  for (const fila of filas.slice(0, 50)) {
     const tr = nodo("tr");
     for (const c of fila) {
       const td = nodo("td", c.clase);
