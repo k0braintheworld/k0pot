@@ -174,6 +174,26 @@ estado() {
   echo
   echo "Tablas cargadas:"
   nft list tables 2>/dev/null | sed "s/^/  /" || echo "  (ninguna)"
+
+  # Lo que se aplica y lo que se carga al arrancar son dos ficheros
+  # distintos. Que coincidan no es evidente, y cuando divergen el fallo
+  # aparece semanas despues, en un reinicio, sin nada que lo relacione.
+  echo
+  echo "Al reiniciar:"
+  local aplicado
+  aplicado="$(cat "$APLICADO" 2>/dev/null)"
+  if ! systemctl is-enabled nftables >/dev/null 2>&1; then
+    rojo "  nftables NO esta habilitado: al reiniciar no habra reglas"
+  elif [ -z "$aplicado" ]; then
+    echo "  no consta que fichero se aplico; no se puede comprobar"
+  elif [ ! -r /etc/nftables.conf ]; then
+    rojo "  /etc/nftables.conf no existe: al reiniciar no habra reglas"
+  elif diff -q "$aplicado" /etc/nftables.conf >/dev/null 2>&1; then
+    verde "  se cargara lo mismo que hay ahora ($aplicado)"
+  else
+    rojo "  /etc/nftables.conf NO coincide con lo aplicado ($aplicado)"
+    echo "  se corrige confirmando otra vez: sudo k0pot-nft confirmar"
+  fi
 }
 
 case "${1:-}" in
