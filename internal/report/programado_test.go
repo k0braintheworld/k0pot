@@ -35,6 +35,13 @@ func (a *almacenFalso) ConsumirCuotaLLM(dia string, tope int) (bool, error) {
 }
 func (a *almacenFalso) CuotaLLMUsada(dia string) (int, error) { return a.cuota[dia], nil }
 
+func (a *almacenFalso) DevolverCuotaLLM(dia string) error {
+	if a.cuota[dia] > 0 {
+		a.cuota[dia]--
+	}
+	return nil
+}
+
 // generadorFalso cuenta cuantas veces se le pide un texto: eso es
 // exactamente lo que se factura.
 type generadorFalso struct {
@@ -286,5 +293,33 @@ func TestUnRepliegueAReglasNoCuentaComoIA(t *testing.T) {
 	}
 	if sig.ConIA {
 		t.Error("un repliegue guardado se sirve luego como si fuera IA")
+	}
+}
+
+// La cuota se apunta antes de llamar, para que dos peticiones simultaneas
+// no rebasen el tope. Si el proveedor falla no ha consumido nada suyo, asi
+// que descontarla igual gastaria el presupuesto del usuario en las averias
+// del proveedor.
+func TestUnaLlamadaFallidaNoGastaCuota(t *testing.T) {
+	p, llm, _, _ := montar(40)
+	llm.fallo = errors.New("HTTP 429: rate limit")
+
+	if _, err := p.AMano(context.Background(), datosCon(3), 7); err != nil {
+		t.Fatal(err)
+	}
+	usada, _ := p.Alm.CuotaLLMUsada("2026-07-23")
+	if usada != 0 {
+		t.Errorf("se gasto %d de cuota en una llamada que fallo", usada)
+	}
+}
+
+func TestUnaLlamadaBuenaSiGastaCuota(t *testing.T) {
+	p, _, _, _ := montar(40)
+	if _, err := p.AMano(context.Background(), datosCon(3), 7); err != nil {
+		t.Fatal(err)
+	}
+	usada, _ := p.Alm.CuotaLLMUsada("2026-07-23")
+	if usada != 1 {
+		t.Errorf("cuota usada = %d, se esperaba 1", usada)
 	}
 }

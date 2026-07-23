@@ -395,9 +395,50 @@ async function cargarAtaques() {
   }
 }
 
+// claveAbierta recuerda que ataque se esta mirando, para que el boton de
+// explicar sepa sobre cual preguntar.
+let claveAbierta = null;
+
+function pintarExplicacion(texto) {
+  const caja = $("ataque-explicacion");
+  caja.replaceChildren();
+  if (!texto) {
+    caja.hidden = true;
+    return;
+  }
+  caja.hidden = false;
+  for (const parrafo of texto.split("\n").filter((l) => l.trim())) {
+    caja.appendChild(nodo("p", null, parrafo));
+  }
+}
+
+// Va por POST y con su propio boton: es el momento en que alguien quiere
+// entender algo, y por eso es donde mejor se gasta una llamada.
+async function explicarAtaque() {
+  if (!claveAbierta) return;
+  const boton = $("explicar-ataque");
+  boton.disabled = true;
+  boton.textContent = "Explicando…";
+  try {
+    const r = await pedirJSON(
+      `/api/episodio/explicar?clave=${encodeURIComponent(claveAbierta)}`, { method: "POST" });
+    pintarExplicacion(r.explicacion);
+  } catch (e) {
+    pintarExplicacion(`No se pudo explicar: ${e.message}`);
+  } finally {
+    boton.disabled = false;
+    boton.textContent = "Explicar con IA";
+  }
+}
+
 async function abrirAtaque(clave) {
   const d = await pedirJSON(`/api/episodio?clave=${encodeURIComponent(clave)}`);
   const dlg = $("dialogo-ataque");
+  claveAbierta = clave;
+  // Si ya se explico una vez, se ensena sin volver a preguntar: la
+  // explicacion de un ataque terminado no cambia por reabrir el dialogo.
+  pintarExplicacion(d.explicacion);
+  $("explicar-ataque").textContent = d.explicacion ? "Volver a explicar" : "Explicar con IA";
 
   $("ataque-titulo").textContent = `${d.protocolo} desde ${d.ip}`;
   const donde = [d.pais, d.isp].filter(Boolean).join(" · ");
@@ -640,6 +681,7 @@ $("tema").addEventListener("click", () => {
 $("rango").addEventListener("change", refrescar);
 $("regenerar").addEventListener("click", regenerarInforme);
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
+$("explicar-ataque").addEventListener("click", explicarAtaque);
 $("c-aviso-canal").addEventListener("change", camposDelCanal);
 $("probar-aviso").addEventListener("click", probarAviso);
 $("novedades").addEventListener("click", marcarVisto);

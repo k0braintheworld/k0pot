@@ -1,7 +1,9 @@
 package store
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -32,6 +34,7 @@ CREATE TABLE IF NOT EXISTS episodios (
     puerto          TEXT     NOT NULL DEFAULT '',
     solo_conexiones INTEGER  NOT NULL DEFAULT 0,
     avisado         TEXT     NOT NULL DEFAULT '',
+    explicacion     TEXT     NOT NULL DEFAULT '',
     resumen         TEXT     NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_episodios_fin ON episodios (fin);
@@ -359,4 +362,29 @@ func (s *Store) MarcarAvisados(eps []EpisodioFila) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// GuardarExplicacion asocia al ataque el texto que redacto el modelo.
+//
+// Se guarda para que reabrir el dialogo no vuelva a gastar cuota: la
+// explicacion de un ataque terminado no cambia por volver a mirarla.
+func (s *Store) GuardarExplicacion(clave, texto string) error {
+	_, err := s.db.Exec(`UPDATE episodios SET explicacion = ? WHERE clave = ?`, texto, clave)
+	if err != nil {
+		return fmt.Errorf("guardando la explicacion: %w", err)
+	}
+	return nil
+}
+
+// Explicacion devuelve la que hubiera guardada.
+func (s *Store) Explicacion(clave string) (string, error) {
+	var texto string
+	err := s.db.QueryRow(`SELECT explicacion FROM episodios WHERE clave = ?`, clave).Scan(&texto)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("leyendo la explicacion: %w", err)
+	}
+	return texto, nil
 }

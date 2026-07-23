@@ -150,6 +150,27 @@ Para comprobarlo desde fuera: `deploy/comprobar-aislamiento.sh <IP-expuesta>
 <IP-gestion>`, ejecutado **desde otra maquina**. Desde el propio servidor no
 demuestra nada.
 
+## Explicar un ataque concreto
+
+El momento en que alguien quiere entender algo no es leyendo el resumen del
+periodo: es cuando abre **un ataque** y ve la secuencia. Por eso el dialogo
+de cada ataque tiene su propio boton de **Explicar con IA**, que responde
+tres cosas y nada mas:
+
+1. **Que querian.** El proposito en una frase.
+2. **Que consiguieron.** Hasta donde llegaron; "no pasaron de llamar a la
+   puerta" es una respuesta perfecta.
+3. **Que significaria en un servidor de verdad**, y que habria que mirar
+   alli. Esa es la parte aprovechable.
+
+La explicacion se guarda con el ataque: reabrir el dialogo no vuelve a
+gastar, porque la explicacion de un ataque terminado no cambia por volver a
+mirarla.
+
+Comparte el tope diario con el informe, y **una llamada que falla no gasta
+cuota**: si el proveedor la rechaza no ha consumido nada suyo, y descontarla
+igual gastaria tu presupuesto en sus averias.
+
 ## Los informes automaticos no cuestan nada
 
 El panel pide el informe en cada refresco. Que esa peticion llamara a un

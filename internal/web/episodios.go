@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/k0braintheworld/k0pot/internal/model"
+	"github.com/k0braintheworld/k0pot/internal/report"
 	"github.com/k0braintheworld/k0pot/internal/saber"
 	"github.com/k0braintheworld/k0pot/internal/store"
 )
@@ -47,6 +48,10 @@ type DetalleEpisodio struct {
 	// los distingue.
 	NotaProveedor *saber.Nota   `json:"nota_proveedor,omitempty"`
 	Pasos         []PasoNarrado `json:"pasos"`
+	// Explicacion es lo que redacto el modelo sobre ESTE ataque, si
+	// alguien lo pidio. Se guarda con el episodio: reabrir el dialogo no
+	// vuelve a gastar cuota.
+	Explicacion string `json:"explicacion,omitempty"`
 }
 
 func (s *Servidor) episodio(w http.ResponseWriter, r *http.Request) {
@@ -95,6 +100,7 @@ func (s *Servidor) episodio(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	det := DetalleEpisodio{EpisodioFila: ep, Pasos: pasos}
+	det.Explicacion, _ = s.Almacen.Explicacion(clave)
 	if n, hay := saber.DeProveedor(ep.ISP); hay {
 		det.NotaProveedor = &n
 	}
@@ -207,4 +213,85 @@ func credencial(d map[string]string) string {
 	default:
 		return "unas credenciales"
 	}
+}
+
+// explicarEpisodio pide al modelo que cuente este ataque concreto.
+//
+// Va por POST y con su propio boton: es el momento en que alguien quiere
+// entender algo, y por eso es donde mejor se gasta una llamada. El informe
+// del periodo resume cifras; esto explica una historia que ya esta
+// ordenada, que es lo que un modelo hace bien.
+func (s *Servidor) explicarEpisodio(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		responderError(w, http.StatusMethodNotAllowed, "usa POST")
+		return
+	}
+	clave := r.URL.Query().Get("clave")
+	if clave == "" {
+		responderError(w, http.StatusBadRequest, "falta la clave del ataque")
+		return
+	}
+
+	explicador, ok := s.Generador.(report.Explicador)
+	if !ok {
+		responderError(w, http.StatusBadRequest,
+			"no hay ningun modelo configurado: revisa Ajustes → Informes")
+		return
+	}
+
+	ep, hay, err := s.Almacen.EpisodioPorClave(clave)
+	if err != nil || !hay {
+		responderError(w, http.StatusNotFound, "ese ataque no existe")
+		return
+	}
+	eventos, err := s.Almacen.EventosDeEpisodio(ep.IP, ep.Protocolo, ep.Inicio, ep.Fin)
+	if err != nil {
+		http.Error(w, "no se pudo leer la secuencia", http.StatusInternalServerError)
+		return
+	}
+
+	pasos := make([]report.PasoDeAtaque, 0, len(eventos))
+	for _, ev := range eventos {
+		texto, _ := narrar(ev)
+		p := report.PasoDeAtaque{Hora: ev.Timestamp.Local().Format("15:04:05"), Texto: texto}
+		if n := notaDe(ev); n != nil {
+			p.Nota = n.Que + ": " + n.Por
+		}
+		pasos = append(pasos, p)
+	}
+	var notaProv string
+	if n, hay := saber.DeProveedor(ep.ISP); hay {
+		notaProv = n.Que + ": " + n.Por
+	}
+
+	// Cuenta contra el mismo tope diario que el informe: es la misma cuota.
+	dia := time.Now().Format("2006-01-02")
+	permitido, err := s.Almacen.ConsumirCuotaLLM(dia, s.Config.Actual().InformeTopeDiario)
+	if err != nil {
+		http.Error(w, "no se pudo comprobar la cuota", http.StatusInternalServerError)
+		return
+	}
+	if !permitido {
+		responderError(w, http.StatusTooManyRequests,
+			"alcanzado el tope de peticiones con IA de hoy")
+		return
+	}
+
+	// El tope es generoso a proposito aunque la respuesta pedida sea corta:
+	// los modelos de razonamiento gastan la mayor parte del presupuesto
+	// deliberando dentro de la propia respuesta, y limpiarRazonamiento
+	// descarta esa parte. Con poco margen se queda todo en nada y el
+	// usuario ve "el modelo devolvio un informe vacio".
+	texto, err := report.ExplicarAtaque(r.Context(), explicador, ep, pasos, notaProv, 2000)
+	if err != nil {
+		// No llego a redactarse nada: se devuelve la llamada apuntada.
+		s.Almacen.DevolverCuotaLLM(dia)
+		responderError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	if err := s.Almacen.GuardarExplicacion(clave, texto); err != nil {
+		http.Error(w, "no se pudo guardar", http.StatusInternalServerError)
+		return
+	}
+	responderJSON(w, map[string]string{"explicacion": texto})
 }

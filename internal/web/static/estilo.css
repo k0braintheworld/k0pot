@@ -587,3 +587,20 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   color: var(--acento);
   font-weight: 600;
 }
+
+.acciones-dialogo { display: flex; gap: .5rem; align-items: flex-start; }
+
+/* La explicacion va ARRIBA de la secuencia, no debajo: es la respuesta a
+   "que ha pasado aqui", y la secuencia es la prueba que la respalda. */
+.explicacion {
+  margin: 0 0 .9rem;
+  padding: .75rem .85rem;
+  font-size: .88rem;
+  line-height: 1.55;
+  background: var(--panel-alto);
+  border-left: 2px solid var(--acento);
+  border-radius: .35rem;
+}
+.explicacion p { margin: 0 0 .6rem; }
+.explicacion p:last-child { margin-bottom: 0; }
+.explicacion .sub { font-size: .74rem; }

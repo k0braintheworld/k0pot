@@ -113,3 +113,18 @@ func (s *Store) CuotaLLMUsada(dia string) (int, error) {
 	}
 	return n, nil
 }
+
+// DevolverCuotaLLM deshace una llamada apuntada que no llego a hacerse.
+//
+// La cuota se apunta ANTES de llamar, para que dos peticiones simultaneas
+// no rebasen el tope. Pero si el proveedor rechaza la peticion no se ha
+// consumido nada suyo, y descontarla igual gastaria el presupuesto del
+// usuario en las averias del proveedor.
+func (s *Store) DevolverCuotaLLM(dia string) error {
+	_, err := s.db.Exec(
+		`UPDATE cuota_llm SET llamadas = MAX(0, llamadas - 1) WHERE dia = ?`, dia)
+	if err != nil {
+		return fmt.Errorf("devolviendo la llamada: %w", err)
+	}
+	return nil
+}

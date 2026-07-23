@@ -116,6 +116,9 @@ func migrar(db *sql.DB) error {
 	if err := anadirColumna(db, "usuarios", "ultima_revision", "TEXT"); err != nil {
 		return err
 	}
+	if err := anadirColumna(db, "episodios", "explicacion", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
 	// Columnas que aparecieron despues de la primera version.
 	if err := anadirColumna(db, "eventos", "motivo", "TEXT"); err != nil {
 		return err

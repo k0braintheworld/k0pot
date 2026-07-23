@@ -66,6 +66,15 @@ type Politica struct {
 	Ahora func() time.Time
 }
 
+// devolver deshace una llamada apuntada que no llego a hacerse. Se ignora
+// el error a proposito: fallar al devolver cuota no puede impedir entregar
+// el informe que el usuario esta esperando.
+func (p *Politica) devolver(dia string) {
+	if d, ok := p.Alm.(interface{ DevolverCuotaLLM(string) error }); ok {
+		_ = d.DevolverCuotaLLM(dia)
+	}
+}
+
 // Servido es un informe listo para el panel.
 type Servido struct {
 	store.InformeGuardado
@@ -171,6 +180,7 @@ func (p *Politica) AMano(ctx context.Context, d Datos, dias int) (Servido, error
 
 	res, err := p.Gen.Generar(ctx, d)
 	if err != nil {
+		p.devolver(dia)
 		s, errAuto := p.Automatico(ctx, d, dias)
 		if errAuto != nil {
 			return Servido{}, err
@@ -185,6 +195,11 @@ func (p *Politica) AMano(ctx context.Context, d Datos, dias int) (Servido, error
 		Huella: huella, Dias: dias, Momento: ahora,
 	}
 	conIA := !loEscribieronLasReglas(res.Redactado)
+	if !conIA {
+		// El modelo no llego a redactar: se replegó a reglas y no consumio
+		// nada suyo, asi que la llamada apuntada se devuelve.
+		p.devolver(dia)
+	}
 	if conIA {
 		// Solo se guarda lo que de verdad redacto el modelo. Guardar un
 		// repliegue lo serviria despues como si fuera un informe con IA

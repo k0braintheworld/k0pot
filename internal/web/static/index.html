@@ -226,8 +226,12 @@
       <h2 id="ataque-titulo">Ataque</h2>
       <p id="ataque-sub" class="sub"></p>
     </div>
-    <button id="cerrar-ataque" type="button" class="boton-menor">Cerrar</button>
+    <div class="acciones-dialogo">
+      <button id="explicar-ataque" type="button" class="boton-menor" title="Pedir al modelo que explique este ataque. Consume cuota.">Explicar con IA</button>
+      <button id="cerrar-ataque" type="button" class="boton-menor">Cerrar</button>
+    </div>
   </header>
+  <div id="ataque-explicacion" class="explicacion" hidden></div>
   <div id="ataque-cuerpo" class="cuerpo-dialogo"></div>
 </dialog>
 

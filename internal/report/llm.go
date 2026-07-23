@@ -120,21 +120,34 @@ func (c *ConLLM) Generar(ctx context.Context, d Datos) (Resultado, error) {
 		return c.Respaldo.Generar(ctx, d)
 	}
 
+	texto, err := c.Preguntar(ctx, sistema, datosComoTexto(d), maxTokens)
+	if err != nil {
+		return c.replegarse(ctx, d, err.Error())
+	}
+	return Resultado{Texto: texto, Redactado: c.Nombre()}, nil
+}
+
+// Preguntar manda un par sistema/usuario al modelo y devuelve el texto.
+//
+// Separado de Generar porque el informe del periodo no es lo unico que se
+// le pide: tambien explica ataques concretos, con otro prompt y otra
+// longitud. La fontaneria es la misma.
+func (c *ConLLM) Preguntar(ctx context.Context, sistema, usuario string, tope int) (string, error) {
 	ctx, cancelar := context.WithTimeout(ctx, c.Plazo)
 	defer cancelar()
 
 	adaptativo := anthropic.ThinkingConfigAdaptiveParam{}
 	resp, err := c.Cliente.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     c.Modelo,
-		MaxTokens: maxTokens,
+		MaxTokens: int64(tope),
 		System:    []anthropic.TextBlockParam{{Text: sistema}},
 		Thinking:  anthropic.ThinkingConfigParamUnion{OfAdaptive: &adaptativo},
 		Messages: []anthropic.MessageParam{
-			anthropic.NewUserMessage(anthropic.NewTextBlock(datosComoTexto(d))),
+			anthropic.NewUserMessage(anthropic.NewTextBlock(usuario)),
 		},
 	})
 	if err != nil {
-		return c.replegarse(ctx, d, explicar(err))
+		return "", fmt.Errorf("%s", explicar(err))
 	}
 
 	var b strings.Builder
@@ -145,9 +158,9 @@ func (c *ConLLM) Generar(ctx context.Context, d Datos) (Resultado, error) {
 	}
 	texto := strings.TrimSpace(b.String())
 	if texto == "" {
-		return c.replegarse(ctx, d, "el modelo devolvio un informe vacio")
+		return "", fmt.Errorf("el modelo devolvio un informe vacio")
 	}
-	return Resultado{Texto: texto, Redactado: c.Nombre()}, nil
+	return texto, nil
 }
 
 // replegarse entrega el informe por reglas y deja constancia — en el log y

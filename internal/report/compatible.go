@@ -89,7 +89,19 @@ func (c *ConCompatible) Generar(ctx context.Context, d Datos) (Resultado, error)
 	if d.SinActividad() {
 		return c.Respaldo.Generar(ctx, d)
 	}
+	texto, err := c.Preguntar(ctx, sistema, datosComoTexto(d), 1200)
+	if err != nil {
+		return c.replegarse(ctx, d, err.Error())
+	}
+	return Resultado{Texto: texto, Redactado: c.Nombre()}, nil
+}
 
+// Preguntar manda un par sistema/usuario al proveedor y devuelve el texto.
+//
+// Esta separado de Generar porque el informe del periodo no es lo unico que
+// se le pide al modelo: tambien explica ataques concretos, y ahi el prompt
+// y el tamano de la respuesta son otros. Lo que no cambia es la fontaneria.
+func (c *ConCompatible) Preguntar(ctx context.Context, sistema, usuario string, maxTokens int) (string, error) {
 	ctx, cancelar := context.WithTimeout(ctx, c.Plazo)
 	defer cancelar()
 
@@ -97,49 +109,48 @@ func (c *ConCompatible) Generar(ctx context.Context, d Datos) (Resultado, error)
 		Modelo: c.Modelo,
 		Mensajes: []mensajeChat{
 			{Rol: "system", Contenido: sistema},
-			{Rol: "user", Contenido: datosComoTexto(d)},
+			{Rol: "user", Contenido: usuario},
 		},
-		MaxTokens:   1200,
+		MaxTokens:   maxTokens,
 		Temperatura: 0.4,
 	})
 	if err != nil {
-		return c.replegarse(ctx, d, "no se pudo preparar la peticion")
+		return "", fmt.Errorf("no se pudo preparar la peticion")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
 		c.URLBase+"/chat/completions", bytes.NewReader(cuerpo))
 	if err != nil {
-		return c.replegarse(ctx, d, err.Error())
+		return "", err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.Clave)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.Cliente.Do(req)
 	if err != nil {
-		return c.replegarse(ctx, d, err.Error())
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	var r respuestaChat
 	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		return c.replegarse(ctx, d,
-			fmt.Sprintf("HTTP %d con respuesta ilegible", resp.StatusCode))
+		return "", fmt.Errorf("HTTP %d con respuesta ilegible", resp.StatusCode)
 	}
 	if r.Error != nil {
-		return c.replegarse(ctx, d, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, r.Error.Mensaje))
+		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, r.Error.Mensaje)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return c.replegarse(ctx, d, fmt.Sprintf("el proveedor respondio %d", resp.StatusCode))
+		return "", fmt.Errorf("el proveedor respondio %d", resp.StatusCode)
 	}
 	if len(r.Opciones) == 0 {
-		return c.replegarse(ctx, d, "el proveedor no devolvio ninguna respuesta")
+		return "", fmt.Errorf("el proveedor no devolvio ninguna respuesta")
 	}
 
 	texto := limpiarRazonamiento(r.Opciones[0].Mensaje.Contenido)
 	if texto == "" {
-		return c.replegarse(ctx, d, "el modelo devolvio un informe vacio")
+		return "", fmt.Errorf("el modelo devolvio un informe vacio")
 	}
-	return Resultado{Texto: texto, Redactado: c.Nombre()}, nil
+	return texto, nil
 }
 
 // limpiarRazonamiento quita la cadena de pensamiento que algunos modelos
