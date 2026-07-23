@@ -40,11 +40,9 @@ type Config struct {
 	// URLBase solo aplica al proveedor compatible.
 	URLBase string `json:"url_base"`
 
-	// Frenos del gasto en IA. El panel pide el informe en cada refresco,
-	// asi que sin ellos una pestaña abierta agota la cuota diaria sola.
-	// InformeIntervaloMin es lo minimo entre dos informes de pago.
-	InformeIntervaloMin int `json:"informe_intervalo_min"`
-	// InformeTopeDiario es el limite duro; 0 significa sin limite.
+	// InformeTopeDiario acota los informes con IA que se pueden pedir al
+	// dia. Los automaticos no cuentan: los redactan las reglas y no cuestan
+	// nada. 0 significa sin limite.
 	InformeTopeDiario int `json:"informe_tope_diario"`
 
 	// Red. Dos interfaces distintas a proposito: el panel se sirve por la
@@ -117,13 +115,11 @@ func PorDefecto() Config {
 		Proveedor:        ProveedorCompatible,
 		Modelo:           "openai/gpt-oss-120b",
 		URLBase:          "https://api.groq.com/openai/v1",
-		// 15 min y 40 al dia caben de sobra en los planes gratuitos y
-		// dejan el informe fresco para lo que un honeypot necesita: si
-		// algo pasa, lo urgente son las alertas, no la prosa.
-		InformeIntervaloMin: 15,
-		InformeTopeDiario:   40,
-		RefrescoSegundos:    20,
-		PaisPropio:          "ES",
+		// 40 al dia caben de sobra en cualquier plan gratuito, y son
+		// muchos mas de los que nadie va a pedir a mano.
+		InformeTopeDiario: 40,
+		RefrescoSegundos:  20,
+		PaisPropio:        "ES",
 		// Vacio = todas las interfaces. Se concreta desde el panel en
 		// cuanto la red este separada de verdad.
 		EscuchaPanel:     "0.0.0.0",
@@ -152,7 +148,6 @@ func (c *Config) Validar() error {
 	acotar("la reserva de cuota", &c.ReservaCuota, 0, 1000)
 	acotar("el refresco del panel", &c.RefrescoSegundos, 5, 3600)
 	acotar("la retencion", &c.RetencionDias, 0, 3650)
-	acotar("el intervalo entre informes", &c.InformeIntervaloMin, 1, 1440)
 	acotar("el tope diario de informes", &c.InformeTopeDiario, 0, 10000)
 
 	if c.Modelo == "" {

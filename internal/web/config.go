@@ -49,8 +49,7 @@ type entradaAjustes struct {
 	EscuchaHoneypots *string                    `json:"escucha_honeypots"`
 	Servicios        map[string]config.Servicio `json:"servicios"`
 
-	InformeIntervaloMin *int `json:"informe_intervalo_min"`
-	InformeTopeDiario   *int `json:"informe_tope_diario"`
+	InformeTopeDiario *int `json:"informe_tope_diario"`
 
 	AvisosActivos *bool   `json:"avisos_activos"`
 	AvisoCanal    *string `json:"aviso_canal"`
@@ -91,7 +90,6 @@ func (s *Servidor) guardarAjustes(w http.ResponseWriter, r *http.Request) {
 	aplicarInt(&c.ReservaCuota, e.ReservaCuota)
 	aplicarInt(&c.RefrescoSegundos, e.RefrescoSegundos)
 	aplicarInt(&c.RetencionDias, e.RetencionDias)
-	aplicarInt(&c.InformeIntervaloMin, e.InformeIntervaloMin)
 	aplicarInt(&c.InformeTopeDiario, e.InformeTopeDiario)
 
 	aplicarTexto := func(destino *string, origen *string) {

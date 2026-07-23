@@ -329,13 +329,17 @@ function pintarInforme(inf) {
   }
   $("generador").textContent = inf.generador;
 
-  // Se dice cuando se redacto y por que no se ha vuelto a redactar. Sin
-  // eso, un informe de hace media hora parece un panel colgado.
+  // Se dice quien lo redacto y si los datos han cambiado desde entonces.
+  // Un informe con IA fechado hace horas, sin mas, parece un panel colgado;
+  // decir que hay actividad nueva convierte eso en una invitacion a pulsar.
   const partes = [];
-  if (inf.momento) partes.push(hace(inf.momento));
-  if (inf.motivo) partes.push(inf.motivo);
+  partes.push(inf.con_ia ? "redactado con IA" : "resumen automatico");
+  if (inf.con_ia && inf.momento) partes.push(hace(inf.momento));
+  if (inf.desactualizado) partes.push("hay actividad nueva desde entonces");
+  else if (inf.motivo && !inf.con_ia) partes.push(inf.motivo);
+  else if (inf.motivo && inf.motivo !== "redactado con IA") partes.push(inf.motivo);
   if (inf.cuota_tope > 0) {
-    partes.push(`${inf.cuota_usada}/${inf.cuota_tope} informes con IA hoy`);
+    partes.push(`${inf.cuota_usada}/${inf.cuota_tope} con IA hoy`);
   }
   $("informe-estado").textContent = partes.join(" · ");
 }
@@ -578,8 +582,8 @@ async function cargarInforme() {
   pintarInforme(await traer("/api/informe"));
 }
 
-// Regenerar va por POST porque cuesta dinero: el refresco automatico usa
-// GET y nunca debe provocar una llamada de pago por si solo.
+// Va por POST porque cuesta dinero: el refresco automatico usa GET, que
+// siempre lo redactan las reglas y nunca gasta cuota.
 async function regenerarInforme() {
   const boton = $("regenerar");
   boton.disabled = true;
@@ -590,10 +594,10 @@ async function regenerarInforme() {
     if (!resp.ok) throw new Error(`respondio ${resp.status}`);
     pintarInforme(await resp.json());
   } catch (e) {
-    $("informe-estado").textContent = `no se pudo regenerar: ${e.message}`;
+    $("informe-estado").textContent = `no se pudo redactar con IA: ${e.message}`;
   } finally {
     boton.disabled = false;
-    boton.textContent = "Regenerar";
+    boton.textContent = "Redactar con IA";
   }
 }
 
@@ -666,7 +670,6 @@ const CAMPOS = {
   "c-refresco": "refresco_segundos",
   "c-pais": "pais_propio",
   "c-retencion": "retencion_dias",
-  "c-informe-intervalo": "informe_intervalo_min",
   "c-informe-tope": "informe_tope_diario",
   "c-aviso-canal": "aviso_canal",
   "c-aviso-destino": "aviso_destino",

@@ -3,6 +3,7 @@ package report
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,26 +11,21 @@ import (
 	"github.com/k0braintheworld/k0pot/internal/store"
 )
 
-// almacenFalso guarda en memoria lo justo para probar la politica.
 type almacenFalso struct {
 	informe store.InformeGuardado
 	hay     bool
 	cuota   map[string]int
 }
 
-func nuevoAlmacen() *almacenFalso {
-	return &almacenFalso{cuota: map[string]int{}}
-}
+func nuevoAlmacen() *almacenFalso { return &almacenFalso{cuota: map[string]int{}} }
 
 func (a *almacenFalso) GuardarInforme(i store.InformeGuardado) error {
 	a.informe, a.hay = i, true
 	return nil
 }
-
 func (a *almacenFalso) UltimoInforme() (store.InformeGuardado, bool, error) {
 	return a.informe, a.hay, nil
 }
-
 func (a *almacenFalso) ConsumirCuotaLLM(dia string, tope int) (bool, error) {
 	if tope > 0 && a.cuota[dia] >= tope {
 		return false, nil
@@ -37,7 +33,6 @@ func (a *almacenFalso) ConsumirCuotaLLM(dia string, tope int) (bool, error) {
 	a.cuota[dia]++
 	return true, nil
 }
-
 func (a *almacenFalso) CuotaLLMUsada(dia string) (int, error) { return a.cuota[dia], nil }
 
 // generadorFalso cuenta cuantas veces se le pide un texto: eso es
@@ -53,9 +48,8 @@ func (g *generadorFalso) Generar(context.Context, Datos) (Resultado, error) {
 	if g.fallo != nil {
 		return Resultado{}, g.fallo
 	}
-	return Resultado{Texto: "texto", Redactado: g.nombre}, nil
+	return Resultado{Texto: "texto del modelo", Redactado: g.nombre}, nil
 }
-
 func (g *generadorFalso) Nombre() string { return g.nombre }
 
 func datosCon(total int) Datos {
@@ -65,170 +59,193 @@ func datosCon(total int) Datos {
 	}
 }
 
-// montar deja un Programado con reloj controlado y tope generoso.
-func montar(tope int) (*Programado, *generadorFalso, *generadorFalso, *time.Time) {
+func montar(tope int) (*Politica, *generadorFalso, *generadorFalso, *time.Time) {
 	llm := &generadorFalso{nombre: "llm:falso"}
 	reglas := &generadorFalso{nombre: NombreReglas}
 	ahora := time.Date(2026, 7, 23, 12, 0, 0, 0, time.UTC)
-	p := &Programado{
-		Gen: llm, Respaldo: reglas, Alm: nuevoAlmacen(),
-		Intervalo: 15 * time.Minute, TopeDiario: tope,
+	p := &Politica{
+		Gen: llm, Reglas: reglas, Alm: nuevoAlmacen(), TopeDiario: tope,
 		Ahora: func() time.Time { return ahora },
 	}
 	return p, llm, reglas, &ahora
 }
 
-func TestPrimerInformeSeRedacta(t *testing.T) {
-	p, llm, _, _ := montar(50)
-	s, err := p.Asegurar(context.Background(), datosCon(3), 7, false)
-	if err != nil {
-		t.Fatal(err)
+// Lo que motiva el reparto: el panel refresca cada 20 s y eso no puede
+// costar dinero.
+func TestElRefrescoDelPanelNoGastaNiUnaLlamada(t *testing.T) {
+	p, llm, reglas, _ := montar(50)
+	for i := 0; i < 200; i++ {
+		if _, err := p.Automatico(context.Background(), datosCon(i), 7); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if llm.veces != 1 {
-		t.Fatalf("se esperaba 1 llamada, hubo %d", llm.veces)
+	if llm.veces != 0 {
+		t.Errorf("el automatico llamo al modelo %d veces", llm.veces)
 	}
-	if !s.Fresco {
-		t.Error("el primer informe deberia venir marcado como fresco")
+	if reglas.veces == 0 {
+		t.Error("las reglas deberian haber redactado")
 	}
 }
 
-// El caso que motivo todo esto: el panel refrescando sin parar.
-func TestPanelRefrescandoNoGastaLlamadas(t *testing.T) {
+func TestSoloSeGastaCuandoSePide(t *testing.T) {
+	p, llm, _, _ := montar(50)
+	if _, err := p.AMano(context.Background(), datosCon(3), 7); err != nil {
+		t.Fatal(err)
+	}
+	if llm.veces != 1 {
+		t.Fatalf("llamadas = %d, se esperaba 1", llm.veces)
+	}
+}
+
+// Un informe con IA ya pagado se sigue sirviendo: es mejor que el de
+// reglas y no cuesta nada volver a ensenarlo.
+func TestElInformeConIASeConservaYSeReutiliza(t *testing.T) {
 	p, llm, _, _ := montar(50)
 	d := datosCon(3)
-	for i := 0; i < 200; i++ {
-		if _, err := p.Asegurar(context.Background(), d, 7, false); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if llm.veces != 1 {
-		t.Fatalf("200 refrescos con los mismos datos gastaron %d llamadas, se esperaba 1", llm.veces)
-	}
-}
-
-func TestDatosNuevosDentroDelIntervaloEsperan(t *testing.T) {
-	p, llm, _, reloj := montar(50)
-	if _, err := p.Asegurar(context.Background(), datosCon(3), 7, false); err != nil {
+	if _, err := p.AMano(context.Background(), d, 7); err != nil {
 		t.Fatal(err)
 	}
-	*reloj = reloj.Add(5 * time.Minute) // menos que el intervalo
-	s, err := p.Asegurar(context.Background(), datosCon(99), 7, false)
+	s, err := p.Automatico(context.Background(), d, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if !s.ConIA || s.Texto != "texto del modelo" {
+		t.Errorf("deberia servirse el guardado: %+v", s)
+	}
+	if s.Desactualizado {
+		t.Error("los datos no han cambiado: no deberia constar como desfasado")
+	}
 	if llm.veces != 1 {
-		t.Fatalf("se regenero antes de tiempo: %d llamadas", llm.veces)
-	}
-	if s.Fresco {
-		t.Error("no deberia venir marcado como fresco")
+		t.Errorf("se volvio a pagar: %d llamadas", llm.veces)
 	}
 }
 
-func TestDatosNuevosPasadoElIntervaloRegeneran(t *testing.T) {
-	p, llm, _, reloj := montar(50)
-	if _, err := p.Asegurar(context.Background(), datosCon(3), 7, false); err != nil {
-		t.Fatal(err)
-	}
-	*reloj = reloj.Add(20 * time.Minute)
-	if _, err := p.Asegurar(context.Background(), datosCon(99), 7, false); err != nil {
-		t.Fatal(err)
-	}
-	if llm.veces != 2 {
-		t.Fatalf("se esperaban 2 llamadas, hubo %d", llm.veces)
-	}
-}
-
-func TestForzarSaltaElIntervalo(t *testing.T) {
+// Si llega actividad nueva se avisa, pero NO se regenera solo: quien lo
+// pidio decide si vuelve a gastar.
+func TestConDatosNuevosAvisaPeroNoRegeneraSolo(t *testing.T) {
 	p, llm, _, _ := montar(50)
-	if _, err := p.Asegurar(context.Background(), datosCon(3), 7, false); err != nil {
+	if _, err := p.AMano(context.Background(), datosCon(3), 7); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := p.Asegurar(context.Background(), datosCon(3), 7, true); err != nil {
+	s, err := p.Automatico(context.Background(), datosCon(99), 7)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if llm.veces != 2 {
-		t.Fatalf("el boton no regenero: %d llamadas", llm.veces)
+	if !s.Desactualizado {
+		t.Error("deberia avisar de que hay actividad nueva")
+	}
+	if llm.veces != 1 {
+		t.Errorf("no debia regenerar solo: %d llamadas", llm.veces)
 	}
 }
 
-// El freno duro: pase lo que pase, la cuota diaria no se rebasa.
-func TestTopeDiarioNoSeRebasa(t *testing.T) {
-	p, llm, reglas, reloj := montar(3)
-	for i := 0; i < 30; i++ {
-		if _, err := p.Asegurar(context.Background(), datosCon(i), 7, true); err != nil {
+// El tope acota lo que se puede pedir a mano, por si alguien se apoya en
+// el boton.
+func TestElTopeDiarioAcotaLasPeticionesAMano(t *testing.T) {
+	p, llm, _, _ := montar(3)
+	var ultimo Servido
+	for i := 0; i < 20; i++ {
+		s, err := p.AMano(context.Background(), datosCon(i), 7)
+		if err != nil {
 			t.Fatal(err)
 		}
-		*reloj = reloj.Add(time.Minute)
+		ultimo = s
 	}
 	if llm.veces != 3 {
-		t.Fatalf("se rebaso el tope: %d llamadas al LLM, tope 3", llm.veces)
+		t.Fatalf("se rebaso el tope: %d llamadas", llm.veces)
 	}
-	if reglas.veces != 27 {
-		t.Fatalf("las reglas debian cubrir el resto: %d", reglas.veces)
+	// Rebasado el tope se sigue devolviendo un informe -el ultimo pagado,
+	// que es mejor que degradar a reglas- pero diciendo por que no es nuevo.
+	if ultimo.Texto == "" {
+		t.Error("el panel no puede quedarse sin informe")
+	}
+	if !strings.Contains(ultimo.Motivo, "tope") {
+		t.Errorf("hay que explicar por que no se redacto: %q", ultimo.Motivo)
 	}
 }
 
-func TestTopeSeRenuevaAlCambiarDeDia(t *testing.T) {
+// Y si no hay ninguno pagado que reutilizar, responden las reglas.
+func TestSinTopeYSinInformePrevioRespondenLasReglas(t *testing.T) {
+	p, llm, reglas, _ := montar(0)
+	p.TopeDiario = -1 // agotado desde el principio
+	p.Alm = &almacenFalso{cuota: map[string]int{"2026-07-23": 99}}
+	p.TopeDiario = 1
+
+	if _, err := p.AMano(context.Background(), datosCon(3), 7); err != nil {
+		t.Fatal(err)
+	}
+	if llm.veces != 0 {
+		t.Errorf("no deberia haber llamado al modelo: %d", llm.veces)
+	}
+	if reglas.veces == 0 {
+		t.Error("sin nada guardado deberian responder las reglas")
+	}
+}
+
+func TestElTopeSeRenuevaCadaDia(t *testing.T) {
 	p, llm, _, reloj := montar(2)
 	for i := 0; i < 5; i++ {
-		if _, err := p.Asegurar(context.Background(), datosCon(i), 7, true); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if llm.veces != 2 {
-		t.Fatalf("tope del primer dia: %d", llm.veces)
+		p.AMano(context.Background(), datosCon(i), 7)
 	}
 	*reloj = reloj.Add(24 * time.Hour)
-	if _, err := p.Asegurar(context.Background(), datosCon(9), 7, true); err != nil {
+	if _, err := p.AMano(context.Background(), datosCon(9), 7); err != nil {
 		t.Fatal(err)
 	}
 	if llm.veces != 3 {
-		t.Fatalf("el dia nuevo deberia traer cuota limpia: %d", llm.veces)
+		t.Errorf("el dia nuevo deberia traer cuota limpia: %d", llm.veces)
 	}
 }
 
-func TestCambiarElPeriodoRegenera(t *testing.T) {
+// Si la API falla, el panel no puede quedarse sin informe.
+func TestSiFallaLaIACaeEnReglasYLoExplica(t *testing.T) {
 	p, llm, _, _ := montar(50)
-	d := datosCon(3)
-	if _, err := p.Asegurar(context.Background(), d, 7, false); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := p.Asegurar(context.Background(), d, 30, false); err != nil {
-		t.Fatal(err)
-	}
-	if llm.veces != 2 {
-		t.Fatalf("otro periodo es otra pregunta: %d llamadas", llm.veces)
-	}
-}
-
-// Si la API falla, el panel debe seguir ensenando el ultimo informe bueno
-// en vez de un error.
-func TestFalloAlRedactarConservaElAnterior(t *testing.T) {
-	p, llm, _, reloj := montar(50)
-	if _, err := p.Asegurar(context.Background(), datosCon(3), 7, false); err != nil {
-		t.Fatal(err)
-	}
 	llm.fallo = errors.New("HTTP 429: rate limit")
-	*reloj = reloj.Add(20 * time.Minute)
-	s, err := p.Asegurar(context.Background(), datosCon(99), 7, false)
+
+	s, err := p.AMano(context.Background(), datosCon(3), 7)
 	if err != nil {
-		t.Fatalf("no deberia propagar el error habiendo informe previo: %v", err)
+		t.Fatalf("no deberia propagar: %v", err)
 	}
-	if s.Texto != "texto" {
-		t.Error("se perdio el informe anterior")
+	if s.ConIA {
+		t.Error("no lo redacto la IA")
 	}
-	if s.Motivo == "" {
-		t.Error("hay que explicar por que no se actualizo")
+	if !strings.Contains(s.Motivo, "429") {
+		t.Errorf("el motivo deberia citar el fallo: %q", s.Motivo)
 	}
 }
 
-// La huella no puede depender del instante de la consulta: si dependiera,
-// cada refresco del panel pareceria un dato nuevo.
+// Sin modelo configurado, pedirlo a mano no puede romper nada.
+func TestSinModeloConfiguradoDevuelveElDeReglas(t *testing.T) {
+	reglas := &generadorFalso{nombre: NombreReglas}
+	p := &Politica{Gen: reglas, Reglas: reglas, Alm: nuevoAlmacen(), TopeDiario: 40}
+
+	s, err := p.AMano(context.Background(), datosCon(3), 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.ConIA {
+		t.Error("sin modelo no puede constar como redactado con IA")
+	}
+}
+
+func TestOtroPeriodoNoReutilizaElInformeGuardado(t *testing.T) {
+	p, _, _, _ := montar(50)
+	d := datosCon(3)
+	if _, err := p.AMano(context.Background(), d, 7); err != nil {
+		t.Fatal(err)
+	}
+	s, err := p.Automatico(context.Background(), d, 30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.ConIA {
+		t.Error("un informe de 7 dias no vale para una consulta de 30")
+	}
+}
+
 func TestHuellaIgnoraElInstanteDeConsulta(t *testing.T) {
-	d1 := datosCon(5)
-	d1.Desde, d1.Hasta = time.Now().Add(-time.Hour), time.Now()
-	d2 := datosCon(5)
-	d2.Desde, d2.Hasta = time.Now().Add(-time.Hour), time.Now().Add(time.Minute)
+	d1, d2 := datosCon(5), datosCon(5)
+	d1.Hasta = time.Now()
+	d2.Hasta = time.Now().Add(time.Minute)
 	if Huella(d1) != Huella(d2) {
 		t.Error("la huella cambia solo por consultar en otro momento")
 	}
@@ -237,5 +254,37 @@ func TestHuellaIgnoraElInstanteDeConsulta(t *testing.T) {
 func TestHuellaCambiaConLosDatos(t *testing.T) {
 	if Huella(datosCon(5)) == Huella(datosCon(6)) {
 		t.Error("datos distintos deberian dar huellas distintas")
+	}
+}
+
+// Cuando el modelo falla, ConLLM se repliega y firma "reglas (el LLM no
+// estaba disponible: ...)" para no atribuir el texto a quien no lo
+// escribio. Comparar esa firma con == daba por redactado con IA justo lo
+// que la IA no habia podido redactar, y el panel lo anunciaba como tal.
+func TestUnRepliegueAReglasNoCuentaComoIA(t *testing.T) {
+	llm := &generadorFalso{nombre: "reglas (el LLM no estaba disponible: HTTP 429)"}
+	p := &Politica{
+		Gen: &generadorFalso{nombre: "llm:falso"}, Reglas: llm,
+		Alm: nuevoAlmacen(), TopeDiario: 40,
+	}
+	// El generador configurado devuelve la firma de repliegue.
+	p.Gen = llm
+
+	s, err := p.AMano(context.Background(), datosCon(3), 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.ConIA {
+		t.Errorf("firma %q se tomo por IA", s.Generador)
+	}
+
+	// Y no se guarda: si se guardara, el refresco siguiente lo serviria
+	// como un informe con IA ya pagado que nunca existio.
+	sig, err := p.Automatico(context.Background(), datosCon(3), 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sig.ConIA {
+		t.Error("un repliegue guardado se sirve luego como si fuera IA")
 	}
 }

@@ -241,17 +241,20 @@ type Informe struct {
 	Texto     string    `json:"texto"`
 	Generador string    `json:"generador"`
 	Momento   time.Time `json:"momento"`
-	Fresco    bool      `json:"fresco"`
-	Motivo    string    `json:"motivo"`
+	// ConIA distingue lo redactado por el modelo de lo que salio de reglas.
+	ConIA bool `json:"con_ia"`
+	// Desactualizado: hay actividad nueva desde que se redacto con IA.
+	Desactualizado bool   `json:"desactualizado"`
+	Motivo         string `json:"motivo"`
 	// Cuota de informes con IA gastada hoy. 0 en tope = sin limite.
 	CuotaUsada int `json:"cuota_usada"`
 	CuotaTope  int `json:"cuota_tope"`
 }
 
 func (s *Servidor) informe(w http.ResponseWriter, r *http.Request) {
-	// Regenerar cuesta dinero, asi que se pide con POST: un GET debe poder
-	// repetirse sin efectos, y el panel lo repite cada pocos segundos.
-	forzar := r.Method == http.MethodPost
+	// Redactar con IA cuesta dinero, asi que se pide con POST: un GET debe
+	// poder repetirse sin efectos, y el panel lo repite cada pocos segundos.
+	conIA := r.Method == http.MethodPost
 
 	d := dias(r)
 	desde := time.Now().AddDate(0, 0, -d)
@@ -280,11 +283,21 @@ func (s *Servidor) informe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := s.programado().Asegurar(r.Context(), report.Datos{
+	datos := report.Datos{
 		Desde: desde, Hasta: time.Now(),
 		Resumen: resumen, Niveles: niveles, Destacados: lista,
 		Episodios: ataques,
-	}, d, forzar)
+	}
+
+	// El refresco del panel NUNCA gasta cuota: lo automatico lo redactan
+	// las reglas. El modelo entra solo cuando alguien lo pide, con POST.
+	pol := s.politica()
+	var res report.Servido
+	if conIA {
+		res, err = pol.AMano(r.Context(), datos, d)
+	} else {
+		res, err = pol.Automatico(r.Context(), datos, d)
+	}
 	if err != nil {
 		http.Error(w, "no se pudo redactar el informe", http.StatusInternalServerError)
 		return
@@ -292,21 +305,19 @@ func (s *Servidor) informe(w http.ResponseWriter, r *http.Request) {
 	// Se publica quien redacto de verdad, no quien estaba configurado.
 	responderJSON(w, Informe{
 		Texto: res.Texto, Generador: res.Generador, Momento: res.Momento,
-		Fresco: res.Fresco, Motivo: res.Motivo,
+		ConIA: res.ConIA, Desactualizado: res.Desactualizado, Motivo: res.Motivo,
 		CuotaUsada: res.CuotaUsada, CuotaTope: res.CuotaTope,
 	})
 }
 
-// programado arma la politica con los ajustes vigentes. Se construye en
-// cada peticion, y no una vez al arrancar, para que cambiar el intervalo
-// o el tope desde el panel tenga efecto sin reiniciar.
-func (s *Servidor) programado() *report.Programado {
-	c := s.Config.Actual()
-	return &report.Programado{
+// politica arma el reparto con los ajustes vigentes. Se construye en cada
+// peticion, y no una vez al arrancar, para que cambiar el tope desde el
+// panel tenga efecto sin reiniciar.
+func (s *Servidor) politica() *report.Politica {
+	return &report.Politica{
 		Gen:        s.Generador,
-		Respaldo:   report.PorReglas{},
+		Reglas:     report.PorReglas{},
 		Alm:        s.Almacen,
-		Intervalo:  time.Duration(c.InformeIntervaloMin) * time.Minute,
-		TopeDiario: c.InformeTopeDiario,
+		TopeDiario: s.Config.Actual().InformeTopeDiario,
 	}
 }

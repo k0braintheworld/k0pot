@@ -150,6 +150,24 @@ Para comprobarlo desde fuera: `deploy/comprobar-aislamiento.sh <IP-expuesta>
 <IP-gestion>`, ejecutado **desde otra maquina**. Desde el propio servidor no
 demuestra nada.
 
+## Los informes automaticos no cuestan nada
+
+El panel pide el informe en cada refresco. Que esa peticion llamara a un
+modelo de pago tenia dos problemas: gastaba la cuota del dia en mirar el
+panel, y la gastaba en lo rutinario, que es justo donde menos aporta un
+modelo.
+
+El reparto es tajante:
+
+- **Lo automatico lo redactan las reglas.** Deterministas, instantaneas y
+  gratis. Siempre al dia, porque se calculan en el momento.
+- **El modelo entra solo al pulsar "Redactar con IA".** Asi la cuota se
+  gasta en los informes que alguien va a leer de verdad.
+
+Un informe con IA ya pagado se conserva y se sigue mostrando. Si despues
+llega actividad nueva, **se avisa pero no se regenera solo**: quien lo pidio
+decide si vuelve a gastar.
+
 ## Los textos hablan de un senuelo, no de un servidor comprometido
 
 Un modelo de lenguaje al que le cuentas que alguien entro como root por SSH
@@ -245,7 +263,7 @@ sistema es la unica que puede quitarselo al proceso.
 | Alcance | Wrapper sobre Cowrie, no honeypot propio | Los honeypots maduros ya estan resueltos; uno mal hecho es una puerta real |
 | Lenguaje | Go, binario unico | Despliegue trivial y poco consumo de memoria |
 | Base de datos | SQLite via `modernc.org/sqlite` | Cero configuracion y sin CGO |
-| Informes | Reglas + IA opcional | Las reglas cubren lo rutinario gratis; la IA solo donde aporta |
+| Informes | Reglas siempre; IA solo a peticion | El panel refresca cada 20 s: que eso costara dinero gastaria la cuota en mirar |
 | Contexto | Catalogo propio, no memoria del modelo | Un modelo explica de memoria que es una ruta con el mismo aplomo acierte o no |
 | Idioma | Espanol en codigo y comentarios | El proyecto se escribe y se lee en espanol |
 

@@ -115,14 +115,9 @@
       </label>
       <label>Modelo<input type="text" id="c-modelo" autocomplete="off"></label>
 
-      <label>Minutos entre informes
-        <input type="number" id="c-informe-intervalo" min="1" max="1440">
-        <small>El panel pide el informe en cada refresco. Sin este freno, una
-        pestaña abierta genera miles de llamadas al dia.</small>
-      </label>
-      <label>Tope de informes con IA al dia
+      <label>Tope de informes con IA al dia (pedidos a mano)
         <input type="number" id="c-informe-tope" min="0" max="10000">
-        <small>Limite duro; al alcanzarlo redactan las reglas. 0 = sin limite.</small>
+        <small>Los informes automaticos no cuentan: los redactan las reglas, que no cuestan nada. 0 = sin limite.</small>
       </label>
 
       <div id="campos-compatible">
@@ -276,7 +271,7 @@
     <div class="cabecera-bloque">
       <h2>Informe</h2>
       <p id="generador" class="sub"></p>
-      <button id="regenerar" type="button" class="boton-menor" title="Redactar uno nuevo ahora">Regenerar</button>
+      <button id="regenerar" type="button" class="boton-menor" title="Redactar el informe con IA. Consume cuota del proveedor.">Redactar con IA</button>
     </div>
     <div id="informe" class="informe"><p class="cargando">Redactando…</p></div>
     <p id="informe-estado" class="sub estado-informe"></p>
