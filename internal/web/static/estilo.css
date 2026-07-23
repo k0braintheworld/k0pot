@@ -762,3 +762,20 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   word-break: break-all;
   overflow-x: auto;
 }
+
+/* La columna de IP no puede partir una direccion a la mitad -"192.168.1"
+   arriba y "00.188" abajo se lee como rota-. Monoespaciado, sin cortar, y
+   con su ancho justo para que quepa entera. */
+.celda-ip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .8rem;
+  white-space: nowrap;
+  width: 1%;
+}
+.celda-ip .enlace-ip {
+  font: inherit;
+  color: var(--texto);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--sub);
+}
+.celda-ip .enlace-ip:hover { color: var(--acento); border-bottom-color: var(--acento); }

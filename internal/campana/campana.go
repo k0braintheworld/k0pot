@@ -56,6 +56,23 @@ type Campana struct {
 	Paises    []string           `json:"paises,omitempty"`
 }
 
+// Interesante dice si una campana merece salir en el panel.
+//
+// Detectar agrupa TODO lo que comparte guion, y a bajo volumen eso son
+// sobre todo escaneres de investigacion haciendo el mismo PING/INFO: cierto,
+// pero sin valor. Una campana solo importa si es lo bastante coordinada
+// -muchas IPs- o lo bastante grave, o si comparten una descarga, que aunque
+// sean dos delata la misma operacion sin duda.
+func (c Campana) Interesante() bool {
+	if c.Tipo == PorDescarga {
+		return true // el mismo binario desde dos sitios ya es senal fuerte
+	}
+	if len(c.IPs) >= 5 {
+		return true // una coincidencia amplia deja de ser casualidad
+	}
+	return episodio.Rango(c.Severidad) >= episodio.Rango(episodio.Acceso)
+}
+
 // Detectar busca campanas entre los ataques de un periodo.
 func Detectar(episodios []store.EpisodioFila) []Campana {
 	grupos := map[string]*Campana{}

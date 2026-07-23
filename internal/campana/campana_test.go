@@ -140,3 +140,30 @@ func TestSinAtaquesNoHayCampanas(t *testing.T) {
 		t.Errorf("se esperaba vacio: %+v", cs)
 	}
 }
+
+// A bajo volumen, agrupar dos escaneres de investigacion que hacen el mismo
+// PING es cierto pero inutil: no aporta y ocupa sitio. Interesante() es lo
+// que lo mantiene fuera del panel hasta que hay algo de verdad.
+func TestSoloSonInteresantesLasCoordinadasDeVerdad(t *testing.T) {
+	casos := []struct {
+		nombre string
+		c      Campana
+		quiero bool
+	}{
+		{"dos IPs tanteando", Campana{Tipo: PorComandos, Severidad: episodio.Tanteo,
+			IPs: []string{"1.1.1.1", "2.2.2.2"}}, false},
+		{"la misma descarga", Campana{Tipo: PorDescarga, Severidad: episodio.Tanteo,
+			IPs: []string{"1.1.1.1", "2.2.2.2"}}, true},
+		{"cinco IPs iguales", Campana{Tipo: PorCredenciales, Severidad: episodio.Tanteo,
+			IPs: []string{"1", "2", "3", "4", "5"}}, true},
+		{"dos IPs pero entraron", Campana{Tipo: PorCredenciales, Severidad: episodio.Acceso,
+			IPs: []string{"1.1.1.1", "2.2.2.2"}}, true},
+	}
+	for _, c := range casos {
+		t.Run(c.nombre, func(t *testing.T) {
+			if c.c.Interesante() != c.quiero {
+				t.Errorf("Interesante()=%v, se esperaba %v", c.c.Interesante(), c.quiero)
+			}
+		})
+	}
+}

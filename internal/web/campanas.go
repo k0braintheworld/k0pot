@@ -19,7 +19,17 @@ func (s *Servidor) campanas(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no se pudieron leer los ataques", http.StatusInternalServerError)
 		return
 	}
-	responderJSON(w, campana.Detectar(eps))
+	// Solo las que aportan: a bajo volumen, agrupar escaneres de
+	// investigacion que hacen el mismo PING es cierto pero inutil. El bloque
+	// del panel se oculta solo cuando esto viene vacio.
+	todas := campana.Detectar(eps)
+	interesantes := todas[:0]
+	for _, c := range todas {
+		if c.Interesante() {
+			interesantes = append(interesantes, c)
+		}
+	}
+	responderJSON(w, interesantes)
 }
 
 // Artefacto es algo que un atacante intento traerse al sistema.

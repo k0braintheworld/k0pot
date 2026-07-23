@@ -431,7 +431,19 @@ function pintarTabla(id, filas) {
   for (const fila of filas.slice(0, 10)) {
     const tr = nodo("tr");
     for (const c of fila) {
-      tr.appendChild(nodo("td", c.clase, c.valor === "" || c.valor == null ? "—" : String(c.valor)));
+      const td = nodo("td", c.clase);
+      if (c.ip) {
+        // La IP abre su ficha: es la forma mas corta de pasar de "quien
+        // aparece mucho" a "que ha hecho y si ya habia venido".
+        const enlace = nodo("button", "enlace-ip", c.ip);
+        enlace.type = "button";
+        enlace.title = "Ver la ficha de esta IP";
+        enlace.addEventListener("click", () => abrirIP(c.ip).catch(() => {}));
+        td.appendChild(enlace);
+      } else {
+        td.textContent = c.valor === "" || c.valor == null ? "—" : String(c.valor);
+      }
+      tr.appendChild(td);
     }
     cuerpo.appendChild(tr);
   }
@@ -467,7 +479,9 @@ async function cargarEstado(recientes) {
     { lat: e.latitud_propia || 0, lon: e.longitud_propia || 0 });
 
   pintarTabla("tabla-ips", (e.top_ips || []).map((ip) => [
-    { valor: ip.ip }, { valor: ip.eventos, clase: "num" }, { valor: contextoIP(ip), clase: "sub" },
+    { ip: ip.ip, clase: "celda-ip" },
+    { valor: ip.eventos, clase: "num" },
+    { valor: contextoIP(ip), clase: "sub" },
   ]));
   pintarTabla("tabla-paises", (e.por_pais || []).map((p) => [
     { valor: nombrePais(p.Valor) }, { valor: p.N, clase: "num" },
@@ -1040,11 +1054,15 @@ async function cargarCampanas() {
   const cont = $("campanas");
   cont.replaceChildren();
 
+  // El bloque entero se oculta cuando no hay nada: una campana solo aparece
+  // si de verdad delata una operacion coordinada. A bajo trafico eso es
+  // raro, y un cuadro vacio permanente ocupa sitio sin decir nada.
+  const seccion = document.querySelector(".bloque-campanas");
   if (!lista.length) {
-    cont.appendChild(nodo("p", "vacio",
-      "Ninguna coincidencia entre ataques todavia. Hacen falta al menos dos IPs compartiendo guion."));
+    if (seccion) seccion.hidden = true;
     return;
   }
+  if (seccion) seccion.hidden = false;
 
   for (const c of lista) {
     const fila = nodo("div", "campana");
