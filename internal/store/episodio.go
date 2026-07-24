@@ -53,6 +53,57 @@ type EpisodioFila struct {
 
 // EventosDesde devuelve los eventos a partir de una fecha, en orden
 // cronologico, que es como los necesita la reconstruccion de episodios.
+// FuenteArtefacto agrupa de donde y quien trajo un fichero capturado.
+type FuenteArtefacto struct {
+	IPs     []string
+	URLs    []string
+	Primera time.Time
+	Ultima  time.Time
+}
+
+// FuentesDeArtefacto busca, por el hash SHA-256 del fichero, los eventos de
+// descarga que lo trajeron: que IPs y desde que URLs, y cuando. El hash se
+// guarda en el detalle del evento crudo (aunque se pierda al agrupar), asi
+// que aqui se recupera la trazabilidad completa de la muestra.
+func (s *Store) FuentesDeArtefacto(sha256 string) (FuenteArtefacto, error) {
+	filas, err := s.db.Query(
+		`SELECT ip, COALESCE(json_extract(detalle,'$.url'),''), timestamp
+		   FROM eventos
+		  WHERE tipo = ? AND json_extract(detalle,'$.sha256') = ?
+		  ORDER BY timestamp`,
+		string(model.DescargaFichero), sha256)
+	if err != nil {
+		return FuenteArtefacto{}, fmt.Errorf("fuentes del artefacto: %w", err)
+	}
+	defer filas.Close()
+
+	var f FuenteArtefacto
+	vistaIP, vistaURL := map[string]bool{}, map[string]bool{}
+	for filas.Next() {
+		var ip, url, ts string
+		if err := filas.Scan(&ip, &url, &ts); err != nil {
+			return FuenteArtefacto{}, err
+		}
+		if ip != "" && !vistaIP[ip] {
+			vistaIP[ip] = true
+			f.IPs = append(f.IPs, ip)
+		}
+		if url != "" && !vistaURL[url] {
+			vistaURL[url] = true
+			f.URLs = append(f.URLs, url)
+		}
+		if t, err := time.Parse(time.RFC3339Nano, ts); err == nil {
+			if f.Primera.IsZero() || t.Before(f.Primera) {
+				f.Primera = t
+			}
+			if t.After(f.Ultima) {
+				f.Ultima = t
+			}
+		}
+	}
+	return f, filas.Err()
+}
+
 func (s *Store) EventosDesde(desde time.Time) ([]model.Evento, error) {
 	filas, err := s.db.Query(
 		`SELECT id, timestamp, COALESCE(protocolo,''), ip, tipo,

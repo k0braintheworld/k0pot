@@ -121,6 +121,23 @@ func Detectar(episodios []store.EpisodioFila) []Campana {
 	return fin
 }
 
+// EpisodiosDe devuelve los ataques que pertenecen a una campana concreta,
+// identificada por su tipo y su huella. Usa la misma deteccion de senales que
+// Detectar, de modo que lo que sale al abrir una campana coincide exactamente
+// con lo que se conto en su resumen.
+func EpisodiosDe(episodios []store.EpisodioFila, tipo Tipo, huella string) []store.EpisodioFila {
+	var out []store.EpisodioFila
+	for _, e := range episodios {
+		for _, s := range senales(e) {
+			if s.tipo == tipo && s.huella == huella {
+				out = append(out, e)
+				break
+			}
+		}
+	}
+	return out
+}
+
 type senal struct {
 	tipo    Tipo
 	huella  string

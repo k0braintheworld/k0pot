@@ -601,6 +601,16 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   margin-top: .15rem; word-break: break-all;
 }
 .campana-alcance { font-size: .74rem; color: var(--sub); white-space: nowrap; }
+.campana.pulsable { cursor: pointer; }
+.campana.pulsable:hover { border-color: var(--acento); }
+.artefacto.pulsable { cursor: pointer; }
+.artefacto.pulsable:hover { border-color: var(--acento); }
+.cadenas-artefacto {
+  margin: .4rem 0 0; padding: .6rem .7rem; max-height: 18rem; overflow: auto;
+  background: #0a0c10; border: 1px solid var(--borde); border-radius: .4rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .74rem; line-height: 1.5; white-space: pre-wrap; word-break: break-all;
+}
 
 .artefacto {
   padding: .5rem .6rem;

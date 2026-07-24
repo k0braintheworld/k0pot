@@ -1100,7 +1100,68 @@ async function cargarCampanas() {
     const paises = (c.paises || []).length ? ` · ${c.paises.join(" ")}` : "";
     fila.appendChild(nodo("span", "campana-alcance",
       `${c.ips.length} IPs${paises}`));
+    // Pulsable: abre el detalle con los ataques que la componen.
+    fila.classList.add("pulsable");
+    fila.addEventListener("click", () => abrirCampana(c));
     cont.appendChild(fila);
+  }
+}
+
+// abrirCampana muestra el guion compartido y LOS ATAQUES que forman la
+// campana; cada uno abre su detalle -evento a evento- reaprovechando el
+// dialogo de ataque. Asi el "proceso" de la operacion sale de encadenar lo
+// que ya existe, sin duplicar nada.
+async function abrirCampana(c) {
+  const paises = (c.paises || []).length ? ` · ${c.paises.join(" ")}` : "";
+  $("campana-titulo").textContent = QUE_COMPARTEN[c.tipo] || c.tipo;
+  $("campana-sub").textContent = `${c.ips.length} IPs${paises} · ${c.episodios} ataques`;
+
+  const muestra = $("campana-muestra");
+  muestra.replaceChildren();
+  if (c.muestra) {
+    muestra.hidden = false;
+    muestra.appendChild(nodo("code", null, c.muestra));
+  } else {
+    muestra.hidden = true;
+  }
+
+  const datos = $("campana-datos");
+  datos.replaceChildren();
+  datos.appendChild(dato("Gravedad", c.severidad));
+  datos.appendChild(dato("Primera vez", new Date(c.desde).toLocaleString("es")));
+  datos.appendChild(dato("Ultima vez", new Date(c.hasta).toLocaleString("es")));
+  if ((c.paises || []).length) datos.appendChild(dato("Paises", c.paises.join(" ")));
+  datos.appendChild(dato("Direcciones", c.ips.join(", ")));
+
+  const lista = $("campana-ataques");
+  lista.replaceChildren();
+  lista.appendChild(nodo("p", "sub", "Cargando ataques…"));
+  $("dialogo-campana").showModal();
+
+  let eps = [];
+  try {
+    eps = await pedirJSON(
+      `/api/campana?tipo=${encodeURIComponent(c.tipo)}` +
+      `&huella=${encodeURIComponent(c.huella)}&dias=${encodeURIComponent(rango())}`);
+  } catch (e) {
+    lista.replaceChildren(nodo("p", "sub", `No se pudo cargar: ${e.message}`));
+    return;
+  }
+
+  lista.replaceChildren();
+  lista.appendChild(nodo("p", "sub",
+    "Los ataques de esta campana — pulsa uno para ver su proceso paso a paso:"));
+  for (const a of eps || []) {
+    const fila = nodo("button", "fila-ataque");
+    fila.type = "button";
+    fila.appendChild(nodo("span", `sev sev-${a.severidad}`, NOMBRE_SEV[a.severidad] || a.severidad));
+    const texto = nodo("div", "fila-ataque-texto");
+    texto.appendChild(nodo("strong", null, `${a.ip} · ${a.protocolo}`));
+    texto.appendChild(nodo("span", "sub", a.resumen));
+    fila.appendChild(texto);
+    fila.appendChild(nodo("span", "fila-ataque-cuando", hace(a.fin)));
+    fila.addEventListener("click", () => { $("dialogo-campana").close(); abrirAtaque(a.clave); });
+    lista.appendChild(fila);
   }
 }
 
@@ -1137,7 +1198,71 @@ async function cargarArtefactos() {
     if (a.fichero && !a.url) partes.push("nombre = SHA-256 del contenido");
     if (a.momento) partes.push(hace(a.momento));
     caja.appendChild(nodo("span", "sub", partes.join(" · ")));
+    // Solo los ficheros capturados (nombre = SHA-256) se pueden abrir para
+    // revisarlos; los que son solo una URL de intento, no hay nada que abrir.
+    if (a.fichero && RE_HASH_ARTEFACTO.test(a.fichero)) {
+      caja.classList.add("pulsable");
+      caja.addEventListener("click", () => abrirArtefacto(a.fichero));
+    }
     cont.appendChild(caja);
+  }
+}
+
+const RE_HASH_ARTEFACTO = /^[a-f0-9]{64}$/;
+
+// abrirArtefacto muestra la ficha de una muestra capturada: que es, sus
+// cadenas de texto internas y quien la trajo, y permite descargarla como
+// fichero inerte para analizarla aparte. Nunca la ejecuta.
+async function abrirArtefacto(hash) {
+  $("artefacto-titulo").textContent = "Artefacto capturado";
+  $("artefacto-sub").textContent = hash;
+
+  const aviso = $("artefacto-aviso");
+  aviso.replaceChildren(nodo("p", null,
+    "Muestra sin procesar, posible malware. Se descarga como fichero inerte " +
+    "para analizarla en un entorno aislado; no la ejecutes en tu equipo."));
+
+  const datos = $("artefacto-datos");
+  datos.replaceChildren(nodo("p", "sub", "Cargando…"));
+  const cadenas = $("artefacto-cadenas");
+  cadenas.replaceChildren();
+
+  // La descarga va por un enlace con la cookie de sesion; el servidor la
+  // entrega como adjunto inerte (nunca se ejecuta ni se interpreta).
+  $("descargar-artefacto").onclick = () => {
+    const a = document.createElement("a");
+    a.href = `/api/artefacto/contenido?hash=${encodeURIComponent(hash)}`;
+    a.rel = "noopener";
+    a.click();
+  };
+
+  $("dialogo-artefacto").showModal();
+
+  let d;
+  try {
+    d = await pedirJSON(`/api/artefacto?hash=${encodeURIComponent(hash)}`);
+  } catch (e) {
+    datos.replaceChildren(nodo("p", "sub", `No se pudo cargar: ${e.message}`));
+    return;
+  }
+
+  datos.replaceChildren();
+  datos.appendChild(dato("Tipo", d.tipo));
+  datos.appendChild(dato("Tamano", tamano(d.bytes)));
+  datos.appendChild(dato("SHA-256", d.sha256));
+  if (d.urls?.length) datos.appendChild(dato("Origen", d.urls.join("  ")));
+  if (d.ips?.length) datos.appendChild(dato("Lo trajeron", d.ips.join(", ")));
+  if (d.primera) datos.appendChild(dato("Primera vez", new Date(d.primera).toLocaleString("es")));
+
+  cadenas.replaceChildren();
+  if (d.cadenas?.length) {
+    cadenas.appendChild(nodo("p", "sub",
+      "Cadenas de texto dentro del fichero (URLs, comandos, direcciones incrustadas):"));
+    const pre = nodo("pre", "cadenas-artefacto");
+    pre.textContent = d.cadenas.join("\n");
+    cadenas.appendChild(pre);
+  } else {
+    cadenas.appendChild(nodo("p", "sub", "Sin cadenas de texto legibles en la cabecera."));
   }
 }
 
@@ -1261,6 +1386,8 @@ $("generar-informe").addEventListener("click", () => {
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
 $("explicar-ataque").addEventListener("click", explicarAtaque);
 $("cerrar-ip").addEventListener("click", () => $("dialogo-ip").close());
+$("cerrar-campana").addEventListener("click", () => $("dialogo-campana").close());
+$("cerrar-artefacto").addEventListener("click", () => $("dialogo-artefacto").close());
 
 // El desplegable de servicios se llena desde el mismo mapa que usa el resto
 // del panel: asi una trampa nueva aparece en el filtro sola, sin que haya que
