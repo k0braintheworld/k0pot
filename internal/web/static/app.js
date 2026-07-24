@@ -1812,6 +1812,61 @@ document.querySelector(".pestanas")?.addEventListener("keydown", (ev) => {
   ev.preventDefault();
 });
 
+// ── Actualizaciones ─────────────────────────────────────────────────────
+
+async function cargarActualizaciones() {
+  try {
+    const a = await pedirJSON("/api/actualizacion");
+    $("version-actual").value = a.version || "?";
+    const pend = $("pendiente-deb");
+    const cancelar = $("cancelar-deb");
+    pend.replaceChildren();
+    if (a.pendiente) {
+      pend.hidden = false;
+      cancelar.hidden = false;
+      pend.appendChild(nodo("span", null,
+        `Hay una actualizacion preparada (${tamano(a.pendiente.bytes)}). Aplicala en el servidor con `));
+      pend.appendChild(nodo("code", null, a.comando));
+      pend.appendChild(nodo("span", null, "."));
+    } else {
+      pend.hidden = true;
+      cancelar.hidden = true;
+    }
+  } catch {
+    // El menu es opcional; si no carga, el resto de ajustes sigue.
+  }
+}
+
+// La subida va como cuerpo crudo del POST, igual que la base GeoIP: un .deb
+// puede pesar varios MB y no hace falta montar un formulario en memoria.
+async function subirActualizacion(fichero) {
+  const estado = $("estado-deb");
+  const boton = $("subir-deb");
+  boton.disabled = true;
+  estado.textContent = `Subiendo ${(fichero.size / 1048576).toFixed(1)} MB…`;
+  try {
+    const resp = await fetch("/api/actualizacion", { method: "POST", body: fichero });
+    const r = await resp.json();
+    if (!resp.ok) throw new Error(r.error || `respondio ${resp.status}`);
+    estado.textContent = "Subida y verificada. Aplicala en el servidor.";
+    cargarActualizaciones();
+  } catch (e) {
+    estado.textContent = `No se pudo subir: ${e.message}`;
+  } finally {
+    boton.disabled = false;
+  }
+}
+
+async function descartarActualizacion() {
+  try {
+    await pedirJSON("/api/actualizacion", { method: "DELETE" });
+    $("estado-deb").textContent = "Actualizacion descartada.";
+    cargarActualizaciones();
+  } catch (e) {
+    $("estado-deb").textContent = `No se pudo descartar: ${e.message}`;
+  }
+}
+
 async function abrirAjustes() {
   try {
     volcarAjustes(await pedirJSON("/api/ajustes"));
@@ -1848,6 +1903,8 @@ async function abrirAjustes() {
     // El mapa es una ayuda, no un requisito: si no carga, quedan los
     // campos de latitud y longitud.
   }
+
+  await cargarActualizaciones();
 
   irAPestana("servicios");
   $("estado-ajustes").textContent = "";
@@ -1904,6 +1961,13 @@ $("c-proveedor").addEventListener("change", mostrarCamposDelProveedor);
 $("abrir-ajustes").addEventListener("click", abrirAjustes);
 $("cerrar-ajustes").addEventListener("click", () => dialogo.close());
 $("guardar-ajustes").addEventListener("click", guardarAjustes);
+$("subir-deb").addEventListener("click", () => $("f-deb").click());
+$("f-deb").addEventListener("change", (ev) => {
+  const f = ev.target.files[0];
+  if (f) subirActualizacion(f);
+  ev.target.value = "";
+});
+$("cancelar-deb").addEventListener("click", descartarActualizacion);
 $("guardar-contrasena").addEventListener("click", cambiarContrasena);
 $("restaurar").addEventListener("click", async () => {
   volcarAjustes(await pedirJSON("/api/ajustes/defecto"));

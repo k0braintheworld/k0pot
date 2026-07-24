@@ -37,7 +37,7 @@ import (
 	"github.com/k0braintheworld/k0pot/internal/web"
 )
 
-const version = "0.0.7-dev"
+var version = "0.0.7-dev"
 
 func main() {
 	var (
@@ -865,6 +865,7 @@ func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion, rutaBD
 	srv := &web.Servidor{
 		Almacen:   almacen,
 		Config:    ajustes,
+		Version:   version,
 		Generador: generadorDe(ajustes.Actual(), sinLLM),
 		Trampas:   trampa.Disponibles(),
 		// Donde Cowrie deja lo que consigue capturar. Que el directorio no

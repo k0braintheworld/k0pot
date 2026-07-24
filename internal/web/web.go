@@ -45,6 +45,8 @@ type Servidor struct {
 	// RutaBD y DirCowrie sirven para medir cuanto ocupa cada cosa.
 	RutaBD    string
 	DirCowrie string
+	// Version es la del binario, para mostrarla en el panel.
+	Version string
 	// AlCambiarConfig avisa a quien haya que reconfigurar (el generador de
 	// informes, el enriquecedor) cuando se guardan ajustes nuevos.
 	AlCambiarConfig func(config.Config)
@@ -89,6 +91,7 @@ func (s *Servidor) Rutas() http.Handler {
 	mux.HandleFunc("/api/uso", s.protegido(s.uso))
 	mux.HandleFunc("/api/reporte", s.protegido(s.reporte))
 	mux.HandleFunc("/api/geoip", s.protegido(s.subirGeoIP))
+	mux.HandleFunc("/api/actualizacion", s.protegido(s.actualizacion))
 	mux.HandleFunc("/api/campanas", s.protegido(s.campanas))
 	mux.HandleFunc("/api/campana", s.protegido(s.campana))
 	mux.HandleFunc("/api/campana/explicar", s.protegido(s.explicarCampana))

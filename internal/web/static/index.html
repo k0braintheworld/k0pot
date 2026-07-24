@@ -47,6 +47,7 @@
       <button type="button" role="tab" data-ir="informes" aria-selected="false">Informes</button>
         <button type="button" role="tab" data-ir="avisos" aria-selected="false">Avisos</button>
       <button type="button" role="tab" data-ir="general" aria-selected="false">General</button>
+      <button type="button" role="tab" data-ir="actualizaciones" aria-selected="false">Actualizaciones</button>
     </nav>
 
     <div class="grupo" data-pestana="servicios">
@@ -267,6 +268,25 @@
       <label>Nueva<input type="password" id="p-nueva" autocomplete="new-password"></label>
       <button type="button" id="guardar-contrasena" class="boton-secundario">Cambiar contrasena</button>
       <p class="ayuda" id="estado-contrasena"></p>
+    </div>
+
+    <div class="grupo" data-pestana="actualizaciones">
+      <h3>Actualizaciones</h3>
+      <label>Version instalada
+        <input type="text" id="version-actual" value="—" readonly>
+      </label>
+      <p class="ayuda">Sube el paquete <code>.deb</code> de una version nueva. El
+      panel lo valida y lo deja preparado, pero <strong>no lo instala</strong>:
+      corre sin privilegios a proposito, para que un acceso al panel no pueda
+      volverse root del servidor. Para aplicarlo, ejecuta en el servidor
+      <code>sudo k0pot-actualizar</code> (te pedira confirmacion).</p>
+      <div class="fila-acciones">
+        <input type="file" id="f-deb" accept=".deb" hidden>
+        <button id="subir-deb" type="button" class="boton-menor">Subir .deb…</button>
+        <button id="cancelar-deb" type="button" class="boton-menor" hidden>Descartar</button>
+        <span id="estado-deb" class="sub"></span>
+      </div>
+      <p id="pendiente-deb" class="ayuda" hidden></p>
     </div>
 
     <footer class="pie-dialogo">

@@ -59,6 +59,7 @@ install -m 755 empaquetado/sistema/k0pot-configurar    "$ARBOL/usr/sbin/k0pot-co
 # symlink para tenerlo en el PATH. Copiarlo a /usr/sbin lo separaria de sus
 # ficheros y "aplicar" no encontraria el aislamiento.
 install -m 755 deploy/k0pot-nft.sh                     "$ARBOL/usr/share/k0pot/deploy/k0pot-nft"
+install -m 755 deploy/k0pot-actualizar.sh             "$ARBOL/usr/sbin/k0pot-actualizar"
 ln -s /usr/share/k0pot/deploy/k0pot-nft                "$ARBOL/usr/sbin/k0pot-nft"
 install -m 644 empaquetado/sistema/*.service           "$ARBOL/usr/lib/systemd/system/"
 install -m 644 docker-compose.yml                      "$ARBOL/usr/share/k0pot/"
