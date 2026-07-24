@@ -25,6 +25,8 @@ import (
 // Datos es todo lo que un informe necesita saber. Se construye una vez y
 // lo comparten los dos generadores.
 type Datos struct {
+	// Idioma en que redactar el informe ("en" para ingles; vacio = espanol).
+	Idioma     string
 	Desde      time.Time
 	Hasta      time.Time
 	Resumen    *store.Resumen
@@ -82,7 +84,13 @@ func NivelDe(niveles map[model.Clasificacion]int) Nivel {
 
 // FraseSemaforo es la linea mas importante de cualquier informe: cuando no
 // pasa nada hay que decirlo con claridad, no enterrar al lector en cifras.
-func FraseSemaforo(niveles map[model.Clasificacion]int) string {
+func FraseSemaforo(niveles map[model.Clasificacion]int, idioma string) string {
+	tr := func(es, en string) string {
+		if idioma == "en" {
+			return en
+		}
+		return es
+	}
 	notables := niveles[model.Notable]
 	revisar := niveles[model.Revisar]
 
@@ -90,14 +98,16 @@ func FraseSemaforo(niveles map[model.Clasificacion]int) string {
 	case Rojo:
 		// "Piden que los mires", no "hay que actuar": en un senuelo que
 		// alguien entre es la trampa funcionando, no una emergencia.
-		return fmt.Sprintf("ROJO — %s merecen que los mires: "+
-			"alguien no se limito a llamar a la puerta", plural(notables, "evento"))
+		return tr(
+			fmt.Sprintf("ROJO — %s merecen que los mires: alguien no se limito a llamar a la puerta", plural(notables, "evento")),
+			fmt.Sprintf("RED — %s deserve a look: someone did more than knock on the door", plural(notables, "event")))
 	case Ambar:
-		return fmt.Sprintf("AMBAR — %s se salen de lo normal, "+
-			"pero nada indica que hayan entrado", plural(revisar, "evento"))
+		return tr(
+			fmt.Sprintf("AMBAR — %s se salen de lo normal, pero nada indica que hayan entrado", plural(revisar, "evento")),
+			fmt.Sprintf("AMBER — %s are out of the ordinary, but nothing suggests they got in", plural(revisar, "event")))
 	default:
-		return "VERDE — todo es ruido de fondo automatizado; " +
-			"nada que mirar hoy"
+		return tr("VERDE — todo es ruido de fondo automatizado; nada que mirar hoy",
+			"GREEN — it's all automated background noise; nothing to look at today")
 	}
 }
 

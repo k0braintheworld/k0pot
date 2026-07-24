@@ -224,7 +224,7 @@ func datosComoTexto(d Datos) string {
 	r := d.Resumen
 
 	fmt.Fprintf(&b, "VEREDICTO DEL CLASIFICADOR: %s\n", NivelDe(d.Niveles))
-	fmt.Fprintf(&b, "%s\n\n", FraseSemaforo(d.Niveles))
+	fmt.Fprintf(&b, "%s\n\n", FraseSemaforo(d.Niveles, d.Idioma))
 	fmt.Fprintf(&b, "Periodo: del %s al %s\n",
 		d.Desde.Local().Format("02/01/2006"), d.Hasta.Local().Format("02/01/2006"))
 	fmt.Fprintf(&b, "Total de eventos: %d, desde %d IPs distintas\n\n", r.Total, r.IPsUnicas)

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="{{.T "lang"}}">
 <head>
 <meta charset="utf-8">
 <title>k0Pot — informe de actividad</title>
@@ -109,13 +109,13 @@
     <div class="logo">
       <span class="sigil">🍯</span>
       <div>
-        <h1>k0Pot · Informe de actividad</h1>
-        <div class="meta" style="text-align:left">Del {{.Desde}} al {{.Hasta}}</div>
+        <h1>{{.T "titulo"}}</h1>
+        <div class="meta" style="text-align:left">{{.T "del"}} {{.Desde}} {{.T "al"}} {{.Hasta}}</div>
       </div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.5rem">
-      <button class="imprimir" onclick="window.print()">Imprimir / Guardar PDF</button>
-      <div class="meta">generado el {{.Generado}}</div>
+      <button class="imprimir" onclick="window.print()">{{.T "imprimir"}}</button>
+      <div class="meta">{{.T "generado"}} {{.Generado}}</div>
     </div>
   </header>
 
@@ -125,13 +125,13 @@
   </div>
 
   <div class="cifras">
-    <div class="cifra"><div class="n">{{.Total}}</div><div class="et">eventos</div></div>
-    <div class="cifra"><div class="n">{{.IPsUnicas}}</div><div class="et">IPs distintas</div></div>
-    <div class="cifra"><div class="n">{{.NumAtaques}}</div><div class="et">ataques</div></div>
-    {{if .Intrusiones}}<div class="cifra grave"><div class="n">{{.Intrusiones}}</div><div class="et">intrusiones</div></div>{{end}}
+    <div class="cifra"><div class="n">{{.Total}}</div><div class="et">{{.T "eventos"}}</div></div>
+    <div class="cifra"><div class="n">{{.IPsUnicas}}</div><div class="et">{{.T "ips_distintas"}}</div></div>
+    <div class="cifra"><div class="n">{{.NumAtaques}}</div><div class="et">{{.T "ataques"}}</div></div>
+    {{if .Intrusiones}}<div class="cifra grave"><div class="n">{{.Intrusiones}}</div><div class="et">{{.T "intrusiones"}}</div></div>{{end}}
   </div>
 
-  <h2>Ataques · los mas graves primero</h2>
+  <h2>{{.T "ataques_titulo"}}</h2>
   {{range .Ataques}}
   <div class="ataque {{.SevClase}}">
     <div class="cab">
@@ -156,24 +156,24 @@
     </div>
   </div>
   {{else}}
-  <p style="color:#8b949e">No se registro ningun ataque en este periodo.</p>
+  <p style="color:#8b949e">{{.T "sin_ataques"}}</p>
   {{end}}
 
   <div class="dos-tablas">
     {{if .TopIPs}}
     <div>
-      <h2>IPs mas activas</h2>
+      <h2>{{.T "ips_activas"}}</h2>
       <table>
-        <thead><tr><th>IP</th><th class="num">Ev.</th><th>Contexto</th></tr></thead>
+        <thead><tr><th>IP</th><th class="num">{{.T "th_ev"}}</th><th>{{.T "th_contexto"}}</th></tr></thead>
         <tbody>{{range .TopIPs}}<tr><td class="mono">{{.IP}}</td><td class="num">{{.Eventos}}</td><td>{{.Contexto}}</td></tr>{{end}}</tbody>
       </table>
     </div>
     {{end}}
     {{if .Credenciales}}
     <div>
-      <h2>Credenciales probadas</h2>
+      <h2>{{.T "creds_titulo"}}</h2>
       <table>
-        <thead><tr><th>Usuario</th><th>Contrasena</th></tr></thead>
+        <thead><tr><th>{{.T "th_usuario"}}</th><th>{{.T "th_password"}}</th></tr></thead>
         <tbody>{{range .Credenciales}}<tr><td class="mono">{{.Usuario}}</td><td class="mono">{{.Password}}</td></tr>{{end}}</tbody>
       </table>
     </div>

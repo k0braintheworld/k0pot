@@ -74,7 +74,7 @@ func TestSemaforo(t *testing.T) {
 // cuando toca es tan util como alertar. Se comprueba la intencion y no las
 // palabras exactas, para poder reescribir la frase sin romper el test.
 func TestFraseVerdeTranquiliza(t *testing.T) {
-	frase := FraseSemaforo(map[model.Clasificacion]int{model.RuidoFondo: 500})
+	frase := FraseSemaforo(map[model.Clasificacion]int{model.RuidoFondo: 500}, "es")
 
 	if !strings.HasPrefix(frase, "VERDE") {
 		t.Errorf("frase = %q", frase)
@@ -97,11 +97,11 @@ func TestFraseVerdeTranquiliza(t *testing.T) {
 }
 
 func TestFraseSingularYPlural(t *testing.T) {
-	uno := FraseSemaforo(map[model.Clasificacion]int{model.Notable: 1})
+	uno := FraseSemaforo(map[model.Clasificacion]int{model.Notable: 1}, "es")
 	if !strings.Contains(uno, "1 evento ") {
 		t.Errorf("frase = %q, esperaba singular", uno)
 	}
-	varios := FraseSemaforo(map[model.Clasificacion]int{model.Notable: 3})
+	varios := FraseSemaforo(map[model.Clasificacion]int{model.Notable: 3}, "es")
 	if !strings.Contains(varios, "3 eventos") {
 		t.Errorf("frase = %q, esperaba plural", varios)
 	}

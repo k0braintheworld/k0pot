@@ -55,6 +55,7 @@ func (s *Servidor) reporte(w http.ResponseWriter, r *http.Request) {
 	res, _ := report.PorReglas{}.Generar(r.Context(), report.Datos{
 		Desde: desde, Hasta: time.Now(),
 		Resumen: resumen, Niveles: niveles, Episodios: ataques,
+		Idioma:  idioma,
 	})
 
 	modelo := datosReporte(desde, resumen, niveles, ataques, res.Texto, s.Almacen, idioma)
@@ -94,6 +95,7 @@ func nonceAleatorio() (string, error) {
 // ── Modelo de la plantilla ──────────────────────────────────────────────
 
 type reporteVista struct {
+	Idioma                  string
 	Nonce                   template.HTMLAttr
 	Desde, Hasta, Generado  string
 	Nivel                   string
@@ -105,6 +107,36 @@ type reporteVista struct {
 	TopIPs                  []filaIP
 	Credenciales            []filaCred
 }
+
+// T traduce las etiquetas fijas de la plantilla del informe segun el idioma.
+func (v reporteVista) T(clave string) string {
+	m := map[string][2]string{
+		"titulo":         {"k0Pot · Informe de actividad", "k0Pot · Activity report"},
+		"del":            {"Del", "From"},
+		"al":             {"al", "to"},
+		"generado":       {"generado el", "generated on"},
+		"imprimir":       {"Imprimir / Guardar PDF", "Print / Save PDF"},
+		"eventos":        {"eventos", "events"},
+		"ips_distintas":  {"IPs distintas", "distinct IPs"},
+		"ataques":        {"ataques", "attacks"},
+		"intrusiones":    {"intrusiones", "intrusions"},
+		"ataques_titulo": {"Ataques · los mas graves primero", "Attacks · most severe first"},
+		"sin_ataques":    {"No se registro ningun ataque en este periodo.", "No attack was recorded in this period."},
+		"ips_activas":    {"IPs mas activas", "Most active IPs"},
+		"th_ev":          {"Ev.", "Ev."},
+		"th_contexto":    {"Contexto", "Context"},
+		"creds_titulo":   {"Credenciales probadas", "Credentials tried"},
+		"th_usuario":     {"Usuario", "User"},
+		"th_password":    {"Contrasena", "Password"},
+		"lang":           {"es", "en"},
+	}
+	par := m[clave]
+	if v.Idioma == "en" {
+		return par[1]
+	}
+	return par[0]
+}
+
 
 type ataqueVista struct {
 	IP, Origen, Severidad, SevClase, Resumen, Cuando string
@@ -130,6 +162,7 @@ func datosReporte(desde time.Time, r *store.Resumen, niveles map[model.Clasifica
 
 	nivel := report.NivelDe(niveles)
 	v := reporteVista{
+		Idioma:     idioma,
 		Desde:      desde.Local().Format("02/01/2006 15:04"),
 		Hasta:      time.Now().Local().Format("02/01/2006 15:04"),
 		Generado:   time.Now().Local().Format("02/01/2006 15:04"),
