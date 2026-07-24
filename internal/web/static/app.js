@@ -1262,6 +1262,13 @@ $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
 $("explicar-ataque").addEventListener("click", explicarAtaque);
 $("cerrar-ip").addEventListener("click", () => $("dialogo-ip").close());
 
+// El desplegable de servicios se llena desde el mismo mapa que usa el resto
+// del panel: asi una trampa nueva aparece en el filtro sola, sin que haya que
+// acordarse de tocar el HTML (que era justo lo que se quedaba desfasado).
+for (const [id, nombre] of Object.entries(NOMBRE_SERVICIO)) {
+  $("f-protocolo").appendChild(nodo("option", null, nombre)).value = id;
+}
+
 // Los filtros recargan solo la lista, no el panel entero: cambiar de
 // gravedad no tiene por que volver a pedir el mapa ni el informe.
 for (const id of ["f-severidad", "f-protocolo"]) {
