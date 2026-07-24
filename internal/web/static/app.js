@@ -1430,6 +1430,12 @@ function aplicarTema(t) {
   try { localStorage.setItem("k0pot-tema", t); } catch (e) { /* modo privado */ }
 }
 aplicarTema(localStorage.getItem("k0pot-tema") || "oscuro");
+
+// Idioma: traducir la interfaz estatica y cablear el selector. traducirDOM e
+// IDIOMA vienen de idiomas.js, que se carga antes que este fichero.
+traducirDOM();
+$("idioma").value = IDIOMA;
+$("idioma").addEventListener("change", (e) => cambiarIdioma(e.target.value));
 $("tema").addEventListener("click", () => {
   aplicarTema(document.documentElement.dataset.tema === "claro" ? "oscuro" : "claro");
 });

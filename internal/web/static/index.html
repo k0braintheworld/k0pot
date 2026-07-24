@@ -13,23 +13,24 @@
     <span class="logo">🍯</span>
     <div>
       <h1>k0Pot</h1>
-      <p class="sub">panel de actividad del honeypot</p>
+      <p class="sub" data-i18n="hdr.sub">panel de actividad del honeypot</p>
     </div>
   </div>
   <div class="controles">
     <button id="novedades" type="button" class="chip-novedades" hidden></button>
-    <div class="pulso"><span id="latido" class="punto"></span><span id="actualizado">conectando…</span></div>
+    <div class="pulso"><span id="latido" class="punto"></span><span id="actualizado" data-i18n="hdr.conectando">conectando…</span></div>
     <select id="rango" aria-label="Periodo">
-      <option value="1" selected>24 horas</option>
-      <option value="7">7 dias</option>
-      <option value="30">30 dias</option>
-      <option value="90">90 dias</option>
+      <option value="1" selected data-i18n="rango.24h">24 horas</option>
+      <option value="7" data-i18n="rango.7d">7 dias</option>
+      <option value="30" data-i18n="rango.30d">30 dias</option>
+      <option value="90" data-i18n="rango.90d">90 dias</option>
     </select>
-    <button id="generar-informe" type="button" class="boton-texto" title="Abrir un informe completo del periodo seleccionado, listo para imprimir o guardar como PDF">Generar informe</button>
-    <button id="tema" class="boton-icono" title="Cambiar tema" aria-label="Cambiar tema">◐</button>
-    <button id="abrir-ajustes" class="boton-icono" title="Ajustes" aria-label="Ajustes">⚙</button>
+    <button id="generar-informe" type="button" class="boton-texto" data-i18n="hdr.informe" data-i18n-title="hdr.informe.t" title="Abrir un informe completo del periodo seleccionado, listo para imprimir o guardar como PDF">Generar informe</button>
+    <select id="idioma" class="sel-idioma" aria-label="Idioma" data-i18n-aria="hdr.idioma"><option value="es">ES</option><option value="en">EN</option></select>
+    <button id="tema" class="boton-icono" data-i18n-title="hdr.tema" data-i18n-aria="hdr.tema" title="Cambiar tema" aria-label="Cambiar tema">◐</button>
+    <button id="abrir-ajustes" class="boton-icono" data-i18n-title="hdr.ajustes" data-i18n-aria="hdr.ajustes" title="Ajustes" aria-label="Ajustes">⚙</button>
     <span id="quien" class="sub"></span>
-    <button id="salir" class="boton-texto">salir</button>
+    <button id="salir" class="boton-texto" data-i18n="hdr.salir">salir</button>
   </div>
 </header>
 
@@ -305,7 +306,7 @@
       <h2 id="ip-titulo">IP</h2>
       <p id="ip-sub" class="sub"></p>
     </div>
-    <button id="cerrar-ip" type="button" class="boton-menor">Cerrar</button>
+    <button id="cerrar-ip" type="button" class="boton-menor" data-i18n="dlg.cerrar">Cerrar</button>
   </header>
   <div id="ip-veredicto" class="explicacion" hidden></div>
   <div id="ip-datos" class="ficha-datos"></div>
@@ -319,8 +320,8 @@
       <p id="campana-sub" class="sub"></p>
     </div>
     <div class="acciones-dialogo">
-      <button id="explicar-campana" type="button" class="boton-menor">Explicar con IA</button>
-      <button id="cerrar-campana" type="button" class="boton-menor">Cerrar</button>
+      <button id="explicar-campana" type="button" class="boton-menor" data-i18n="dlg.explicar">Explicar con IA</button>
+      <button id="cerrar-campana" type="button" class="boton-menor" data-i18n="dlg.cerrar">Cerrar</button>
     </div>
   </header>
   <div id="campana-muestra" class="explicacion" hidden></div>
@@ -336,9 +337,9 @@
       <p id="artefacto-sub" class="sub"></p>
     </div>
     <div class="acciones-dialogo">
-      <button id="explicar-artefacto" type="button" class="boton-menor">Explicar con IA</button>
-      <button id="descargar-artefacto" type="button" class="boton-menor">Descargar</button>
-      <button id="cerrar-artefacto" type="button" class="boton-menor">Cerrar</button>
+      <button id="explicar-artefacto" type="button" class="boton-menor" data-i18n="dlg.explicar">Explicar con IA</button>
+      <button id="descargar-artefacto" type="button" class="boton-menor" data-i18n="dlg.descargar">Descargar</button>
+      <button id="cerrar-artefacto" type="button" class="boton-menor" data-i18n="dlg.cerrar">Cerrar</button>
     </div>
   </header>
   <div id="artefacto-aviso" class="explicacion"></div>
@@ -354,8 +355,8 @@
       <p id="ataque-sub" class="sub"></p>
     </div>
     <div class="acciones-dialogo">
-      <button id="explicar-ataque" type="button" class="boton-menor" title="Pedir al modelo que explique este ataque. Consume cuota.">Explicar con IA</button>
-      <button id="cerrar-ataque" type="button" class="boton-menor">Cerrar</button>
+      <button id="explicar-ataque" type="button" class="boton-menor" data-i18n="dlg.explicar" data-i18n-title="dlg.explicar.t" title="Pedir al modelo que explique este ataque. Consume cuota.">Explicar con IA</button>
+      <button id="cerrar-ataque" type="button" class="boton-menor" data-i18n="dlg.cerrar">Cerrar</button>
     </div>
   </header>
   <div id="ataque-explicacion" class="explicacion" hidden></div>
@@ -365,99 +366,100 @@
 <main class="rejilla-panel">
   <section id="semaforo" class="semaforo">
     <span class="indicador"></span>
-    <p id="frase">Cargando…</p>
+    <p id="frase" data-i18n="cargando">Cargando…</p>
   </section>
 
   <section class="metricas">
-    <article class="metrica"><span id="m-total" class="cifra">—</span><span class="etiqueta">eventos</span></article>
-    <article class="metrica"><span id="m-ips" class="cifra">—</span><span class="etiqueta">IPs unicas</span></article>
-    <article class="metrica"><span id="m-paises" class="cifra">—</span><span class="etiqueta">paises</span></article>
-    <article class="metrica ruido"><span id="m-ruido" class="cifra">—</span><span class="etiqueta">% ruido de fondo</span></article>
-    <article class="metrica revisar"><span id="m-revisar" class="cifra">—</span><span class="etiqueta">a revisar</span></article>
-    <article class="metrica notable"><span id="m-notable" class="cifra">—</span><span class="etiqueta">notables</span></article>
+    <article class="metrica"><span id="m-total" class="cifra">—</span><span class="etiqueta" data-i18n="m.eventos">eventos</span></article>
+    <article class="metrica"><span id="m-ips" class="cifra">—</span><span class="etiqueta" data-i18n="m.ips">IPs unicas</span></article>
+    <article class="metrica"><span id="m-paises" class="cifra">—</span><span class="etiqueta" data-i18n="m.paises">paises</span></article>
+    <article class="metrica ruido"><span id="m-ruido" class="cifra">—</span><span class="etiqueta" data-i18n="m.ruido">% ruido de fondo</span></article>
+    <article class="metrica revisar"><span id="m-revisar" class="cifra">—</span><span class="etiqueta" data-i18n="m.revisar">a revisar</span></article>
+    <article class="metrica notable"><span id="m-notable" class="cifra">—</span><span class="etiqueta" data-i18n="m.notable">notables</span></article>
   </section>
 
   <section class="bloque bloque-mapa">
     <div class="cabecera-bloque">
-      <h2>Origen de los ataques</h2>
+      <h2 data-i18n="sec.mapa">Origen de los ataques</h2>
       <p id="leyenda-mapa" class="sub"></p>
     </div>
-    <div id="mapa" class="mapa"><p class="cargando">Cargando mapa…</p></div>
+    <div id="mapa" class="mapa"><p class="cargando" data-i18n="cargando.mapa">Cargando mapa…</p></div>
   </section>
 
   <section class="bloque bloque-vivo">
-    <div class="cabecera-bloque"><h2>En vivo</h2><p class="sub">ultimos eventos</p></div>
-    <div id="vivo" class="vivo"><p class="cargando">Cargando…</p></div>
+    <div class="cabecera-bloque"><h2 data-i18n="sec.vivo">En vivo</h2><p class="sub" data-i18n="sec.vivo.sub">ultimos eventos</p></div>
+    <div id="vivo" class="vivo"><p class="cargando" data-i18n="cargando">Cargando…</p></div>
   </section>
 
   <section class="bloque bloque-ataques">
     <div class="cabecera-bloque">
-      <h2>Ataques</h2>
-      <p class="sub">Los mas graves primero, no los mas ruidosos</p>
+      <h2 data-i18n="sec.ataques">Ataques</h2>
+      <p class="sub" data-i18n="sec.ataques.sub">Los mas graves primero, no los mas ruidosos</p>
     </div>
     <div class="filtros">
-      <input type="search" id="f-texto" placeholder="Buscar IP, pais, proveedor…" aria-label="Buscar ataques">
+      <input type="search" id="f-texto" placeholder="Buscar IP, pais, proveedor…" data-i18n-placeholder="f.buscar" aria-label="Buscar ataques">
       <select id="f-severidad" aria-label="Gravedad minima">
-        <option value="">Toda gravedad</option>
-        <option value="tanteo">Tanteo o mas</option>
-        <option value="acceso">Acceso o mas</option>
-        <option value="intrusion">Solo intrusiones</option>
+        <option value="" data-i18n="f.toda">Toda gravedad</option>
+        <option value="tanteo" data-i18n="f.tanteo">Tanteo o mas</option>
+        <option value="acceso" data-i18n="f.acceso">Acceso o mas</option>
+        <option value="intrusion" data-i18n="f.intrusion">Solo intrusiones</option>
       </select>
       <select id="f-protocolo" aria-label="Servicio">
-        <option value="">Todos los servicios</option>
+        <option value="" data-i18n="f.servicios">Todos los servicios</option>
       </select>
-      <button id="f-limpiar" type="button" class="boton-menor" hidden>Quitar filtros</button>
+      <button id="f-limpiar" type="button" class="boton-menor" data-i18n="f.limpiar" hidden>Quitar filtros</button>
     </div>
-    <div id="ataques" class="lista-ataques"><p class="cargando">Cargando…</p></div>
+    <div id="ataques" class="lista-ataques"><p class="cargando" data-i18n="cargando">Cargando…</p></div>
   </section>
 
   <section class="bloque bloque-grafica">
     <div class="cabecera-bloque">
-      <h2>Ataques por gravedad</h2>
-      <p class="sub">Cuanto es ruido de fondo y cuanto va en serio</p>
+      <h2 data-i18n="sec.grafica">Ataques por gravedad</h2>
+      <p class="sub" data-i18n="sec.grafica.sub">Cuanto es ruido de fondo y cuanto va en serio</p>
     </div>
-    <div id="grafica-gravedad" class="grafica-gravedad"><p class="cargando">Cargando…</p></div>
+    <div id="grafica-gravedad" class="grafica-gravedad"><p class="cargando" data-i18n="cargando">Cargando…</p></div>
   </section>
 
   <section class="bloque bloque-serie">
     <div class="cabecera-bloque">
-      <h2>Actividad en el tiempo</h2>
+      <h2 data-i18n="sec.serie">Actividad en el tiempo</h2>
       <p id="leyenda-serie" class="sub"></p>
     </div>
-    <div id="serie" class="serie"><p class="cargando">Cargando…</p></div>
+    <div id="serie" class="serie"><p class="cargando" data-i18n="cargando">Cargando…</p></div>
   </section>
 
   <section class="bloque bloque-campanas" hidden>
     <div class="cabecera-bloque">
-      <h2>Campanas</h2>
-      <p class="sub">Ataques que comparten guion: varias IPs, una sola operacion</p>
+      <h2 data-i18n="sec.campanas">Campanas</h2>
+      <p class="sub" data-i18n="sec.campanas.sub">Ataques que comparten guion: varias IPs, una sola operacion</p>
     </div>
-    <div id="campanas" class="lista-campanas"><p class="cargando">Cargando…</p></div>
+    <div id="campanas" class="lista-campanas"><p class="cargando" data-i18n="cargando">Cargando…</p></div>
   </section>
 
   <section class="bloque bloque-artefactos" hidden>
     <div class="cabecera-bloque">
-      <h2>Artefactos</h2>
-      <p class="sub">Lo que intentaron traerse al sistema</p>
+      <h2 data-i18n="sec.artefactos">Artefactos</h2>
+      <p class="sub" data-i18n="sec.artefactos.sub">Lo que intentaron traerse al sistema</p>
     </div>
-    <div id="artefactos" class="lista-artefactos"><p class="cargando">Cargando…</p></div>
+    <div id="artefactos" class="lista-artefactos"><p class="cargando" data-i18n="cargando">Cargando…</p></div>
   </section>
 
-  <section class="bloque bloque-ips"><h2>IPs mas activas</h2><table id="tabla-ips"><tbody></tbody></table></section>
-  <section class="bloque bloque-tabla"><h2>Paises</h2><table id="tabla-paises"><tbody></tbody></table></section>
+  <section class="bloque bloque-ips"><h2 data-i18n="sec.ips">IPs mas activas</h2><table id="tabla-ips"><tbody></tbody></table></section>
+  <section class="bloque bloque-tabla"><h2 data-i18n="sec.paises">Paises</h2><table id="tabla-paises"><tbody></tbody></table></section>
   <section class="bloque bloque-credenciales">
-    <h2>Credenciales probadas</h2>
+    <h2 data-i18n="sec.cred">Credenciales probadas</h2>
     <div class="par-tablas">
-      <div><p class="mini-titulo">usuarios</p><table id="tabla-usuarios"><tbody></tbody></table></div>
-      <div><p class="mini-titulo">contrasenas</p><table id="tabla-passwords"><tbody></tbody></table></div>
+      <div><p class="mini-titulo" data-i18n="sec.usuarios">usuarios</p><table id="tabla-usuarios"><tbody></tbody></table></div>
+      <div><p class="mini-titulo" data-i18n="sec.passwords">contrasenas</p><table id="tabla-passwords"><tbody></tbody></table></div>
     </div>
   </section>
 </main>
 
 <footer>
-  <p>Los datos de esta pagina los escriben atacantes. Se muestran siempre como texto plano, nunca como HTML.</p>
+  <p data-i18n="pie">Los datos de esta pagina los escriben atacantes. Se muestran siempre como texto plano, nunca como HTML.</p>
 </footer>
 
+<script src="idiomas.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
