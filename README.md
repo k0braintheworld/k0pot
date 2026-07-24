@@ -1,11 +1,14 @@
 # k0Pot
 
-Honeypot ligero que explica lo que pasa en lugar de limitarse a registrarlo.
+Honeypot ligero que **explica** lo que pasa en lugar de limitarse a
+registrarlo. Captura los ataques, separa el ruido de lo que importa y, cuando
+quieres entender uno de verdad, **te lo cuenta con IA en lenguaje llano**
+—que es, como funciona y que buscaban— sin que tengas que ser analista de
+seguridad.
 
 Alternativa simplificada a [T-Pot](https://github.com/telekom-security/tpotce):
 en vez de veinte honeypots sobre un stack ELK de 16 GB, reutiliza los que ya
-funcionan bien y aporta la capa que suele faltar — **traducir los ataques a
-lenguaje que se entienda sin ser analista de seguridad**.
+funcionan bien y aporta la capa que suele faltar: **la interpretacion**.
 
 > **Estado: en desarrollo.** Funciona y captura ataques reales, pero cambia a
 > menudo y no ha pasado por una auditoria independiente.
@@ -24,7 +27,9 @@ k0Pot responde a tres preguntas, en este orden:
    consiguieron, no por cuanto insistieron.
 3. **¿Que significa?** `GET /SDK/webLanguage` es un hecho; *"buscan camaras IP
    Hikvision expuestas para reclutarlas en una botnet"* es lo que necesitas
-   saber.
+   saber. Un catalogo propio traduce lo rutinario al instante; y para lo que
+   no basta con eso —entender un ataque entero, un binario capturado o una
+   campana coordinada— esta el boton de **Explicar con IA**.
 
 ## Como funciona
 
@@ -62,6 +67,43 @@ que el atacante *consiguio*:
 Mil conexiones de un escaner valen menos que una sola sesion donde alguien
 tecleo `cat /etc/passwd`. Ordenar por volumen es justo lo que entierra el
 unico episodio que habia que mirar.
+
+## Entender con IA: ataques, campanas y artefactos
+
+Es lo que mas distingue a k0Pot. Cuando abres el detalle de algo y quieres
+saber que esta pasando de verdad, tienes un boton de **Explicar con IA** que
+lo cuenta para alguien con conocimientos minimos, **traduciendo cada
+termino**. Esta en los tres sitios donde importa:
+
+- **Un ataque** — que buscaban, **como funciona la tecnica paso a paso**,
+  hasta donde llegaron, y que significaria en un servidor de verdad.
+- **Una campana** (varias IPs con el mismo guion) — que operacion coordinada
+  hay detras y por que reparten el trabajo entre tantas direcciones.
+- **Un artefacto capturado** (posible malware) — que es y que hace, deducido
+  de su tipo y de las cadenas de texto que lleva dentro, **sin ejecutarlo**.
+
+La explicacion de un ataque sigue esta forma, en prosa llana:
+
+1. **Que buscan.** El proposito en una frase.
+2. **Como funciona.** Que tecnica es, por que funciona y como se encadenan
+   los pasos del registro.
+3. **Hasta donde llegaron.** "No pasaron de llamar a la puerta" es una
+   respuesta perfecta y frecuente.
+4. **Que significaria en un servidor de verdad**, y que revisar alli.
+
+Cada explicacion se **guarda** con lo explicado (por su clave, hash o
+huella), asi que reabrirlo no vuelve a gastar. El encuadre es defensivo: al
+modelo se le dice por delante de todo que esto es un **senuelo** y que NO
+recomiende aislar la maquina ni cerrar la trampa (ver *"Los textos hablan de
+un senuelo"* mas abajo).
+
+**El proveedor es intercambiable.** Vale cualquier API compatible con OpenAI
+—Groq, OpenRouter, Mistral, Together, Ollama— o la de Anthropic; se elige en
+Ajustes. **Sin clave, k0Pot funciona igual**: solo se apagan las
+explicaciones, y todo lo demas (semaforo, agrupacion, catalogo, informe) se
+calcula con reglas, gratis. Ademas **la IA nunca se gasta sola** (ver mas
+abajo): solo cuando pulsas, y una llamada que el proveedor rechaza no
+consume cuota.
 
 ## Servicios
 
@@ -300,30 +342,6 @@ El informe se arma con `html/template`, que auto-escapa: un comando de
 atacante con `<script>` sale como texto, nunca como HTML. Es la misma garantia
 del panel, en un fichero que puede compartirse o guardarse como evidencia.
 
-## Explicar un ataque concreto
-
-El momento en que alguien quiere entender algo no es leyendo el resumen del
-periodo: es cuando abre **un ataque** y ve la secuencia. Por eso el dialogo
-de cada ataque tiene su propio boton de **Explicar con IA**, pensado para
-alguien con conocimientos minimos: traduce cada termino y cuenta cuatro
-cosas:
-
-1. **Que buscan.** El proposito en una frase.
-2. **Como funciona el ataque.** El mecanismo paso a paso: que tecnica es,
-   por que funciona y como se encadenan los pasos del registro.
-3. **Hasta donde llegaron.** "No pasaron de llamar a la puerta" es una
-   respuesta perfecta.
-4. **Que significaria en un servidor de verdad**, y que habria que mirar
-   alli. Esa es la parte aprovechable.
-
-La explicacion se guarda con el ataque: reabrir el dialogo no vuelve a
-gastar, porque la explicacion de un ataque terminado no cambia por volver a
-mirarla.
-
-Comparte el tope diario con el informe, y **una llamada que falla no gasta
-cuota**: si el proveedor la rechaza no ha consumido nada suyo, y descontarla
-igual gastaria tu presupuesto en sus averias.
-
 ## Retencion
 
 Dos plazos, no uno, porque no cuestan lo mismo:
@@ -351,10 +369,10 @@ El principio: **nada que cueste dinero ocurre sin que lo pidas**.
 - **El panel es gratis y siempre al dia.** El semaforo, el reparto por
   gravedad y por servicio y las metricas se calculan con reglas
   deterministas, al momento. Ningun refresco llama a un modelo de pago.
-- **La IA entra solo cuando pulsas.** "Explicar con IA" en un ataque
-  concreto es el unico gasto, y es justo el momento en que alguien quiere
-  entender algo. La explicacion se guarda con el ataque: reabrirla no vuelve
-  a gastar.
+- **La IA entra solo cuando pulsas.** "Explicar con IA" en un ataque, una
+  campana o un artefacto es el unico gasto, y es justo el momento en que
+  alguien quiere entender algo. Cada explicacion se guarda: reabrirla no
+  vuelve a gastar.
 - **El informe completo** ("Generar informe") es un documento con toda la
   actividad, redactado por reglas: se abre cuantas veces quieras sin coste.
 
