@@ -901,9 +901,14 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 /* Etiqueta bot / manual en cada ataque: el bot va apagado (es lo normal) y
    lo "manual" resalta, que es lo que interesa no perder de vista. */
 .chip-origen {
-  font-size: .62rem; text-transform: uppercase; letter-spacing: .03em;
-  padding: .08rem .32rem; border-radius: .3rem; font-weight: 700;
-  white-space: nowrap; align-self: center;
+  display: inline-block; vertical-align: middle; margin-right: .4rem;
+  font-size: .58rem; text-transform: uppercase; letter-spacing: .03em;
+  padding: .05rem .28rem; border-radius: .3rem; font-weight: 700;
+  white-space: nowrap;
 }
 .origen-bot { color: var(--sub); background: rgba(127, 140, 160, .12); }
 .origen-manual { color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
+.filtro-check {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .82rem; color: var(--sub); white-space: nowrap; cursor: pointer;
+}

@@ -604,3 +604,5 @@ Object.assign(IDIOMAS.en, {
   "auto.bot": "Bot", "auto.manual": "Manual",
   "auto.manual.tip": "An interactive session that doesn't match known automation: could be a person. Worth a look."
 });
+Object.assign(IDIOMAS.es, { "f.ruido": "Ocultar ruido de fondo" });
+Object.assign(IDIOMAS.en, { "f.ruido": "Hide background noise" });

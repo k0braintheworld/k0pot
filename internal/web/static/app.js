@@ -586,7 +586,7 @@ function filtrosDeAtaques() {
 
 function hayFiltro() {
   const f = filtrosDeAtaques();
-  return Boolean(f.q || f.severidad || f.protocolo || f.automatismo);
+  return Boolean(f.q || f.severidad || f.protocolo || f.automatismo || $("f-ruido").checked);
 }
 
 async function cargarAtaques() {
@@ -596,7 +596,13 @@ async function cargarAtaques() {
 
   const resp = await fetch(`/api/episodios?${params}`);
   if (!resp.ok) throw new Error(`/api/episodios respondio ${resp.status}`);
-  const lista = await resp.json();
+  let lista = await resp.json();
+  // "Ocultar ruido de fondo": fuera lo que no llego a entrar -escaneos,
+  // tanteos y fuerza bruta fallida-, que es la mayoria y no cuenta ninguna
+  // historia. Se queda lo que consiguio acceso o actuo dentro.
+  if ($("f-ruido").checked) {
+    lista = lista.filter((a) => a.severidad === "acceso" || a.severidad === "intrusion");
+  }
 
   const cont = $("ataques");
   cont.replaceChildren();
@@ -624,14 +630,16 @@ async function cargarAtaques() {
 
     const sev = nodo("span", `sev sev-${a.severidad}`, nombreSev(a.severidad));
     fila.appendChild(sev);
-    if (a.automatismo) {
-      const chip = nodo("span", `chip-origen origen-${a.automatismo}`, t("auto." + a.automatismo));
-      if (a.automatismo === "manual") chip.title = t("auto.manual.tip");
-      fila.appendChild(chip);
-    }
 
     const texto = nodo("div", "fila-ataque-texto");
     const donde = [a.ip, a.pais, a.isp].filter(Boolean).join(" · ");
+    // La etiqueta bot/manual va inline, delante del servicio: asi ocupa solo
+    // su texto y no rompe la rejilla de tres columnas de la fila.
+    if (a.automatismo) {
+      const chip = nodo("span", `chip-origen origen-${a.automatismo}`, t("auto." + a.automatismo));
+      if (a.automatismo === "manual") chip.title = t("auto.manual.tip");
+      texto.appendChild(chip);
+    }
     texto.appendChild(nodo("strong", null, `${a.protocolo} — ${donde}`));
     texto.appendChild(nodo("span", "sub", a.resumen));
     fila.appendChild(texto);
@@ -1508,7 +1516,7 @@ for (const [id, nombre] of Object.entries(NOMBRE_SERVICIO)) {
 
 // Los filtros recargan solo la lista, no el panel entero: cambiar de
 // gravedad no tiene por que volver a pedir el mapa ni el informe.
-for (const id of ["f-severidad", "f-protocolo", "f-automatismo"]) {
+for (const id of ["f-severidad", "f-protocolo", "f-automatismo", "f-ruido"]) {
   $(id).addEventListener("change", () => cargarAtaques().catch(() => {}));
 }
 let tecleando = null;
@@ -1523,6 +1531,7 @@ $("f-limpiar").addEventListener("click", () => {
   $("f-severidad").value = "";
   $("f-protocolo").value = "";
   $("f-automatismo").value = "";
+  $("f-ruido").checked = false;
   cargarAtaques().catch(() => {});
 });
 $("c-aviso-canal").addEventListener("change", camposDelCanal);
