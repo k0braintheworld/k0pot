@@ -195,11 +195,11 @@ func (s *Servidor) estado(w http.ResponseWriter, r *http.Request) {
 
 	responderJSON(w, Estado{
 		Severidades:  severidades,
-		Nivel:        report.NivelDe(niveles),
+		Nivel:        report.NivelDeAtaques(severidades),
 		PaisPropio:   s.Config.Actual().PaisPropio,
 		Latitud:      s.Config.Actual().LatitudPropia,
 		Longitud:     s.Config.Actual().LongitudPropia,
-		Frase:        report.FraseSemaforo(niveles),
+		Frase:        report.FraseSemaforoAtaques(severidades),
 		Dias:         d,
 		Total:        resumen.Total,
 		IPsUnicas:    resumen.IPsUnicas,

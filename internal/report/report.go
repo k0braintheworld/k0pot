@@ -101,6 +101,42 @@ func FraseSemaforo(niveles map[model.Clasificacion]int) string {
 	}
 }
 
+// NivelDeAtaques y FraseSemaforoAtaques deciden el semaforo contando ATAQUES
+// (episodios), no eventos. Es la diferencia que sostiene la tesis del panel:
+// un unico intruso teclea decenas de comandos -decenas de eventos "notables"-
+// pero es un solo ataque. Contar eventos exagera; contar ataques dice la
+// verdad de cuantas veces alguien paso de llamar a la puerta a entrar.
+//
+// El baremo de 4 niveles del episodio se colapsa a los 3 del semaforo:
+// roce+tanteo es ruido, acceso pide una mirada (ambar) y una intrusion es lo
+// que de verdad importa (rojo).
+func NivelDeAtaques(sev map[string]int) Nivel {
+	switch {
+	case sev["intrusion"] > 0:
+		return Rojo
+	case sev["acceso"] > 0:
+		return Ambar
+	default:
+		return Verde
+	}
+}
+
+func FraseSemaforoAtaques(sev map[string]int) string {
+	switch NivelDeAtaques(sev) {
+	case Rojo:
+		// "Piden que los mires", no "hay que actuar": en un senuelo que
+		// alguien entre y actue es la trampa funcionando, no una emergencia.
+		return fmt.Sprintf("ROJO — %s merecen que los mires: "+
+			"alguien no se limito a llamar a la puerta", plural(sev["intrusion"], "ataque"))
+	case Ambar:
+		return fmt.Sprintf("AMBAR — %s consiguieron entrar, "+
+			"pero nada indica que llegaran a actuar dentro", plural(sev["acceso"], "ataque"))
+	default:
+		return "VERDE — todo es ruido de fondo automatizado; " +
+			"nada que mirar hoy"
+	}
+}
+
 func plural(n int, palabra string) string {
 	if n == 1 {
 		return "1 " + palabra

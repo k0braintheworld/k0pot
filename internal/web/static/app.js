@@ -467,13 +467,21 @@ async function cargarEstado(recientes) {
   $("semaforo").className = `semaforo ${e.nivel.toLowerCase()}`;
   $("frase").textContent = e.frase;
 
-  const ruido = e.niveles?.ruido_fondo ?? 0;
+  // Las metricas cuentan ATAQUES (episodios), no eventos, para hablar el
+  // mismo idioma que la grafica de gravedad: un intruso genera decenas de
+  // eventos pero es un solo ataque. "Eventos" queda como dato bruto de
+  // volumen; ruido/a revisar/notables salen del baremo de gravedad.
+  const sv = e.severidades || {};
+  const nRoce = sv.roce || 0, nTanteo = sv.tanteo || 0;
+  const nAcceso = sv.acceso || 0, nIntrusion = sv.intrusion || 0;
+  const ataques = nRoce + nTanteo + nAcceso + nIntrusion;
+  const ruido = nRoce + nTanteo;
   $("m-total").textContent = e.total.toLocaleString("es");
   $("m-ips").textContent = e.ips_unicas.toLocaleString("es");
   $("m-paises").textContent = (e.por_pais || []).length;
-  $("m-ruido").textContent = e.total > 0 ? Math.round((ruido / e.total) * 100) : 0;
-  $("m-revisar").textContent = e.niveles?.revisar ?? 0;
-  $("m-notable").textContent = e.niveles?.notable ?? 0;
+  $("m-ruido").textContent = ataques > 0 ? Math.round((ruido / ataques) * 100) : 0;
+  $("m-revisar").textContent = nAcceso;
+  $("m-notable").textContent = nIntrusion;
 
   await pintarMapa(e.por_pais || [], recientes, e.pais_propio,
     { lat: e.latitud_propia || 0, lon: e.longitud_propia || 0 });
