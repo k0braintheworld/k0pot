@@ -176,6 +176,34 @@ SSH ni Telnet arrancaran —con el contenedor apareciendo como `Up`.
 ./k0pot -usuarios             # cuentas del panel
 ```
 
+## Actualizar
+
+Desde el panel, en **Ajustes → Actualizaciones**: ves la version instalada y
+puedes **subir el `.deb`** de una version nueva. El panel lo valida (que es un
+paquete de verdad) y lo deja preparado, pero **no lo instala**.
+
+Instalar un `.deb` es ejecutar codigo como root; el panel corre sin
+privilegios a proposito, asi que un acceso al panel -expuesto a internet- no
+puede volverse root del host. Por eso el ultimo paso lo das tu, en el
+servidor:
+
+```sh
+sudo k0pot-actualizar
+```
+
+El ayudante comprueba con `dpkg` que el paquete subido es de verdad `k0pot`,
+te ensena la version vieja y la nueva, **pide confirmacion**, instala con
+`apt` y reinicia los servicios. El panel nunca invoca `sudo`: el unico que
+instala eres tu, con tu contrasena.
+
+La subida esta protegida por sesion y por comprobacion de origen (CSRF), con
+tope de tamano y escritura atomica. En **Ajustes** puedes descartar un `.deb`
+pendiente si te equivocaste.
+
+Cuando el proyecto sea publico, lo correcto sera **releases firmados** y que
+`k0pot-actualizar` verifique la firma antes de instalar; eso permitiria la
+auto-actualizacion con seguridad. De momento el gate es tu `sudo`.
+
 ## Aislamiento de red: leelo antes de exponerlo
 
 **Un honeypot es una maquina que invitas a que ataquen.** Si esta en la misma

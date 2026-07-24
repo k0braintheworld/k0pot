@@ -92,6 +92,23 @@ No hacen falta para empezar. Las anades cuando quieras.
 
 
 --------------------------------------------------------------------
+  ACTUALIZAR A UNA VERSION NUEVA
+--------------------------------------------------------------------
+
+En el panel, Ajustes -> Actualizaciones: sube el fichero .deb de la version
+nueva. El panel lo comprueba y lo deja preparado, pero NO lo instala solo (a
+proposito: corre sin permisos para que nadie que entre al panel pueda tocar
+el servidor).
+
+Para aplicarlo, en el servidor, ejecuta:
+
+    sudo k0pot-actualizar
+
+Te dira que version hay y cual vas a instalar, y te pedira confirmar. Al
+aceptar, instala la nueva y reinicia todo solo.
+
+
+--------------------------------------------------------------------
   SI ALGO NO VA
 --------------------------------------------------------------------
 
