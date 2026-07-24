@@ -149,7 +149,7 @@ func Agrupar(eventos []model.Evento, hueco time.Duration) []Episodio {
 	fin := make([]Episodio, 0, len(todos))
 	for _, e := range todos {
 		e.SoloConexiones = !e.hablaron
-		e.Resumen = e.redactar()
+		e.Resumen = e.redactar("es")
 		fin = append(fin, *e)
 	}
 	return fin
@@ -227,60 +227,80 @@ func (e *Episodio) absorber(ev model.Evento) {
 //
 // Se escribe en el orden en que a alguien le importa: primero si entro,
 // luego que hizo dentro, y solo al final cuanto insistio.
-func (e *Episodio) redactar() string {
+func Redactar(e Episodio, idioma string) string { return e.redactar(idioma) }
+
+func (e *Episodio) redactar(idioma string) string {
+	tr := func(es, en string) string {
+		if idioma == "en" {
+			return en
+		}
+		return es
+	}
 	var partes []string
 
 	if e.LoginExitoso {
 		if u := ultimo(e.Usuarios); u != "" {
-			partes = append(partes, fmt.Sprintf("entro como %s", u))
+			partes = append(partes, tr("entro como "+u, "entered as "+u))
 		} else {
-			partes = append(partes, "entro")
+			partes = append(partes, tr("entro", "entered"))
 		}
 	}
 	if n := len(e.Comandos); n > 0 {
 		// "Ejecuto 4 comandos" sobre un PING de Redis suena a intrusion y
 		// no lo es. El verbo tiene que decir la verdad de lo que paso.
 		if saber.SinShell(e.Protocolo) && orden[e.Severidad] < orden[Intrusion] {
-			partes = append(partes, fmt.Sprintf("sondeo el servicio con %s",
-				plural(n, "orden", "ordenes")))
+			partes = append(partes, tr(
+				"sondeo el servicio con "+plural(n, "orden", "ordenes"),
+				"probed the service with "+plural(n, "command", "commands")))
 		} else {
-			partes = append(partes, fmt.Sprintf("ejecuto %s", plural(n, "comando", "comandos")))
+			partes = append(partes, tr(
+				"ejecuto "+plural(n, "comando", "comandos"),
+				"ran "+plural(n, "command", "commands")))
 		}
 	}
 	if n := len(e.Descargas); n > 0 {
-		partes = append(partes, fmt.Sprintf("intento descargar %s", plural(n, "fichero", "ficheros")))
+		partes = append(partes, tr(
+			"intento descargar "+plural(n, "fichero", "ficheros"),
+			"tried to download "+plural(n, "file", "files")))
 	}
 	if n := len(e.Tuneles); n > 0 {
-		partes = append(partes, fmt.Sprintf(
-			"intento usar el servidor de pasarela hacia %s", strings.Join(recorta(e.Tuneles, 2), ", ")))
+		dest := strings.Join(recorta(e.Tuneles, 2), ", ")
+		partes = append(partes, tr(
+			"intento usar el servidor de pasarela hacia "+dest,
+			"tried to use the server as a relay toward "+dest))
 	}
 	if e.LoginsFallidos > 0 {
-		partes = append(partes, fmt.Sprintf("probo %s",
-			plural(e.LoginsFallidos, "credencial", "credenciales")))
+		partes = append(partes, tr(
+			"probo "+plural(e.LoginsFallidos, "credencial", "credenciales"),
+			"tried "+plural(e.LoginsFallidos, "credential", "credentials")))
 	}
 	if n := len(e.Rutas); n > 0 {
-		partes = append(partes, fmt.Sprintf("tanteo %s", plural(n, "ruta", "rutas")))
+		partes = append(partes, tr(
+			"tanteo "+plural(n, "ruta", "rutas"),
+			"probed "+plural(n, "path", "paths")))
 	}
 
 	if len(partes) == 0 {
 		// Sin hallazgos por tipo de evento, pero con severidad elevada, el
 		// motivo del clasificador es lo unico que explica la etiqueta.
 		if len(e.Motivos) > 0 {
-			return mayuscula(e.Motivos[0])
+			return mayuscula(saber.Nota{Que: e.Motivos[0]}.En(idioma).Que)
 		}
 		// Decir "solo conecto" desaprovecha lo que sabemos: quien llamo,
 		// a que puerto y que se fue sin decir nada. Eso es un sondeo de
 		// puertos, y nombrarlo asi ahorra tener que deducirlo.
 		if e.SoloConexiones {
-			donde := "el servicio"
+			donde := tr("el servicio", "the service")
 			if e.Puerto != "" {
-				donde = "el puerto " + e.Puerto
+				donde = tr("el puerto "+e.Puerto, "port "+e.Puerto)
 			}
-			return mayuscula(fmt.Sprintf(
-				"comprobo que %s estuviera abierto y se fue sin enviar nada (%s)",
-				donde, plural(e.Eventos, "vez", "veces")))
+			return mayuscula(tr(
+				"comprobo que "+donde+" estuviera abierto y se fue sin enviar nada ("+plural(e.Eventos, "vez", "veces")+")",
+				"checked that "+donde+" was open and left without sending anything ("+plural(e.Eventos, "time", "times")+")"))
 		}
-		return mayuscula(fmt.Sprintf("solo conecto, %s", plural(e.Eventos, "vez", "veces")))
+		return mayuscula(tr(
+			"solo conecto, "+plural(e.Eventos, "vez", "veces"),
+			"only connected, "+plural(e.Eventos, "time", "times")))
 	}
 	return mayuscula(strings.Join(partes, "; "))
 }

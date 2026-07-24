@@ -12,7 +12,7 @@ const $ = (id) => document.getElementById(id);
 const rango = () => $("rango").value;
 
 async function traer(ruta) {
-  const resp = await fetch(`${ruta}?dias=${encodeURIComponent(rango())}`);
+  const resp = await fetch(`${ruta}?dias=${encodeURIComponent(rango())}&idioma=${IDIOMA}`);
   if (!resp.ok) throw new Error(`${ruta} respondio ${resp.status}`);
   return resp.json();
 }
@@ -501,7 +501,13 @@ async function cargarEstado(recientes) {
   sem.className = `semaforo ${e.nivel.toLowerCase()}`;
   // El veredicto en una frase pasa a ser el tooltip: sigue ahi para quien lo
   // quiera, pero la linea la ocupa algo mas util, el reparto por servicio.
-  sem.title = e.frase;
+  // Se arma en el cliente para que siga el idioma elegido.
+  const sv2 = e.severidades || {};
+  const nInt = sv2.intrusion || 0, nAcc = sv2.acceso || 0;
+  const atq = (n) => t(n === 1 ? "sem.ataque1" : "sem.ataqueN", { n });
+  sem.title = nInt > 0 ? t("sem.rojo", { n: atq(nInt) })
+    : nAcc > 0 ? t("sem.ambar", { n: atq(nAcc) })
+    : t("sem.verde");
   pintarSemaforo(e.nivel, e.ataques_por_servicio);
 
   // Las metricas cuentan ATAQUES (episodios), no eventos, para hablar el
@@ -584,7 +590,7 @@ function hayFiltro() {
 
 async function cargarAtaques() {
   const f = filtrosDeAtaques();
-  const params = new URLSearchParams({ dias: rango() });
+  const params = new URLSearchParams({ dias: rango(), idioma: IDIOMA });
   for (const [k, v] of Object.entries(f)) if (v) params.set(k, v);
 
   const resp = await fetch(`/api/episodios?${params}`);
@@ -624,10 +630,14 @@ async function cargarAtaques() {
     texto.appendChild(nodo("span", "sub", a.resumen));
     fila.appendChild(texto);
 
-    if (corteNovedades && new Date(a.fin).getTime() > corteNovedades) {
-      fila.classList.add("nuevo");
+    const esNuevo = corteNovedades && new Date(a.fin).getTime() > corteNovedades;
+    if (esNuevo) fila.classList.add("nuevo");
+    const cuando = nodo("span", "fila-ataque-cuando", hace(a.fin));
+    if (esNuevo) {
+      cuando.appendChild(document.createTextNode(" · "));
+      cuando.appendChild(nodo("span", "insignia-nuevo", t("ataque.nuevo")));
     }
-    fila.appendChild(nodo("span", "fila-ataque-cuando", hace(a.fin)));
+    fila.appendChild(cuando);
     fila.addEventListener("click", () => abrirAtaque(a.clave));
     cont.appendChild(fila);
   }
@@ -670,7 +680,7 @@ async function explicarAtaque() {
 }
 
 async function abrirAtaque(clave) {
-  const d = await pedirJSON(`/api/episodio?clave=${encodeURIComponent(clave)}`);
+  const d = await pedirJSON(`/api/episodio?clave=${encodeURIComponent(clave)}&idioma=${IDIOMA}`);
   const dlg = $("dialogo-ataque");
   claveAbierta = clave;
   // Si ya se explico una vez, se ensena sin volver a preguntar: la
@@ -932,9 +942,9 @@ async function cargarNovedades() {
   chip.hidden = false;
   chip.classList.toggle("grave", n.graves > 0);
   chip.textContent = n.graves
-    ? `${n.total} nuevos · ${n.graves} grave${n.graves > 1 ? "s" : ""}`
-    : `${n.total} nuevos`;
-  chip.title = `Desde ${new Date(n.desde).toLocaleString(IDIOMA)}. Pulsa para marcarlos como vistos.`;
+    ? t("pill.con", { n: n.total, g: n.graves, sev: t(n.graves > 1 ? "pill.graveN" : "pill.grave1") })
+    : t("pill.solo", { n: n.total });
+  chip.title = t("pill.title", { fecha: new Date(n.desde).toLocaleString(IDIOMA) });
 }
 
 // Marcar como visto es explicito: si se hiciera al cargar la pagina, el
@@ -996,12 +1006,12 @@ function cuantoLleva(desde, hasta) {
 }
 
 async function abrirIP(ip) {
-  const p = await pedirJSON(`/api/ip?ip=${encodeURIComponent(ip)}`);
+  const p = await pedirJSON(`/api/ip?ip=${encodeURIComponent(ip)}&idioma=${IDIOMA}`);
   $("dialogo-ataque").close();
 
   $("ip-titulo").textContent = p.ip;
   const donde = [p.origen.pais, p.origen.isp, p.origen.tipo_uso].filter(Boolean);
-  $("ip-sub").textContent = donde.join(" · ") || "sin datos publicos";
+  $("ip-sub").textContent = donde.join(" · ") || t("ip.sindatos");
 
   // El veredicto va arriba y en una frase: es lo que distingue a un
   // escaner de paso de alguien que insiste, que es para lo que se abre
@@ -1138,7 +1148,7 @@ async function abrirCampana(c) {
   try {
     resp = await pedirJSON(
       `/api/campana?tipo=${encodeURIComponent(c.tipo)}` +
-      `&huella=${encodeURIComponent(c.huella)}&dias=${encodeURIComponent(rango())}`);
+      `&huella=${encodeURIComponent(c.huella)}&dias=${encodeURIComponent(rango())}&idioma=${IDIOMA}`);
   } catch (e) {
     lista.replaceChildren(nodo("p", "sub", t("dlg.nocargar", { msg: e.message })));
     return;
@@ -1193,7 +1203,7 @@ async function cargarArtefactos() {
     if (a.bytes) partes.push(tamano(a.bytes));
     // Cowrie nombra los ficheros con el SHA-256 de su contenido, asi que
     // el nombre sirve tal cual para consultarlo sin subir la muestra.
-    if (a.fichero && !a.url) partes.push("nombre = SHA-256 del contenido");
+    if (a.fichero && !a.url) partes.push(t("artef.sha"));
     if (a.momento) partes.push(hace(a.momento));
     caja.appendChild(nodo("span", "sub", partes.join(" · ")));
     // Solo los ficheros capturados (nombre = SHA-256) se pueden abrir para
@@ -1433,7 +1443,7 @@ $("rango").addEventListener("change", refrescar);
 // El informe se abre en otra pestana: es un documento para revisar e
 // imprimir, no algo que sustituya al panel. Lleva el periodo seleccionado.
 $("generar-informe").addEventListener("click", () => {
-  window.open(`/api/reporte?dias=${encodeURIComponent(rango())}`, "_blank", "noopener");
+  window.open(`/api/reporte?dias=${encodeURIComponent(rango())}&idioma=${IDIOMA}`, "_blank", "noopener");
 });
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
 $("explicar-ataque").addEventListener("click", explicarAtaque);
@@ -1687,9 +1697,9 @@ async function cargarRed() {
 
     const cab = nodo("div", "interfaz-cab");
     cab.appendChild(nodo("span", "servicio-nombre", ifa.nombre));
-    cab.appendChild(nodo("span", "chip" + (ifa.activa ? " activo" : ""), ifa.activa ? "activa" : "caida"));
+    cab.appendChild(nodo("span", "chip" + (ifa.activa ? " activo" : ""), ifa.activa ? t("aj.red.activa") : t("aj.red.caida")));
     caja.appendChild(cab);
-    caja.appendChild(nodo("p", "ayuda", `ahora: ${(ifa.ips || []).join(", ") || "sin IP"}`));
+    caja.appendChild(nodo("p", "ayuda", t("aj.red.ahora", { ips: (ifa.ips || []).join(", ") || t("aj.red.sinip") })));
 
     const modo = nodo("label", "fila");
     const dhcp = document.createElement("input");

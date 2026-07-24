@@ -530,3 +530,39 @@ Object.assign(IDIOMAS.en, {
   "cfg.av.dst.webhook": "Webhook URL",
   "cfg.av.dst.webhook.ayuda": "It will receive a POST with the alert as JSON."
 });
+
+// -- Grupo 3: cadenas dinámicas del panel que faltaban --
+Object.assign(IDIOMAS.es, {
+  "pill.solo": "{n} nuevos",
+  "pill.con": "{n} nuevos · {g} {sev}",
+  "pill.grave1": "grave", "pill.graveN": "graves",
+  "pill.title": "Desde {fecha}. Pulsa para marcarlos como vistos.",
+  "ataque.nuevo": "nuevo",
+  "artef.sha": "nombre = SHA-256 del contenido",
+  "ip.sindatos": "sin datos públicos",
+  "aj.red.activa": "activa", "aj.red.caida": "caída",
+  "aj.red.ahora": "ahora: {ips}", "aj.red.sinip": "sin IP"
+});
+Object.assign(IDIOMAS.en, {
+  "pill.solo": "{n} new",
+  "pill.con": "{n} new · {g} {sev}",
+  "pill.grave1": "serious", "pill.graveN": "serious",
+  "pill.title": "Since {fecha}. Click to mark them as seen.",
+  "ataque.nuevo": "new",
+  "artef.sha": "name = SHA-256 of the content",
+  "ip.sindatos": "no public data",
+  "aj.red.activa": "up", "aj.red.caida": "down",
+  "aj.red.ahora": "now: {ips}", "aj.red.sinip": "no IP"
+});
+Object.assign(IDIOMAS.es, {
+  "sem.ataque1": "{n} ataque", "sem.ataqueN": "{n} ataques",
+  "sem.rojo": "ROJO — {n} merecen que los mires: alguien no se limitó a llamar a la puerta",
+  "sem.ambar": "ÁMBAR — {n} consiguieron entrar, pero nada indica que llegaran a actuar dentro",
+  "sem.verde": "VERDE — todo es ruido de fondo automatizado; nada que mirar hoy"
+});
+Object.assign(IDIOMAS.en, {
+  "sem.ataque1": "{n} attack", "sem.ataqueN": "{n} attacks",
+  "sem.rojo": "RED — {n} deserve a look: someone did more than knock on the door",
+  "sem.ambar": "AMBER — {n} got in, but nothing suggests they went on to act inside",
+  "sem.verde": "GREEN — it's all automated background noise; nothing to look at today"
+});

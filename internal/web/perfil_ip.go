@@ -40,6 +40,7 @@ type PerfilIP struct {
 
 func (s *Servidor) perfilIP(w http.ResponseWriter, r *http.Request) {
 	ip := r.URL.Query().Get("ip")
+	idioma := idiomaDe(r)
 	if net.ParseIP(ip) == nil {
 		responderError(w, http.StatusBadRequest, "eso no es una direccion IP")
 		return
@@ -52,6 +53,9 @@ func (s *Servidor) perfilIP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no se pudieron leer sus ataques", http.StatusInternalServerError)
 		return
 	}
+	for i := range ataques {
+		ataques[i].Resumen = episodio.Redactar(ataques[i].Episodio, idioma)
+	}
 	origen, _, err := s.Almacen.OrigenDe(ip)
 	if err != nil {
 		http.Error(w, "no se pudo leer el contexto de la IP", http.StatusInternalServerError)
@@ -60,7 +64,8 @@ func (s *Servidor) perfilIP(w http.ResponseWriter, r *http.Request) {
 
 	p := PerfilIP{IP: ip, Origen: origen, Episodios: len(ataques), Ataques: ataques}
 	if n, hay := saber.DeProveedor(origen.ISP); hay {
-		p.NotaProveedor = &n
+		nn := n.En(idioma)
+		p.NotaProveedor = &nn
 	}
 
 	peor := episodio.Roce

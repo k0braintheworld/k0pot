@@ -658,8 +658,7 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 
 /* Las filas nuevas se distinguen sin releerlas enteras. */
 .fila-ataque.nuevo { border-left: 3px solid var(--acento); }
-.fila-ataque.nuevo .fila-ataque-cuando::after {
-  content: " · nuevo";
+.insignia-nuevo {
   color: var(--acento);
   font-weight: 600;
 }

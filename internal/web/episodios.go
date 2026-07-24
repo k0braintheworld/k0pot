@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/k0braintheworld/k0pot/internal/episodio"
 	"github.com/k0braintheworld/k0pot/internal/model"
 	"github.com/k0braintheworld/k0pot/internal/report"
 	"github.com/k0braintheworld/k0pot/internal/saber"
@@ -16,6 +17,7 @@ import (
 // primero.
 func (s *Servidor) episodios(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
+	idioma := idiomaDe(r)
 	lista, err := s.Almacen.Episodios(store.FiltroEpisodios{
 		Desde:     time.Now().AddDate(0, 0, -dias(r)),
 		Minima:    severidadValida(q.Get("severidad")),
@@ -26,6 +28,9 @@ func (s *Servidor) episodios(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "no se pudieron leer los ataques", http.StatusInternalServerError)
 		return
+	}
+	for i := range lista {
+		lista[i].Resumen = episodio.Redactar(lista[i].Episodio, idioma)
 	}
 	responderJSON(w, lista)
 }
@@ -106,84 +111,101 @@ func (s *Servidor) episodio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	idioma := idiomaDe(r)
+	tr := func(es, en string) string {
+		if idioma == "en" {
+			return en
+		}
+		return es
+	}
 	pasos := make([]PasoNarrado, 0, len(eventos))
 	// Cuando nadie llego a hablar, cada conexion es un sondeo de puertos:
 	// merece decirse una vez, no repetir "abre conexion" diez veces sin
 	// explicar nunca que significa.
 	if ep.SoloConexiones && len(eventos) > 0 {
+		notaSondeo := saber.Nota{
+			Que: "comprobacion de que el puerto esta abierto",
+			Por: "es el primer paso de cualquier inventario automatico; " +
+				"no llegaron a probar nada contra el servicio",
+		}.En(idioma)
 		pasos = append(pasos, PasoNarrado{
 			Momento: ep.Inicio, Tipo: "sondeo",
-			Texto: "sondeo de puertos: abrieron la conexion y la cerraron sin enviar nada",
-			Nota: &saber.Nota{
-				Que: "comprobacion de que el puerto esta abierto",
-				Por: "es el primer paso de cualquier inventario automatico; " +
-					"no llegaron a probar nada contra el servicio",
-			},
+			Texto: tr("sondeo de puertos: abrieron la conexion y la cerraron sin enviar nada",
+				"port scan: they opened the connection and closed it without sending anything"),
+			Nota: &notaSondeo,
 		})
 	}
 	for _, ev := range eventos {
-		texto, destacado := narrar(ev)
+		texto, destacado := narrar(ev, idioma)
 		pasos = append(pasos, PasoNarrado{
 			Momento: ev.Timestamp, Tipo: string(ev.Tipo),
-			Texto: texto, Destacado: destacado, Nota: notaDe(ev),
+			Texto: texto, Destacado: destacado, Nota: notaDe(ev, idioma),
 			Crudo: crudoDe(ev),
 		})
 	}
+	ep.Resumen = episodio.Redactar(ep.Episodio, idioma)
 	det := DetalleEpisodio{EpisodioFila: ep, Pasos: pasos}
 	det.Explicacion, _ = s.Almacen.Explicacion(clave)
 	if n, hay := saber.DeProveedor(ep.ISP); hay {
-		det.NotaProveedor = &n
+		nn := n.En(idioma)
+		det.NotaProveedor = &nn
 	}
 	responderJSON(w, det)
 }
 
 // narrar convierte un evento en la linea que se lee en la narracion, y
 // dice si es de los que cambian la historia.
-func narrar(ev model.Evento) (string, bool) {
+func narrar(ev model.Evento, idioma string) (string, bool) {
+	tr := func(es, en string) string {
+		if idioma == "en" {
+			return en
+		}
+		return es
+	}
 	d := ev.Detalle
 	switch ev.Tipo {
 	case model.Conexion:
 		if p := d["puerto"]; p != "" {
-			return "abre conexion al puerto " + p, false
+			return tr("abre conexion al puerto ", "opens connection to port ") + p, false
 		}
-		return "abre conexion", false
+		return tr("abre conexion", "opens connection"), false
 	case model.HuellaCliente:
 		if c := d["cliente"]; c != "" {
-			return "se identifica como " + visible(c), false
+			return tr("se identifica como ", "identifies as ") + visible(c), false
 		}
-		return "se identifica", false
+		return tr("se identifica", "identifies itself"), false
 	case model.LoginFallido:
-		return "prueba " + credencial(d) + " — rechazada", false
+		return tr("prueba ", "tries ") + credencial(d, idioma) + tr(" — rechazada", " — rejected"), false
 	case model.LoginExitoso:
-		return "ENTRA con " + credencial(d), true
+		return tr("ENTRA con ", "ENTERS with ") + credencial(d, idioma), true
 	case model.ComandoEjecutado:
 		c := d["comando"]
 		if c == "" {
-			return "ejecuta un comando", true
+			return tr("ejecuta un comando", "runs a command"), true
 		}
 		if saber.SinShell(ev.Protocolo) {
 			// Es un verbo del protocolo, no una shell. Solo se resalta si
 			// de verdad intenta algo: resaltar un PING gasta la atencion
 			// del lector en lo que no importa.
 			v, hay := saber.DeVerbo(ev.Protocolo, c)
-			return "envia: " + c, hay && v.Grave
+			return tr("envia: ", "sends: ") + c, hay && v.Grave
 		}
-		return "ejecuta: " + c, true
+		return tr("ejecuta: ", "runs: ") + c, true
 	case model.TunelSolicitado:
 		if d := d["destino"]; d != "" {
-			return "pide reenviar trafico hacia " + d, true
+			return tr("pide reenviar trafico hacia ", "asks to forward traffic to ") + d, true
 		}
-		return "pide reenviar trafico a traves del servidor", true
+		return tr("pide reenviar trafico a traves del servidor", "asks to forward traffic through the server"), true
 
 	case model.DescargaFichero:
 		if u := d["url"]; u != "" {
-			return "intenta descargar " + u, true
+			return tr("intenta descargar ", "tries to download ") + u, true
 		}
-		return "intenta descargar un fichero", true
+		return tr("intenta descargar un fichero", "tries to download a file"), true
 	case model.PeticionHTTP:
 		linea := d["metodo"] + " " + d["ruta"]
 		if linea == " " {
-			linea = "peticion HTTP"
+			linea = tr("peticion HTTP", "HTTP request")
 		}
 		// Una peticion a /.env o /wp-admin no es una visita: es tanteo, y
 		// el clasificador ya lo sabe. Se hereda su veredicto.
@@ -196,7 +218,7 @@ func narrar(ev model.Evento) (string, bool) {
 // notaDe busca en el catalogo que significa lo observado. Devuelve nil
 // cuando no se sabe: no decir nada es mejor que inventar una explicacion,
 // porque quien lee el panel no tiene como distinguir una de otra.
-func notaDe(ev model.Evento) *saber.Nota {
+func notaDe(ev model.Evento, idioma string) *saber.Nota {
 	d := ev.Detalle
 	var (
 		n   saber.Nota
@@ -208,7 +230,8 @@ func notaDe(ev model.Evento) *saber.Nota {
 	case model.ComandoEjecutado:
 		if saber.SinShell(ev.Protocolo) {
 			if v, ok := saber.DeVerbo(ev.Protocolo, d["comando"]); ok {
-				return &v.Nota
+				nota := v.Nota.En(idioma)
+				return &nota
 			}
 			return nil
 		}
@@ -228,10 +251,11 @@ func notaDe(ev model.Evento) *saber.Nota {
 	if !hay {
 		return nil
 	}
+	n = n.En(idioma)
 	return &n
 }
 
-func credencial(d map[string]string) string {
+func credencial(d map[string]string, idioma string) string {
 	u, p := d["usuario"], d["password"]
 	switch {
 	case u != "" && p != "":
@@ -239,8 +263,14 @@ func credencial(d map[string]string) string {
 	case u != "":
 		return u
 	case p != "":
+		if idioma == "en" {
+			return "(no user):" + p
+		}
 		return "(sin usuario):" + p
 	default:
+		if idioma == "en" {
+			return "some credentials"
+		}
 		return "unas credenciales"
 	}
 }
@@ -280,17 +310,19 @@ func (s *Servidor) explicarEpisodio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	idioma := idiomaDe(r)
 	pasos := make([]report.PasoDeAtaque, 0, len(eventos))
 	for _, ev := range eventos {
-		texto, _ := narrar(ev)
+		texto, _ := narrar(ev, idioma)
 		p := report.PasoDeAtaque{Hora: ev.Timestamp.Local().Format("15:04:05"), Texto: texto}
-		if n := notaDe(ev); n != nil {
+		if n := notaDe(ev, idioma); n != nil {
 			p.Nota = n.Que + ": " + n.Por
 		}
 		pasos = append(pasos, p)
 	}
 	var notaProv string
 	if n, hay := saber.DeProveedor(ep.ISP); hay {
+		n = n.En(idioma)
 		notaProv = n.Que + ": " + n.Por
 	}
 

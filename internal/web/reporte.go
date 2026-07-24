@@ -31,6 +31,7 @@ var tplReporte = template.Must(template.New("reporte").Parse(plantillaReporte))
 // produce el PDF, sin que k0Pot tenga que traer un generador de PDF propio.
 func (s *Servidor) reporte(w http.ResponseWriter, r *http.Request) {
 	d := dias(r)
+	idioma := idiomaDe(r)
 	desde := time.Now().AddDate(0, 0, -d)
 
 	resumen, err := s.Almacen.Resumir(desde)
@@ -56,7 +57,7 @@ func (s *Servidor) reporte(w http.ResponseWriter, r *http.Request) {
 		Resumen: resumen, Niveles: niveles, Episodios: ataques,
 	})
 
-	modelo := datosReporte(desde, resumen, niveles, ataques, res.Texto, s.Almacen)
+	modelo := datosReporte(desde, resumen, niveles, ataques, res.Texto, s.Almacen, idioma)
 
 	// El informe es un documento AUTOCONTENIDO: el estilo va en linea para
 	// que siga funcionando al guardarlo y abrirlo sin servidor. La CSP del
@@ -125,7 +126,7 @@ type filaCred struct {
 }
 
 func datosReporte(desde time.Time, r *store.Resumen, niveles map[model.Clasificacion]int,
-	ataques []store.EpisodioFila, textoInforme string, alm *store.Store) reporteVista {
+	ataques []store.EpisodioFila, textoInforme string, alm *store.Store, idioma string) reporteVista {
 
 	nivel := report.NivelDe(niveles)
 	v := reporteVista{
@@ -148,10 +149,10 @@ func datosReporte(desde time.Time, r *store.Resumen, niveles map[model.Clasifica
 		if e.Severidad == episodio.Intrusion {
 			v.Intrusiones++
 		}
-		v.Ataques = append(v.Ataques, ataqueDeEpisodio(e, alm))
+		v.Ataques = append(v.Ataques, ataqueDeEpisodio(e, alm, idioma))
 	}
 	for _, ip := range r.TopIPs {
-		v.TopIPs = append(v.TopIPs, filaIP{IP: ip.IP, Eventos: ip.Eventos, Contexto: contextoDeIP(ip)})
+		v.TopIPs = append(v.TopIPs, filaIP{IP: ip.IP, Eventos: ip.Eventos, Contexto: contextoDeIP(ip, idioma)})
 	}
 	// Usuarios y contrasenas se emparejan en la vista por su recuento: no
 	// tenemos el par exacto, pero listarlos juntos ya orienta.
@@ -172,7 +173,13 @@ func datosReporte(desde time.Time, r *store.Resumen, niveles map[model.Clasifica
 	return v
 }
 
-func ataqueDeEpisodio(e store.EpisodioFila, alm *store.Store) ataqueVista {
+func ataqueDeEpisodio(e store.EpisodioFila, alm *store.Store, idioma string) ataqueVista {
+	tr := func(es, en string) string {
+		if idioma == "en" {
+			return en
+		}
+		return es
+	}
 	origen := e.IP
 	partes := []string{}
 	if e.Pais != "" {
@@ -182,15 +189,15 @@ func ataqueDeEpisodio(e store.EpisodioFila, alm *store.Store) ataqueVista {
 		partes = append(partes, e.ISP)
 	}
 	if e.Reputacion > 0 {
-		partes = append(partes, fmt.Sprintf("reputacion %d/100", e.Reputacion))
+		partes = append(partes, fmt.Sprintf(tr("reputacion %d/100", "reputation %d/100"), e.Reputacion))
 	}
 	origen = strings.Join(partes, " · ")
 
 	a := ataqueVista{
-		IP: e.IP, Origen: origen, Resumen: e.Resumen,
+		IP: e.IP, Origen: origen, Resumen: episodio.Redactar(e.Episodio, idioma),
 		Severidad: strings.ToUpper(string(e.Severidad)),
 		SevClase:  string(e.Severidad),
-		Cuando: fmt.Sprintf("%s · durante %s · %d eventos",
+		Cuando: fmt.Sprintf(tr("%s · durante %s · %d eventos", "%s · for %s · %d events"),
 			e.Inicio.Local().Format("02/01 15:04"), duracion(e.Duracion()), e.Eventos),
 	}
 
@@ -199,12 +206,12 @@ func ataqueDeEpisodio(e store.EpisodioFila, alm *store.Store) ataqueVista {
 		return a
 	}
 	for _, ev := range eventos {
-		texto, clave := narrar(ev)
+		texto, clave := narrar(ev, idioma)
 		p := pasoVista{
 			Hora: ev.Timestamp.Local().Format("15:04:05"), Texto: texto,
 			Clave: clave, Crudo: crudoDe(ev),
 		}
-		if n := notaDe(ev); n != nil {
+		if n := notaDe(ev, idioma); n != nil {
 			p.Nota = n.Que + " — " + n.Por
 		}
 		// Si el crudo es identico al texto, no se repite.
@@ -227,7 +234,7 @@ func duracion(d time.Duration) string {
 	}
 }
 
-func contextoDeIP(ip store.IPActiva) string {
+func contextoDeIP(ip store.IPActiva, idioma string) string {
 	partes := []string{}
 	if ip.ISP != "" {
 		partes = append(partes, ip.ISP)
@@ -236,6 +243,9 @@ func contextoDeIP(ip store.IPActiva) string {
 		partes = append(partes, fmt.Sprintf("%d/100", ip.Reputacion))
 	}
 	if len(partes) == 0 {
+		if idioma == "en" {
+			return "no public data"
+		}
 		return "sin datos publicos"
 	}
 	return strings.Join(partes, " · ")

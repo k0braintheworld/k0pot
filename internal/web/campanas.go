@@ -14,6 +14,7 @@ import (
 
 	"github.com/k0braintheworld/k0pot/internal/artefacto"
 	"github.com/k0braintheworld/k0pot/internal/campana"
+	"github.com/k0braintheworld/k0pot/internal/episodio"
 	"github.com/k0braintheworld/k0pot/internal/report"
 	"github.com/k0braintheworld/k0pot/internal/store"
 )
@@ -58,6 +59,10 @@ func (s *Servidor) campana(w http.ResponseWriter, r *http.Request) {
 		Episodios   []store.EpisodioFila `json:"episodios"`
 		Explicacion string               `json:"explicacion,omitempty"`
 	}{Episodios: campana.EpisodiosDe(eps, tipo, huella)}
+	idioma := idiomaDe(r)
+	for i := range respuesta.Episodios {
+		respuesta.Episodios[i].Resumen = episodio.Redactar(respuesta.Episodios[i].Episodio, idioma)
+	}
 	respuesta.Explicacion, _ = s.Almacen.ExplicacionDe("campana", string(tipo)+"|"+huella)
 	responderJSON(w, respuesta)
 }
