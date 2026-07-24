@@ -65,6 +65,23 @@ type FuenteArtefacto struct {
 // descarga que lo trajeron: que IPs y desde que URLs, y cuando. El hash se
 // guarda en el detalle del evento crudo (aunque se pierda al agrupar), asi
 // que aqui se recupera la trazabilidad completa de la muestra.
+// ShaDeURL devuelve el SHA-256 del fichero que se capturo desde una URL, si
+// alguno. Enlaza una campana de descarga con el binario que reparte: de "se
+// traen esto de aqui" a "y esto es lo que era".
+func (s *Store) ShaDeURL(url string) (string, bool) {
+	var sha string
+	err := s.db.QueryRow(
+		`SELECT json_extract(detalle,'$.sha256') FROM eventos
+		  WHERE tipo = ? AND json_extract(detalle,'$.url') = ?
+		    AND json_extract(detalle,'$.sha256') IS NOT NULL
+		  ORDER BY timestamp DESC LIMIT 1`,
+		string(model.DescargaFichero), url).Scan(&sha)
+	if err != nil || sha == "" {
+		return "", false
+	}
+	return sha, true
+}
+
 func (s *Store) FuentesDeArtefacto(sha256 string) (FuenteArtefacto, error) {
 	filas, err := s.db.Query(
 		`SELECT ip, COALESCE(json_extract(detalle,'$.url'),''), timestamp

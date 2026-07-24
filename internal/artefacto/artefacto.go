@@ -62,6 +62,10 @@ func primeraLinea(b []byte) string {
 	return strings.TrimSpace(string(b))
 }
 
+// EsTexto dice si unos bytes son texto imprimible (un script, un .sh),
+// para poder ensenarlos tal cual en vez de solo sus cadenas sueltas.
+func EsTexto(b []byte) bool { return esTexto(b) }
+
 // esTexto decide si la cabecera es texto imprimible. Un binario tiene bytes
 // nulos y de control por todas partes; el texto, no.
 func esTexto(b []byte) bool {

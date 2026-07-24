@@ -576,3 +576,21 @@ Object.assign(IDIOMAS.en, {
   "sem.ambar": "AMBER — {n} got in, but nothing suggests they went on to act inside",
   "sem.verde": "GREEN — it's all automated background noise; nothing to look at today"
 });
+Object.assign(IDIOMAS.es, {
+  "camp.secuencia.comandos": "Estas direcciones ejecutaron exactamente esta secuencia de comandos:",
+  "camp.secuencia.rutas": "Estas direcciones tantearon exactamente estas rutas:",
+  "camp.secuencia.credenciales": "Estas direcciones probaron el mismo diccionario de acceso:",
+  "camp.secuencia.descarga": "Estas direcciones se trajeron el mismo fichero desde:",
+  "camp.usuarios": "Usuarios", "camp.contrasenas": "Contraseñas",
+  "camp.verfichero": "Ver el fichero capturado →",
+  "artef.contenido.intro": "Contenido del fichero (es texto, se lee tal cual):"
+});
+Object.assign(IDIOMAS.en, {
+  "camp.secuencia.comandos": "These addresses ran exactly this sequence of commands:",
+  "camp.secuencia.rutas": "These addresses probed exactly these paths:",
+  "camp.secuencia.credenciales": "These addresses tried the same login dictionary:",
+  "camp.secuencia.descarga": "These addresses pulled the same file from:",
+  "camp.usuarios": "Usernames", "camp.contrasenas": "Passwords",
+  "camp.verfichero": "View the captured file →",
+  "artef.contenido.intro": "File content (it's text, read it as-is):"
+});

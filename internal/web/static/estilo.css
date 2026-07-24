@@ -881,3 +881,19 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .embudo .nota { margin: .8rem 0 0; font-size: .82rem; color: var(--sub); line-height: 1.5; }
 
 .sel-idioma { font-size: .78rem; padding: .3rem .4rem; }
+
+/* Secuencia compartida de una campana y contenido de texto de un artefacto:
+   se leen como en una terminal, que es lo que ensena que hicieron. */
+.secuencia {
+  margin: .5rem 0 0; padding: .6rem .7rem;
+  max-height: 20rem; overflow: auto; white-space: pre;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .8rem; line-height: 1.55;
+  background: var(--mar); border-radius: .4rem; color: var(--texto);
+}
+.url-descarga { display: block; margin: .3rem 0 0; word-break: break-all; }
+.enlace-fichero {
+  margin-top: .6rem; background: none; border: none; padding: 0;
+  color: var(--acento); cursor: pointer; font: inherit; font-weight: 600;
+}
+.enlace-fichero:hover { text-decoration: underline; }

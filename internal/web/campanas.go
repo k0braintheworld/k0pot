@@ -58,7 +58,23 @@ func (s *Servidor) campana(w http.ResponseWriter, r *http.Request) {
 	respuesta := struct {
 		Episodios   []store.EpisodioFila `json:"episodios"`
 		Explicacion string               `json:"explicacion,omitempty"`
+		// Fichero enlaza una campana de descarga con el binario capturado,
+		// para saltar de "se traen esto" a poder abrir y ver que era.
+		Fichero string `json:"fichero,omitempty"`
 	}{Episodios: campana.EpisodiosDe(eps, tipo, huella)}
+	if tipo == campana.PorDescarga {
+		for _, e := range respuesta.Episodios {
+			for _, u := range e.Descargas {
+				if sha, ok := s.Almacen.ShaDeURL(u); ok {
+					respuesta.Fichero = sha
+					break
+				}
+			}
+			if respuesta.Fichero != "" {
+				break
+			}
+		}
+	}
 	idioma := idiomaDe(r)
 	for i := range respuesta.Episodios {
 		respuesta.Episodios[i].Resumen = episodio.Redactar(respuesta.Episodios[i].Episodio, idioma)
@@ -308,6 +324,9 @@ type DetalleArtefacto struct {
 	Bytes       int64     `json:"bytes"`
 	Tipo        string    `json:"tipo"`
 	Cadenas     []string  `json:"cadenas"`
+	// Vista es el contenido tal cual cuando es texto (un script .sh se lee
+	// entero); vacio si es binario, donde el volcado no dice nada.
+	Vista       string    `json:"vista,omitempty"`
 	IPs         []string  `json:"ips,omitempty"`
 	URLs        []string  `json:"urls,omitempty"`
 	Primera     time.Time `json:"primera,omitempty"`
@@ -359,6 +378,9 @@ func (s *Servidor) detalleArtefacto(hash string) (DetalleArtefacto, bool) {
 		Bytes:   info.Size(),
 		Tipo:    artefacto.Tipo(cabecera),
 		Cadenas: artefacto.Cadenas(cabecera, 60),
+	}
+	if artefacto.EsTexto(cabecera) {
+		det.Vista = string(cabecera)
 	}
 	if fu, err := s.Almacen.FuentesDeArtefacto(hash); err == nil {
 		det.IPs, det.URLs = fu.IPs, fu.URLs

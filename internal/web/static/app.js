@@ -1112,6 +1112,38 @@ async function cargarCampanas() {
 // campana; cada uno abre su detalle -evento a evento- reaprovechando el
 // dialogo de ataque. Asi el "proceso" de la operacion sale de encadenar lo
 // que ya existe, sin duplicar nada.
+// pintarSecuenciaCampana ensena lo que DE VERDAD comparten los ataques de
+// una campana: la secuencia entera de comandos, el diccionario, las rutas o
+// el fichero. Es el paso de "estas IPs" a "esto es lo que hacen".
+function pintarSecuenciaCampana(cont, tipo, rep, fichero) {
+  cont.replaceChildren();
+  cont.hidden = false;
+  cont.appendChild(nodo("p", "sub", t("camp.secuencia." + tipo)));
+  if (tipo === "comandos") {
+    const pre = nodo("pre", "secuencia");
+    pre.textContent = (rep.comandos || []).map((c) => "$ " + c).join("\n") || "—";
+    cont.appendChild(pre);
+  } else if (tipo === "rutas") {
+    const pre = nodo("pre", "secuencia");
+    pre.textContent = (rep.rutas || []).join("\n") || "—";
+    cont.appendChild(pre);
+  } else if (tipo === "credenciales") {
+    cont.appendChild(dato(t("camp.usuarios"), (rep.usuarios || []).join(", ") || "—"));
+    cont.appendChild(dato(t("camp.contrasenas"), (rep.passwords || []).join(", ") || "—"));
+  } else if (tipo === "descarga") {
+    for (const u of rep.descargas || []) cont.appendChild(nodo("code", "url-descarga", u));
+  }
+  if (fichero) {
+    // Enlaza la campana de descarga con el binario capturado: un clic para
+    // pasar de "se traen esto de aqui" a ver que era en realidad.
+    const link = nodo("button", "enlace-fichero");
+    link.type = "button";
+    link.textContent = t("camp.verfichero");
+    link.addEventListener("click", () => { $("dialogo-campana").close(); abrirArtefacto(fichero); });
+    cont.appendChild(link);
+  }
+}
+
 let campanaAbierta = null;
 
 async function abrirCampana(c) {
@@ -1155,6 +1187,8 @@ async function abrirCampana(c) {
   }
   pintarExplicacion("campana-explicacion", resp.explicacion);
   $("explicar-campana").textContent = resp.explicacion ? t("dlg.reexplicar") : t("dlg.explicar");
+  // La muestra recortada se sustituye por la secuencia COMPLETA compartida.
+  pintarSecuenciaCampana($("campana-muestra"), c.tipo, (resp.episodios || [])[0] || {}, resp.fichero);
 
   lista.replaceChildren();
   lista.appendChild(nodo("p", "sub",
@@ -1289,9 +1323,15 @@ t("artef.aviso")));
   if (d.primera) datos.appendChild(dato(t("dato.primera"), new Date(d.primera).toLocaleString(IDIOMA)));
 
   cadenas.replaceChildren();
-  if (d.cadenas?.length) {
-    cadenas.appendChild(nodo("p", "sub",
-t("artef.cadenas.intro")));
+  if (d.vista) {
+    // Es texto (un script): se lee tal cual, que ensena mucho mas que unas
+    // cadenas sueltas. textContent, nunca innerHTML: no se interpreta nada.
+    cadenas.appendChild(nodo("p", "sub", t("artef.contenido.intro")));
+    const pre = nodo("pre", "cadenas-artefacto");
+    pre.textContent = d.vista;
+    cadenas.appendChild(pre);
+  } else if (d.cadenas?.length) {
+    cadenas.appendChild(nodo("p", "sub", t("artef.cadenas.intro")));
     const pre = nodo("pre", "cadenas-artefacto");
     pre.textContent = d.cadenas.join("\n");
     cadenas.appendChild(pre);
