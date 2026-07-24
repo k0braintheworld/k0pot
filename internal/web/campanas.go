@@ -179,6 +179,12 @@ type Artefacto struct {
 	Bytes   int64     `json:"bytes,omitempty"`
 	IPs     []string  `json:"ips,omitempty"`
 	Momento time.Time `json:"momento"`
+	// FicheroDe es el SHA-256 del fichero que SI se capturo desde esta URL,
+	// si alguno: enlaza el intento con la muestra que dejo.
+	FicheroDe string `json:"fichero_de,omitempty"`
+	// Explicacion guardada de la URL; se precarga para no re-gastar cuota al
+	// reabrir el detalle.
+	Explicacion string `json:"explicacion,omitempty"`
 }
 
 // artefactos lista lo que intentaron descargar.
@@ -222,6 +228,10 @@ func (s *Servidor) artefactos(w http.ResponseWriter, r *http.Request) {
 	out := make([]Artefacto, 0, len(porURL))
 	for _, a := range porURL {
 		sort.Strings(a.IPs)
+		if sha, ok := s.Almacen.ShaDeURL(a.URL); ok {
+			a.FicheroDe = sha
+		}
+		a.Explicacion, _ = s.Almacen.ExplicacionDe("url", a.URL)
 		out = append(out, *a)
 	}
 	out = append(out, s.ficherosCapturados()...)
@@ -468,4 +478,50 @@ func (s *Servidor) artefactoContenido(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
 	}
 	io.Copy(w, f)
+}
+
+
+// explicarURL explica una direccion de descarga sin fichero capturado: lo unico
+// que se puede contar de un intento sin muestra. Gasta cuota y guarda por URL.
+func (s *Servidor) explicarURL(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		responderError(w, http.StatusMethodNotAllowed, "usa POST")
+		return
+	}
+	url := strings.TrimSpace(r.URL.Query().Get("url"))
+	if url == "" {
+		responderError(w, http.StatusBadRequest, "falta la url")
+		return
+	}
+	if len(url) > 2048 {
+		url = url[:2048]
+	}
+	explicador, ok := s.Generador.(report.Explicador)
+	if !ok {
+		responderError(w, http.StatusBadRequest,
+			"no hay ningun modelo configurado: revisa Ajustes -> Informes")
+		return
+	}
+	ips, _ := strconv.Atoi(r.URL.Query().Get("ips"))
+	dia := time.Now().Format("2006-01-02")
+	permitido, err := s.Almacen.ConsumirCuotaLLM(dia, s.Config.Actual().InformeTopeDiario)
+	if err != nil {
+		http.Error(w, "no se pudo comprobar la cuota", http.StatusInternalServerError)
+		return
+	}
+	if !permitido {
+		responderError(w, http.StatusTooManyRequests, "alcanzado el tope de IA de hoy")
+		return
+	}
+	texto, err := report.ExplicarURL(r.Context(), explicador, url, ips, idiomaDe(r), 2000)
+	if err != nil {
+		s.Almacen.DevolverCuotaLLM(dia)
+		responderError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	if err := s.Almacen.GuardarExplicacionDe("url", url, texto); err != nil {
+		http.Error(w, "no se pudo guardar la explicacion", http.StatusInternalServerError)
+		return
+	}
+	responderJSON(w, map[string]string{"explicacion": texto})
 }

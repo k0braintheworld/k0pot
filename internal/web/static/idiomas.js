@@ -606,3 +606,19 @@ Object.assign(IDIOMAS.en, {
 });
 Object.assign(IDIOMAS.es, { "f.ruido": "Ocultar ruido de fondo" });
 Object.assign(IDIOMAS.en, { "f.ruido": "Hide background noise" });
+Object.assign(IDIOMAS.es, {
+  "artef.abrible": "ábrelo para ver qué hace",
+  "artef.intento": "intento — no se capturó el fichero",
+  "artef.capturo": "intento — sí capturó un fichero",
+  "artef.url.titulo": "Intento de descarga",
+  "artef.url.aviso": "No se capturó el fichero de esta dirección (TFTP no se guarda, la descarga falló, o solo consta el comando). Esto es lo que sí sabemos.",
+  "artef.url.verfichero": "→ Ver el fichero que sí se capturó"
+});
+Object.assign(IDIOMAS.en, {
+  "artef.abrible": "open it to see what it does",
+  "artef.intento": "attempt — file not captured",
+  "artef.capturo": "attempt — it did capture a file",
+  "artef.url.titulo": "Download attempt",
+  "artef.url.aviso": "The file from this address wasn't captured (TFTP isn't stored, the download failed, or only the command was logged). Here is what we do know.",
+  "artef.url.verfichero": "→ View the file that was captured"
+});

@@ -1253,12 +1253,19 @@ async function cargarArtefactos() {
     // el nombre sirve tal cual para consultarlo sin subir la muestra.
     if (a.fichero && !a.url) partes.push(t("artef.sha"));
     if (a.momento) partes.push(hace(a.momento));
+    // Etiqueta clara: un fichero capturado se abre; una URL es un intento
+    // -del que a veces sí salió fichero-. Asi se entiende por que unos se
+    // pueden abrir y otros no.
+    const esFichero = a.fichero && RE_HASH_ARTEFACTO.test(a.fichero);
+    if (esFichero) partes.push(t("artef.abrible"));
+    else if (a.url) partes.push(a.fichero_de ? t("artef.capturo") : t("artef.intento"));
     caja.appendChild(nodo("span", "sub", partes.join(" · ")));
-    // Solo los ficheros capturados (nombre = SHA-256) se pueden abrir para
-    // revisarlos; los que son solo una URL de intento, no hay nada que abrir.
-    if (a.fichero && RE_HASH_ARTEFACTO.test(a.fichero)) {
+    if (esFichero) {
       caja.classList.add("pulsable");
       caja.addEventListener("click", () => abrirArtefacto(a.fichero));
+    } else if (a.url) {
+      caja.classList.add("pulsable");
+      caja.addEventListener("click", () => abrirArtefactoURL(a));
     }
     cont.appendChild(caja);
   }
@@ -1288,11 +1295,41 @@ async function explicarCampana() {
 
 const RE_HASH_ARTEFACTO = /^[a-f0-9]{64}$/;
 let hashArtefactoAbierto = null;
+let urlArtefactoAbierta = null;
+
+// abrirArtefactoURL abre la ficha de un INTENTO de descarga sin fichero: no
+// hay bytes que revisar, pero si de donde venia, quien la pidio y -si la
+// tenemos- el fichero que dejo. La IA explica que suele ser esa direccion.
+async function abrirArtefactoURL(a) {
+  urlArtefactoAbierta = { url: a.url, ips: (a.ips || []).length };
+  hashArtefactoAbierto = null;
+  $("artefacto-titulo").textContent = t("artef.url.titulo");
+  $("artefacto-sub").textContent = a.url;
+  $("artefacto-aviso").replaceChildren(nodo("p", null, t("artef.url.aviso")));
+  $("descargar-artefacto").hidden = true;
+  $("explicar-artefacto").textContent = a.explicacion ? t("dlg.reexplicar") : t("dlg.explicar");
+
+  const datos = $("artefacto-datos");
+  datos.replaceChildren();
+  if (a.ips?.length) datos.appendChild(dato(t("dato.trajeron"), a.ips.join(", ")));
+  if (a.momento) datos.appendChild(dato(t("dato.ultima"), new Date(a.momento).toLocaleString(IDIOMA)));
+  if (a.fichero_de) {
+    const link = nodo("button", "enlace-fichero", t("artef.url.verfichero"));
+    link.type = "button";
+    link.addEventListener("click", () => abrirArtefacto(a.fichero_de));
+    datos.appendChild(link);
+  }
+  $("artefacto-cadenas").replaceChildren();
+  pintarExplicacion("artefacto-explicacion", a.explicacion || "");
+  $("dialogo-artefacto").showModal();
+}
 
 // abrirArtefacto muestra la ficha de una muestra capturada: que es, sus
 // cadenas de texto internas y quien la trajo, y permite descargarla como
 // fichero inerte para analizarla aparte. Nunca la ejecuta.
 async function abrirArtefacto(hash) {
+  urlArtefactoAbierta = null;
+  $("descargar-artefacto").hidden = false;
   $("artefacto-titulo").textContent = t("artef.titulo");
   $("artefacto-sub").textContent = hash;
 
@@ -1359,7 +1396,26 @@ t("artef.aviso")));
 
 // Explica con IA que es y que hace la muestra. Igual que en ataques: POST,
 // gasta cuota, y el resultado se guarda por el hash.
+async function explicarURLActual() {
+  const boton = $("explicar-artefacto");
+  boton.disabled = true;
+  boton.textContent = t("dlg.explicando");
+  try {
+    const u = urlArtefactoAbierta;
+    const r = await pedirJSON(
+      `/api/url/explicar?url=${encodeURIComponent(u.url)}&ips=${u.ips}&idioma=${IDIOMA}`,
+      { method: "POST" });
+    pintarExplicacion("artefacto-explicacion", r.explicacion);
+  } catch (e) {
+    pintarExplicacion("artefacto-explicacion", t("dlg.noexplicar", { msg: e.message }));
+  } finally {
+    boton.disabled = false;
+    boton.textContent = t("dlg.reexplicar");
+  }
+}
+
 async function explicarArtefacto() {
+  if (urlArtefactoAbierta) return explicarURLActual();
   if (!hashArtefactoAbierto) return;
   const boton = $("explicar-artefacto");
   boton.disabled = true;

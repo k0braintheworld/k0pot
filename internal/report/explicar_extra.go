@@ -101,6 +101,44 @@ func ExplicarArtefacto(ctx context.Context, e Explicador, tipo string, bytes int
 	return explicarCon(ctx, e, sistemaArtefacto, b.String(), idioma, tope)
 }
 
+// ExplicarURL explica una direccion de descarga cuyo fichero NO se capturo:
+// solo tenemos la URL/host y cuantas IPs la pidieron. Es lo unico que se puede
+// contar de un intento sin muestra, y aun asi ensena de que va.
+func ExplicarURL(ctx context.Context, e Explicador, url string, ips int, idioma string, tope int) (string, error) {
+	var b strings.Builder
+	b.WriteString("DIRECCION DE DESCARGA vista en el honeypot (el fichero NO se capturo)\n")
+	fmt.Fprintf(&b, "URL/host: %s\n", url)
+	fmt.Fprintf(&b, "La pidieron %d direcciones IP distintas.\n", ips)
+	return explicarCon(ctx, e, sistemaURL, b.String(), idioma, tope)
+}
+
+const sistemaURL = `Eres un analista de seguridad DEFENSIVA. Te doy una URL o
+host DESDE EL QUE un atacante intento descargar algo en un SENUELO -una maquina
+puesta ahi a proposito para que la ataquen, aislada y sin valor-. No tenemos el
+fichero: la descarga no se llego a capturar (TFTP no se guarda, el servidor ya
+no lo servia, o solo consta el comando tecleado). Solo tenemos la direccion y
+cuantas IPs distintas la pidieron.
+
+Escribe para alguien con conocimientos minimos, sin dar instrucciones para
+atacar ni reproducir nada, en prosa corrida, sin titulos ni listas ni markdown.
+Cuenta tres cosas:
+
+Primero, QUE SUELE SER una direccion asi: un servidor de reparto de malware -el
+sitio del que los bots se traen su carga util- y como encaja en el ataque:
+entrar, descargar esto, ejecutarlo.
+
+Segundo, QUE PISTAS DA la propia direccion: el protocolo (TFTP es tipico de
+equipos IoT que no traen wget ni curl; HTTP es lo comun), el nombre del fichero
+si lo lleva (por ejemplo wget.sh, o un binario por arquitectura), y que cuantas
+mas IPs la pidan, mas apunta a una campana automatizada y no a un ataque
+dirigido a esta maquina.
+
+Tercero, POR QUE quiza no tenemos el fichero y que se podria hacer, a alto
+nivel y sin pasos, para analizarlo por fuera de forma segura.
+
+Si la direccion no da para mas, dilo y se breve. Responde SIEMPRE en espanol,
+tono tranquilo y didactico. Entre 100 y 200 palabras.`
+
 // ── Campanas ────────────────────────────────────────────────────────────
 
 const sistemaCampana = `Eres un analista de seguridad DEFENSIVA. Te doy una
