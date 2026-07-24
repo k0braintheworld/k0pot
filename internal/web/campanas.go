@@ -14,6 +14,7 @@ import (
 
 	"github.com/k0braintheworld/k0pot/internal/artefacto"
 	"github.com/k0braintheworld/k0pot/internal/campana"
+	"github.com/k0braintheworld/k0pot/internal/report"
 	"github.com/k0braintheworld/k0pot/internal/store"
 )
 
@@ -53,7 +54,90 @@ func (s *Servidor) campana(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no se pudieron leer los ataques", http.StatusInternalServerError)
 		return
 	}
-	responderJSON(w, campana.EpisodiosDe(eps, tipo, huella))
+	respuesta := struct {
+		Episodios   []store.EpisodioFila `json:"episodios"`
+		Explicacion string               `json:"explicacion,omitempty"`
+	}{Episodios: campana.EpisodiosDe(eps, tipo, huella)}
+	respuesta.Explicacion, _ = s.Almacen.ExplicacionDe("campana", string(tipo)+"|"+huella)
+	responderJSON(w, respuesta)
+}
+
+// queComparten pone en una frase lo que une a los ataques de una campana,
+// para dárselo al modelo en lenguaje llano.
+func queComparten(tipo campana.Tipo) string {
+	switch tipo {
+	case campana.PorCredenciales:
+		return "el mismo diccionario de usuario y contrasena"
+	case campana.PorDescarga:
+		return "el mismo fichero que se traen"
+	case campana.PorComandos:
+		return "la misma secuencia de comandos"
+	case campana.PorRutas:
+		return "las mismas rutas web tanteadas"
+	}
+	return string(tipo)
+}
+
+// explicarCampana pide al modelo que cuente que operacion coordinada hay
+// detras de una campana. Gasta cuota y guarda el resultado por su huella.
+func (s *Servidor) explicarCampana(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		responderError(w, http.StatusMethodNotAllowed, "usa POST")
+		return
+	}
+	tipo := campana.Tipo(strings.TrimSpace(r.URL.Query().Get("tipo")))
+	huella := strings.TrimSpace(r.URL.Query().Get("huella"))
+	if tipo == "" || huella == "" {
+		responderError(w, http.StatusBadRequest, "faltan el tipo y la huella")
+		return
+	}
+	desde := time.Now().AddDate(0, 0, -dias(r))
+	eps, err := s.Almacen.Episodios(store.FiltroEpisodios{Desde: desde, Limite: 500})
+	if err != nil {
+		http.Error(w, "no se pudieron leer los ataques", http.StatusInternalServerError)
+		return
+	}
+	var elegida campana.Campana
+	hallada := false
+	for _, c := range campana.Detectar(eps) {
+		if c.Tipo == tipo && c.Huella == huella {
+			elegida, hallada = c, true
+			break
+		}
+	}
+	if !hallada {
+		responderError(w, http.StatusNotFound, "esa campana ya no existe en el periodo")
+		return
+	}
+	explicador, ok := s.Generador.(report.Explicador)
+	if !ok {
+		responderError(w, http.StatusBadRequest,
+			"no hay ningun modelo configurado: revisa Ajustes -> Informes")
+		return
+	}
+	dia := time.Now().Format("2006-01-02")
+	permitido, err := s.Almacen.ConsumirCuotaLLM(dia, s.Config.Actual().InformeTopeDiario)
+	if err != nil {
+		http.Error(w, "no se pudo comprobar la cuota", http.StatusInternalServerError)
+		return
+	}
+	if !permitido {
+		responderError(w, http.StatusTooManyRequests, "alcanzado el tope de IA de hoy")
+		return
+	}
+	texto, err := report.ExplicarCampana(r.Context(), explicador,
+		queComparten(tipo), elegida.Muestra, len(elegida.IPs),
+		elegida.Paises, string(elegida.Severidad), 2000)
+	if err != nil {
+		s.Almacen.DevolverCuotaLLM(dia)
+		responderError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	if err := s.Almacen.GuardarExplicacionDe("campana", string(tipo)+"|"+huella, texto); err != nil {
+		http.Error(w, "no se pudo guardar la explicacion", http.StatusInternalServerError)
+		return
+	}
+	responderJSON(w, map[string]string{"explicacion": texto})
 }
 
 // Artefacto es algo que un atacante intento traerse al sistema.
@@ -160,14 +244,15 @@ var reHashArtefacto = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
 // DetalleArtefacto describe un fichero capturado para revisarlo SIN ejecutarlo.
 type DetalleArtefacto struct {
-	SHA256  string    `json:"sha256"`
-	Bytes   int64     `json:"bytes"`
-	Tipo    string    `json:"tipo"`
-	Cadenas []string  `json:"cadenas"`
-	IPs     []string  `json:"ips,omitempty"`
-	URLs    []string  `json:"urls,omitempty"`
-	Primera time.Time `json:"primera,omitempty"`
-	Ultima  time.Time `json:"ultima,omitempty"`
+	SHA256      string    `json:"sha256"`
+	Bytes       int64     `json:"bytes"`
+	Tipo        string    `json:"tipo"`
+	Cadenas     []string  `json:"cadenas"`
+	IPs         []string  `json:"ips,omitempty"`
+	URLs        []string  `json:"urls,omitempty"`
+	Primera     time.Time `json:"primera,omitempty"`
+	Ultima      time.Time `json:"ultima,omitempty"`
+	Explicacion string    `json:"explicacion,omitempty"`
 }
 
 // rutaArtefacto valida el hash y devuelve la ruta al fichero, garantizando
@@ -187,22 +272,21 @@ func (s *Servidor) rutaArtefacto(hash string) (string, bool) {
 
 // artefacto describe una muestra: que es, que cadenas lleva dentro y quien la
 // trajo. Nunca ejecuta el fichero; solo lee sus bytes.
-func (s *Servidor) artefacto(w http.ResponseWriter, r *http.Request) {
-	hash := strings.TrimSpace(r.URL.Query().Get("hash"))
+// detalleArtefacto arma la ficha de una muestra: tipo, tamano, cadenas y de
+// donde vino. Solo lee bytes; nunca ejecuta el fichero. Lo comparten la ficha
+// (GET) y la explicacion con IA (POST).
+func (s *Servidor) detalleArtefacto(hash string) (DetalleArtefacto, bool) {
 	ruta, ok := s.rutaArtefacto(hash)
 	if !ok {
-		responderError(w, http.StatusBadRequest, "hash de artefacto invalido")
-		return
+		return DetalleArtefacto{}, false
 	}
 	info, err := os.Stat(ruta)
 	if err != nil || info.IsDir() {
-		responderError(w, http.StatusNotFound, "ese artefacto no existe")
-		return
+		return DetalleArtefacto{}, false
 	}
 	f, err := os.Open(ruta)
 	if err != nil {
-		http.Error(w, "no se pudo leer el artefacto", http.StatusInternalServerError)
-		return
+		return DetalleArtefacto{}, false
 	}
 	defer f.Close()
 	// Solo los primeros 4 KB: basta para el tipo y una vista previa de cadenas.
@@ -220,7 +304,60 @@ func (s *Servidor) artefacto(w http.ResponseWriter, r *http.Request) {
 		det.IPs, det.URLs = fu.IPs, fu.URLs
 		det.Primera, det.Ultima = fu.Primera, fu.Ultima
 	}
+	return det, true
+}
+
+func (s *Servidor) artefacto(w http.ResponseWriter, r *http.Request) {
+	det, ok := s.detalleArtefacto(strings.TrimSpace(r.URL.Query().Get("hash")))
+	if !ok {
+		responderError(w, http.StatusNotFound, "ese artefacto no existe")
+		return
+	}
+	det.Explicacion, _ = s.Almacen.ExplicacionDe("artefacto", det.SHA256)
 	responderJSON(w, det)
+}
+
+// explicarArtefacto pide al modelo que cuente que es y que hace la muestra,
+// a partir de su tipo y sus cadenas -sin ejecutarla-. Gasta cuota igual que
+// la explicacion de un ataque, y guarda el resultado por su hash.
+func (s *Servidor) explicarArtefacto(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		responderError(w, http.StatusMethodNotAllowed, "usa POST")
+		return
+	}
+	det, ok := s.detalleArtefacto(strings.TrimSpace(r.URL.Query().Get("hash")))
+	if !ok {
+		responderError(w, http.StatusNotFound, "ese artefacto no existe")
+		return
+	}
+	explicador, ok := s.Generador.(report.Explicador)
+	if !ok {
+		responderError(w, http.StatusBadRequest,
+			"no hay ningun modelo configurado: revisa Ajustes -> Informes")
+		return
+	}
+	dia := time.Now().Format("2006-01-02")
+	permitido, err := s.Almacen.ConsumirCuotaLLM(dia, s.Config.Actual().InformeTopeDiario)
+	if err != nil {
+		http.Error(w, "no se pudo comprobar la cuota", http.StatusInternalServerError)
+		return
+	}
+	if !permitido {
+		responderError(w, http.StatusTooManyRequests, "alcanzado el tope de IA de hoy")
+		return
+	}
+	texto, err := report.ExplicarArtefacto(r.Context(), explicador,
+		det.Tipo, det.Bytes, det.Cadenas, det.URLs, 2000)
+	if err != nil {
+		s.Almacen.DevolverCuotaLLM(dia)
+		responderError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	if err := s.Almacen.GuardarExplicacionDe("artefacto", det.SHA256, texto); err != nil {
+		http.Error(w, "no se pudo guardar la explicacion", http.StatusInternalServerError)
+		return
+	}
+	responderJSON(w, map[string]string{"explicacion": texto})
 }
 
 // artefactoContenido entrega el fichero SIEMPRE como adjunto inerte: nunca con

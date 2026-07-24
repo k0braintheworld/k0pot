@@ -640,8 +640,8 @@ async function cargarAtaques() {
 // explicar sepa sobre cual preguntar.
 let claveAbierta = null;
 
-function pintarExplicacion(texto) {
-  const caja = $("ataque-explicacion");
+function pintarExplicacion(idCaja, texto) {
+  const caja = $(idCaja);
   caja.replaceChildren();
   if (!texto) {
     caja.hidden = true;
@@ -663,9 +663,9 @@ async function explicarAtaque() {
   try {
     const r = await pedirJSON(
       `/api/episodio/explicar?clave=${encodeURIComponent(claveAbierta)}`, { method: "POST" });
-    pintarExplicacion(r.explicacion);
+    pintarExplicacion("ataque-explicacion", r.explicacion);
   } catch (e) {
-    pintarExplicacion(`No se pudo explicar: ${e.message}`);
+    pintarExplicacion("ataque-explicacion", `No se pudo explicar: ${e.message}`);
   } finally {
     boton.disabled = false;
     boton.textContent = "Explicar con IA";
@@ -678,7 +678,7 @@ async function abrirAtaque(clave) {
   claveAbierta = clave;
   // Si ya se explico una vez, se ensena sin volver a preguntar: la
   // explicacion de un ataque terminado no cambia por reabrir el dialogo.
-  pintarExplicacion(d.explicacion);
+  pintarExplicacion("ataque-explicacion", d.explicacion);
   $("explicar-ataque").textContent = d.explicacion ? "Volver a explicar" : "Explicar con IA";
 
   const titulo = $("ataque-titulo");
@@ -1111,7 +1111,12 @@ async function cargarCampanas() {
 // campana; cada uno abre su detalle -evento a evento- reaprovechando el
 // dialogo de ataque. Asi el "proceso" de la operacion sale de encadenar lo
 // que ya existe, sin duplicar nada.
+let campanaAbierta = null;
+
 async function abrirCampana(c) {
+  campanaAbierta = { tipo: c.tipo, huella: c.huella };
+  pintarExplicacion("campana-explicacion", "");
+  $("explicar-campana").textContent = "Explicar con IA";
   const paises = (c.paises || []).length ? ` · ${c.paises.join(" ")}` : "";
   $("campana-titulo").textContent = QUE_COMPARTEN[c.tipo] || c.tipo;
   $("campana-sub").textContent = `${c.ips.length} IPs${paises} · ${c.episodios} ataques`;
@@ -1138,20 +1143,22 @@ async function abrirCampana(c) {
   lista.appendChild(nodo("p", "sub", "Cargando ataques…"));
   $("dialogo-campana").showModal();
 
-  let eps = [];
+  let resp = { episodios: [] };
   try {
-    eps = await pedirJSON(
+    resp = await pedirJSON(
       `/api/campana?tipo=${encodeURIComponent(c.tipo)}` +
       `&huella=${encodeURIComponent(c.huella)}&dias=${encodeURIComponent(rango())}`);
   } catch (e) {
     lista.replaceChildren(nodo("p", "sub", `No se pudo cargar: ${e.message}`));
     return;
   }
+  pintarExplicacion("campana-explicacion", resp.explicacion);
+  $("explicar-campana").textContent = resp.explicacion ? "Volver a explicar" : "Explicar con IA";
 
   lista.replaceChildren();
   lista.appendChild(nodo("p", "sub",
     "Los ataques de esta campana — pulsa uno para ver su proceso paso a paso:"));
-  for (const a of eps || []) {
+  for (const a of resp.episodios || []) {
     const fila = nodo("button", "fila-ataque");
     fila.type = "button";
     fila.appendChild(nodo("span", `sev sev-${a.severidad}`, NOMBRE_SEV[a.severidad] || a.severidad));
@@ -1208,7 +1215,30 @@ async function cargarArtefactos() {
   }
 }
 
+// Va por POST y con su boton: gasta cuota, asi que solo cuando alguien lo
+// pide. La explicacion se guarda por la huella de la campana; reabrirla no
+// vuelve a gastar.
+async function explicarCampana() {
+  if (!campanaAbierta) return;
+  const boton = $("explicar-campana");
+  boton.disabled = true;
+  boton.textContent = "Explicando…";
+  try {
+    const r = await pedirJSON(
+      `/api/campana/explicar?tipo=${encodeURIComponent(campanaAbierta.tipo)}` +
+      `&huella=${encodeURIComponent(campanaAbierta.huella)}&dias=${encodeURIComponent(rango())}`,
+      { method: "POST" });
+    pintarExplicacion("campana-explicacion", r.explicacion);
+  } catch (e) {
+    pintarExplicacion("campana-explicacion", `No se pudo explicar: ${e.message}`);
+  } finally {
+    boton.disabled = false;
+    boton.textContent = "Volver a explicar";
+  }
+}
+
 const RE_HASH_ARTEFACTO = /^[a-f0-9]{64}$/;
+let hashArtefactoAbierto = null;
 
 // abrirArtefacto muestra la ficha de una muestra capturada: que es, sus
 // cadenas de texto internas y quien la trajo, y permite descargarla como
@@ -1221,6 +1251,10 @@ async function abrirArtefacto(hash) {
   aviso.replaceChildren(nodo("p", null,
     "Muestra sin procesar, posible malware. Se descarga como fichero inerte " +
     "para analizarla en un entorno aislado; no la ejecutes en tu equipo."));
+
+  hashArtefactoAbierto = hash;
+  pintarExplicacion("artefacto-explicacion", "");
+  $("explicar-artefacto").textContent = "Explicar con IA";
 
   const datos = $("artefacto-datos");
   datos.replaceChildren(nodo("p", "sub", "Cargando…"));
@@ -1263,6 +1297,29 @@ async function abrirArtefacto(hash) {
     cadenas.appendChild(pre);
   } else {
     cadenas.appendChild(nodo("p", "sub", "Sin cadenas de texto legibles en la cabecera."));
+  }
+
+  pintarExplicacion("artefacto-explicacion", d.explicacion);
+  $("explicar-artefacto").textContent = d.explicacion ? "Volver a explicar" : "Explicar con IA";
+}
+
+// Explica con IA que es y que hace la muestra. Igual que en ataques: POST,
+// gasta cuota, y el resultado se guarda por el hash.
+async function explicarArtefacto() {
+  if (!hashArtefactoAbierto) return;
+  const boton = $("explicar-artefacto");
+  boton.disabled = true;
+  boton.textContent = "Explicando…";
+  try {
+    const r = await pedirJSON(
+      `/api/artefacto/explicar?hash=${encodeURIComponent(hashArtefactoAbierto)}`,
+      { method: "POST" });
+    pintarExplicacion("artefacto-explicacion", r.explicacion);
+  } catch (e) {
+    pintarExplicacion("artefacto-explicacion", `No se pudo explicar: ${e.message}`);
+  } finally {
+    boton.disabled = false;
+    boton.textContent = "Volver a explicar";
   }
 }
 
@@ -1388,6 +1445,8 @@ $("explicar-ataque").addEventListener("click", explicarAtaque);
 $("cerrar-ip").addEventListener("click", () => $("dialogo-ip").close());
 $("cerrar-campana").addEventListener("click", () => $("dialogo-campana").close());
 $("cerrar-artefacto").addEventListener("click", () => $("dialogo-artefacto").close());
+$("explicar-campana").addEventListener("click", explicarCampana);
+$("explicar-artefacto").addEventListener("click", explicarArtefacto);
 
 // El desplegable de servicios se llena desde el mismo mapa que usa el resto
 // del panel: asi una trampa nueva aparece en el filtro sola, sin que haya que

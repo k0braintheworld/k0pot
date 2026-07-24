@@ -298,9 +298,13 @@
       <h2 id="campana-titulo">Campana</h2>
       <p id="campana-sub" class="sub"></p>
     </div>
-    <button id="cerrar-campana" type="button" class="boton-menor">Cerrar</button>
+    <div class="acciones-dialogo">
+      <button id="explicar-campana" type="button" class="boton-menor">Explicar con IA</button>
+      <button id="cerrar-campana" type="button" class="boton-menor">Cerrar</button>
+    </div>
   </header>
   <div id="campana-muestra" class="explicacion" hidden></div>
+  <div id="campana-explicacion" class="explicacion" hidden></div>
   <div id="campana-datos" class="ficha-datos"></div>
   <div id="campana-ataques" class="cuerpo-dialogo"></div>
 </dialog>
@@ -312,11 +316,13 @@
       <p id="artefacto-sub" class="sub"></p>
     </div>
     <div class="acciones-dialogo">
-      <button id="descargar-artefacto" type="button" class="boton-menor">Descargar para analizar</button>
+      <button id="explicar-artefacto" type="button" class="boton-menor">Explicar con IA</button>
+      <button id="descargar-artefacto" type="button" class="boton-menor">Descargar</button>
       <button id="cerrar-artefacto" type="button" class="boton-menor">Cerrar</button>
     </div>
   </header>
   <div id="artefacto-aviso" class="explicacion"></div>
+  <div id="artefacto-explicacion" class="explicacion" hidden></div>
   <div id="artefacto-datos" class="ficha-datos"></div>
   <div id="artefacto-cadenas" class="cuerpo-dialogo"></div>
 </dialog>
