@@ -25,7 +25,7 @@ func ep(ip string, sev episodio.Severidad, resumen string) store.EpisodioFila {
 }
 
 func TestSinAtaquesNoHayAviso(t *testing.T) {
-	if _, hay := Redactar(nil, ""); hay {
+	if _, hay := Redactar(nil, "", ""); hay {
 		t.Error("no deberia haber mensaje")
 	}
 }
@@ -34,7 +34,7 @@ func TestSinAtaquesNoHayAviso(t *testing.T) {
 func TestElTituloDiceLoImportante(t *testing.T) {
 	m, _ := Redactar([]store.EpisodioFila{
 		ep("1.2.3.4", episodio.Intrusion, "Entro como root; intento usar el servidor de pasarela"),
-	}, "http://panel")
+	}, "http://panel", "")
 
 	if !strings.Contains(m.Titulo, "Intrusion") || !strings.Contains(m.Titulo, "1.2.3.4") {
 		t.Errorf("titulo poco informativo: %q", m.Titulo)
@@ -50,7 +50,7 @@ func TestElTituloDiceLoImportante(t *testing.T) {
 // Un acceso preocupa, pero menos que una intrusion: el canal lo traduce a
 // su prioridad y no conviene gastar la urgencia en todo.
 func TestUnAccesoNoEsUrgente(t *testing.T) {
-	m, _ := Redactar([]store.EpisodioFila{ep("1.2.3.4", episodio.Acceso, "Entro como root")}, "")
+	m, _ := Redactar([]store.EpisodioFila{ep("1.2.3.4", episodio.Acceso, "Entro como root")}, "", "")
 	if m.Urgente {
 		t.Error("un acceso sin actividad no deberia ir como urgente")
 	}
@@ -61,7 +61,7 @@ func TestLoMasGraveVaPrimero(t *testing.T) {
 	m, _ := Redactar([]store.EpisodioFila{
 		ep("1.1.1.1", episodio.Acceso, "Entro"),
 		ep("2.2.2.2", episodio.Intrusion, "Entro y ejecuto comandos"),
-	}, "")
+	}, "", "")
 	if !strings.HasPrefix(m.Cuerpo, "INTRUSION") {
 		t.Errorf("el cuerpo empieza por %q", m.Cuerpo[:20])
 	}
@@ -74,7 +74,7 @@ func TestUnaAvalanchaSeResumeEnUnSoloAviso(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		muchos = append(muchos, ep("1.1.1.1", episodio.Acceso, "Entro"))
 	}
-	m, _ := Redactar(muchos, "")
+	m, _ := Redactar(muchos, "", "")
 	if strings.Count(m.Cuerpo, "ACCESO") > topeEnMensaje {
 		t.Errorf("se detallaron demasiados: %d", strings.Count(m.Cuerpo, "ACCESO"))
 	}
@@ -180,7 +180,7 @@ func TestElErrorDelServicioSePropaga(t *testing.T) {
 }
 
 func TestElAvisoDePruebaExplicaQueEsperar(t *testing.T) {
-	m := DePrueba("http://panel")
+	m := DePrueba("http://panel", "")
 	if !strings.Contains(m.Cuerpo, "ruido de fondo") && !strings.Contains(m.Cuerpo, "ruido") {
 		t.Errorf("deberia aclarar que NO se avisa de todo: %q", m.Cuerpo)
 	}

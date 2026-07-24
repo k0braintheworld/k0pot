@@ -107,6 +107,7 @@ func (s *Servidor) Rutas() http.Handler {
 	mux.HandleFunc("/api/servicios", s.protegido(s.servicios))
 	mux.HandleFunc("/api/red", s.protegido(s.red))
 	mux.HandleFunc("/api/contrasena", s.protegido(s.cambiarContrasena))
+	mux.HandleFunc("/api/idioma", s.protegido(s.fijarIdioma))
 
 	return cabeceras(mux)
 }

@@ -49,6 +49,7 @@ type entradaAjustes struct {
 	TLSCert                *string                    `json:"tls_cert"`
 	TLSClave               *string                    `json:"tls_clave"`
 	PaisPropio             *string                    `json:"pais_propio"`
+	Idioma                 *string                    `json:"idioma"`
 	LatitudPropia          *float64                   `json:"latitud_propia"`
 	LongitudPropia         *float64                   `json:"longitud_propia"`
 	RetencionDias          *int                       `json:"retencion_dias"`
@@ -138,6 +139,9 @@ func (s *Servidor) guardarAjustes(w http.ResponseWriter, r *http.Request) {
 	aplicarTexto(&c.TLSClave, e.TLSClave)
 	if e.PaisPropio != nil {
 		c.PaisPropio = *e.PaisPropio
+	}
+	if e.Idioma != nil && (*e.Idioma == "es" || *e.Idioma == "en") {
+		c.Idioma = *e.Idioma
 	}
 	if e.LatitudPropia != nil {
 		c.LatitudPropia = *e.LatitudPropia

@@ -72,6 +72,10 @@ type Config struct {
 	TLSClave   string `json:"tls_clave"`
 
 	RefrescoSegundos int `json:"refresco_segundos"`
+	// Idioma del panel y de los avisos ("es" por defecto, "en" ingles). Lo
+	// fija el selector de la cabecera; los avisos, que salen sin que nadie
+	// mire el panel, leen el idioma de aqui.
+	Idioma string `json:"idioma"`
 	// PaisPropio es donde esta el honeypot, en codigo ISO de dos letras.
 	// El mapa traza hacia ahi las lineas de ataque.
 	PaisPropio string `json:"pais_propio"`
@@ -146,6 +150,7 @@ func PorDefecto() Config {
 		// muchos mas de los que nadie va a pedir a mano.
 		InformeTopeDiario: 40,
 		RefrescoSegundos:  20,
+		Idioma:            "es",
 		PaisPropio:        "ES",
 		// Vacio = todas las interfaces. Se concreta desde el panel en
 		// cuanto la red este separada de verdad.

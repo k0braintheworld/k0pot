@@ -176,9 +176,19 @@ function traducirDOM(raiz) {
 
 // cambiarIdioma persiste la eleccion y recarga: un re-render limpio en el
 // idioma nuevo es mas fiable que repintar a mano cada trozo dinamico.
-function cambiarIdioma(nuevo) {
+async function cambiarIdioma(nuevo) {
   if (!IDIOMAS[nuevo] || nuevo === IDIOMA) return;
   localStorage.setItem("k0pot-idioma", nuevo);
+  // Que los avisos del servidor (que salen sin espectador) sigan el idioma
+  // del panel. Es lo unico que el servidor necesita saber; el resto del
+  // idioma vive en el navegador. Best-effort: si falla, se recarga igual.
+  try {
+    await fetch("/api/idioma", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idioma: nuevo }),
+    });
+  } catch (e) { /* la recarga sigue; el panel cambia aunque el aviso no */ }
   location.reload();
 }
 

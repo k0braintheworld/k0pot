@@ -367,7 +367,7 @@ func avisarDeLoGrave(ctx context.Context, almacen *store.Store, c config.Config)
 	if err != nil || len(pendientes) == 0 {
 		return err
 	}
-	mensaje, hay := aviso.Redactar(pendientes, c.AvisoEnlace)
+	mensaje, hay := aviso.Redactar(pendientes, c.AvisoEnlace, c.Idioma)
 	if !hay {
 		return nil
 	}
