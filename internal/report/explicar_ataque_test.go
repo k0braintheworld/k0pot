@@ -59,7 +59,7 @@ func TestElPromptDelAtaqueEncuadraQueEsDefensivo(t *testing.T) {
 		}
 	}
 	// Y el encuadre va antes que la peticion, no al final.
-	if strings.Index(p, "defensiva") > strings.Index(p, "responde tres cosas") {
+	if strings.Index(p, "defensiva") > strings.Index(p, "cuenta estas cuatro cosas") {
 		t.Error("el encuadre deberia ir por delante de lo que se pide")
 	}
 }
