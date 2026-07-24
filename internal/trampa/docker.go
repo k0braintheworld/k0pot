@@ -70,13 +70,16 @@ func atenderDocker(id string, conn net.Conn, req *http.Request, cuerpo []byte, r
 		responderDocker(conn, 201, `{"Id":"e1x2e3c4"}`)
 
 	case strings.HasSuffix(ruta, "/images/create"):
-		// Bajarse una imagen: el equivalente a traerse el binario.
+		// Bajarse una imagen NO es traerse malware: son imagenes base publicas
+		// (alpine, debian, busybox...). Es una accion de la API, no un
+		// artefacto, asi que se registra como comando y no como descarga: de lo
+		// contrario la lista de artefactos se llena de nombres de distros.
 		imagen := req.URL.Query().Get("fromImage")
 		if tag := req.URL.Query().Get("tag"); tag != "" {
 			imagen += ":" + tag
 		}
-		reg(evento(id, "docker", ip, model.DescargaFichero,
-			map[string]string{"fichero": recortar(imagen, 256)}))
+		reg(evento(id, "docker", ip, model.ComandoEjecutado,
+			map[string]string{"comando": recortar("pull "+imagen, 256)}))
 		responderDocker(conn, 200, `{"status":"Pulling from library"}`)
 
 	case ruta == "/_ping":
