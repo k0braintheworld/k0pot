@@ -300,3 +300,27 @@ func (s *Store) EpisodiosDesde(desde time.Time) (map[string]int, error) {
 	}
 	return out, filas.Err()
 }
+
+// AtaquesPorServicio cuenta los ataques (episodios) por protocolo desde una
+// fecha, de mas a menos. Es el reparto que responde "a que servicio le estan
+// dando", que dice mas que un veredicto generico.
+func (s *Store) AtaquesPorServicio(desde time.Time) ([]Recuento, error) {
+	filas, err := s.db.Query(
+		`SELECT protocolo, COUNT(*) n FROM episodios WHERE fin > ?
+		 GROUP BY protocolo ORDER BY n DESC`,
+		desde.UTC().Format(time.RFC3339Nano))
+	if err != nil {
+		return nil, fmt.Errorf("contando ataques por servicio: %w", err)
+	}
+	defer filas.Close()
+
+	var out []Recuento
+	for filas.Next() {
+		var r Recuento
+		if err := filas.Scan(&r.Valor, &r.N); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, filas.Err()
+}

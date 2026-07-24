@@ -461,11 +461,48 @@ function nombrePais(iso) {
   return mundo?.paises?.[iso]?.n || iso;
 }
 
+// Nombres bonitos de los servicios para el panel; los internos van en
+// minusculas (ssh, http, mysql...).
+const NOMBRE_SERVICIO = {
+  ssh: "SSH", telnet: "Telnet", http: "HTTP", redis: "Redis", ftp: "FTP",
+  mysql: "MySQL", postgres: "PostgreSQL", smtp: "SMTP", rdp: "RDP",
+  vnc: "VNC", docker: "Docker",
+};
+function nombreServicio(id) {
+  return NOMBRE_SERVICIO[id] || (id ? id[0].toUpperCase() + id.slice(1) : "?");
+}
+
+// pintarSemaforo escribe la linea del semaforo: la palabra del nivel -el
+// color ya lo refuerza- y a que servicio le estan dando, de mas a menos.
+function pintarSemaforo(nivel, servicios) {
+  const cont = $("frase");
+  cont.replaceChildren();
+  cont.appendChild(nodo("strong", "sem-nivel", nivel));
+
+  servicios = servicios || [];
+  if (!servicios.length) {
+    cont.appendChild(nodo("span", "sem-vacio", "sin ataques en este periodo"));
+    return;
+  }
+  cont.appendChild(nodo("span", "sep", "—"));
+  servicios.forEach((sv, i) => {
+    if (i > 0) cont.appendChild(nodo("span", "sep", "·"));
+    const chip = nodo("span", "serv");
+    chip.appendChild(nodo("span", "serv-nombre", nombreServicio(sv.Valor)));
+    chip.appendChild(nodo("span", "serv-n", String(sv.N)));
+    cont.appendChild(chip);
+  });
+}
+
 async function cargarEstado(recientes) {
   const e = await traer("/api/estado");
 
-  $("semaforo").className = `semaforo ${e.nivel.toLowerCase()}`;
-  $("frase").textContent = e.frase;
+  const sem = $("semaforo");
+  sem.className = `semaforo ${e.nivel.toLowerCase()}`;
+  // El veredicto en una frase pasa a ser el tooltip: sigue ahi para quien lo
+  // quiera, pero la linea la ocupa algo mas util, el reparto por servicio.
+  sem.title = e.frase;
+  pintarSemaforo(e.nivel, e.ataques_por_servicio);
 
   // Las metricas cuentan ATAQUES (episodios), no eventos, para hablar el
   // mismo idioma que la grafica de gravedad: un intruso genera decenas de

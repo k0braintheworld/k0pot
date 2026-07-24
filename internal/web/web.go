@@ -163,6 +163,7 @@ type Estado struct {
 	Niveles      map[model.Clasificacion]int `json:"niveles"`
 	PorTipo      []store.Recuento            `json:"por_tipo"`
 	Severidades  map[string]int              `json:"severidades"`
+	PorServicio  []store.Recuento            `json:"ataques_por_servicio"`
 	PorPais      []store.Recuento            `json:"por_pais"`
 	TopIPs       []store.IPActiva            `json:"top_ips"`
 	TopUsuarios  []store.Recuento            `json:"top_usuarios"`
@@ -192,9 +193,17 @@ func (s *Servidor) estado(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no se pudo leer la gravedad de los ataques", http.StatusInternalServerError)
 		return
 	}
+	// Reparto de ataques por servicio, para el semaforo: dice a que puerto le
+	// estan dando, no solo cuanto preocupa.
+	porServicio, err := s.Almacen.AtaquesPorServicio(desde)
+	if err != nil {
+		http.Error(w, "no se pudo leer el reparto por servicio", http.StatusInternalServerError)
+		return
+	}
 
 	responderJSON(w, Estado{
 		Severidades:  severidades,
+		PorServicio:  porServicio,
 		Nivel:        report.NivelDeAtaques(severidades),
 		PaisPropio:   s.Config.Actual().PaisPropio,
 		Latitud:      s.Config.Actual().LatitudPropia,

@@ -137,6 +137,14 @@ main.rejilla-panel {
 }
 .semaforo .indicador { width: .8rem; height: .8rem; border-radius: 50%; background: var(--sub); flex: none; }
 .semaforo p { margin: 0; font-size: 1.02rem; font-weight: 500; }
+/* La linea del semaforo: la palabra del nivel y el reparto por servicio. */
+#frase { display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .55rem; }
+.sem-nivel { font-weight: 700; letter-spacing: .04em; }
+.sem-vacio { color: var(--sub); font-weight: 400; font-size: .92rem; }
+.sep { color: var(--sub); font-weight: 400; }
+.serv { font-weight: 400; font-size: .95rem; }
+.serv-nombre { color: var(--sub); }
+.serv-n { margin-left: .3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .semaforo.verde { border-left-color: var(--verde); }
 .semaforo.verde .indicador { background: var(--verde); box-shadow: 0 0 0 4px color-mix(in srgb, var(--verde) 20%, transparent); }
 .semaforo.ambar { border-left-color: var(--ambar); }

@@ -97,6 +97,9 @@ func TestEstado(t *testing.T) {
 	if e.Nivel != report.Rojo {
 		t.Errorf("nivel = %q, esperaba ROJO (hay un evento notable)", e.Nivel)
 	}
+	if len(e.PorServicio) != 1 || e.PorServicio[0].Valor != "ssh" || e.PorServicio[0].N != 1 {
+		t.Errorf("por servicio = %+v, esperaba 1 ataque de ssh", e.PorServicio)
+	}
 	if len(e.TopIPs) != 1 || !e.TopIPs[0].Tor {
 		t.Errorf("top ips = %+v, esperaba el contexto enriquecido", e.TopIPs)
 	}
