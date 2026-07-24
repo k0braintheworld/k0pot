@@ -49,6 +49,9 @@ type EpisodioFila struct {
 	Pais       string `json:"pais"`
 	ISP        string `json:"isp"`
 	Reputacion int    `json:"reputacion"`
+	// Automatismo ("bot" o "manual") lo pone la capa web al leer, no la BD:
+	// es un juicio sobre el patron, no un dato capturado.
+	Automatismo string `json:"automatismo,omitempty"`
 }
 
 // EventosDesde devuelve los eventos a partir de una fecha, en orden

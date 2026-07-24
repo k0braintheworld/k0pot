@@ -30,8 +30,25 @@ func (s *Servidor) episodios(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no se pudieron leer los ataques", http.StatusInternalServerError)
 		return
 	}
+	enCamp := campana.EnCampana(lista)
+	veces := map[string]int{}
+	for _, e := range lista {
+		veces[e.IP]++
+	}
 	for i := range lista {
 		lista[i].Resumen = episodio.Redactar(lista[i].Episodio, idioma)
+		lista[i].Automatismo = automatismoDe(lista[i], enCamp[lista[i].Clave], veces[lista[i].IP])
+	}
+	// Filtro por origen: quedarse solo con los bots o solo con lo que parece
+	// manual. Va aqui y no en SQL porque la etiqueta es un juicio, no un campo.
+	if f := q.Get("automatismo"); f == "bot" || f == "manual" {
+		filtrada := lista[:0]
+		for _, e := range lista {
+			if e.Automatismo == f {
+				filtrada = append(filtrada, e)
+			}
+		}
+		lista = filtrada
 	}
 	responderJSON(w, lista)
 }
@@ -435,4 +452,52 @@ func contextoCampana(alm *store.Store, ep store.EpisodioFila) string {
 		return "este patron es poco comun: no coincide con las campanas automatizadas que se repiten estos dias, asi que merece mas atencion que el ruido habitual"
 	}
 	return "es un escaneo o tanteo automatico de los mas comunes: el ruido de fondo constante de estar expuesto en internet"
+}
+
+// automatismoDe etiqueta un ataque como "bot" o "manual" a ojo, para poder
+// limpiar el ruido. No pretende certeza -en un senuelo casi todo es
+// automatico-: "manual" significa "no encaja con ningun automatismo conocido
+// y encima fue una sesion interactiva y pausada; merece una mirada".
+func automatismoDe(e store.EpisodioFila, enCampana bool, vecesIP int) string {
+	// Senales claras de automatizacion. El ritmo de tecleo seria la mejor
+	// prueba, pero a nivel de episodio no es fiable (un bot reconecta despacio
+	// y parece pausado), asi que se decide por estructura, no por tiempo.
+	if enCampana || // repite el mismo guion exacto que otras direcciones
+		e.SoloConexiones || // sondeo de puertos: abre y cierra sin decir nada
+		vecesIP >= 3 || // la misma IP machacando una y otra vez no es una persona
+		(e.LoginsFallidos >= 4 && !e.LoginExitoso) || // fuerza bruta a diccionario
+		pareceDropper(e.Comandos) { // se trae un binario y lo ejecuta
+		return "bot"
+	}
+	// "manual" solo para una sesion interactiva con exploracion variada que no
+	// encaja en nada automatico conocido. Es un aviso de "mira esto", no una
+	// certeza: en un senuelo casi todo es bot, asi que debe ser rara para que
+	// signifique algo. Sin esa disciplina, la etiqueta no limpiaria nada.
+	if e.LoginExitoso && comandosDistintos(e.Comandos) >= 4 {
+		return "manual"
+	}
+	return "bot"
+}
+
+func comandosDistintos(c []string) int {
+	set := map[string]bool{}
+	for _, x := range c {
+		set[x] = true
+	}
+	return len(set)
+}
+
+// pareceDropper reconoce el kit tipico de una infeccion automatizada:
+// traerse un binario y ejecutarlo. Una persona explorando no hace esto de
+// primeras.
+func pareceDropper(comandos []string) bool {
+	for _, c := range comandos {
+		l := strings.ToLower(c)
+		for _, m := range []string{"wget", "curl", "tftp", "ftpget", "busybox", "chmod", "/tmp/", "nvram"} {
+			if strings.Contains(l, m) {
+				return true
+			}
+		}
+	}
+	return false
 }

@@ -580,12 +580,13 @@ function filtrosDeAtaques() {
     q: $("f-texto").value.trim(),
     severidad: $("f-severidad").value,
     protocolo: $("f-protocolo").value,
+    automatismo: $("f-automatismo").value,
   };
 }
 
 function hayFiltro() {
   const f = filtrosDeAtaques();
-  return Boolean(f.q || f.severidad || f.protocolo);
+  return Boolean(f.q || f.severidad || f.protocolo || f.automatismo);
 }
 
 async function cargarAtaques() {
@@ -623,6 +624,11 @@ async function cargarAtaques() {
 
     const sev = nodo("span", `sev sev-${a.severidad}`, nombreSev(a.severidad));
     fila.appendChild(sev);
+    if (a.automatismo) {
+      const chip = nodo("span", `chip-origen origen-${a.automatismo}`, t("auto." + a.automatismo));
+      if (a.automatismo === "manual") chip.title = t("auto.manual.tip");
+      fila.appendChild(chip);
+    }
 
     const texto = nodo("div", "fila-ataque-texto");
     const donde = [a.ip, a.pais, a.isp].filter(Boolean).join(" · ");
@@ -1502,7 +1508,7 @@ for (const [id, nombre] of Object.entries(NOMBRE_SERVICIO)) {
 
 // Los filtros recargan solo la lista, no el panel entero: cambiar de
 // gravedad no tiene por que volver a pedir el mapa ni el informe.
-for (const id of ["f-severidad", "f-protocolo"]) {
+for (const id of ["f-severidad", "f-protocolo", "f-automatismo"]) {
   $(id).addEventListener("change", () => cargarAtaques().catch(() => {}));
 }
 let tecleando = null;
@@ -1516,6 +1522,7 @@ $("f-limpiar").addEventListener("click", () => {
   $("f-texto").value = "";
   $("f-severidad").value = "";
   $("f-protocolo").value = "";
+  $("f-automatismo").value = "";
   cargarAtaques().catch(() => {});
 });
 $("c-aviso-canal").addEventListener("change", camposDelCanal);

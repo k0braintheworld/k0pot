@@ -594,3 +594,13 @@ Object.assign(IDIOMAS.en, {
   "camp.verfichero": "View the captured file →",
   "artef.contenido.intro": "File content (it's text, read it as-is):"
 });
+Object.assign(IDIOMAS.es, {
+  "f.origen.todos": "Todo origen", "f.origen.bot": "Solo bots", "f.origen.manual": "Solo manual",
+  "auto.bot": "Bot", "auto.manual": "Manual",
+  "auto.manual.tip": "Sesión interactiva que no encaja con la automatización conocida: podría ser una persona. Merece una mirada."
+});
+Object.assign(IDIOMAS.en, {
+  "f.origen.todos": "Any origin", "f.origen.bot": "Bots only", "f.origen.manual": "Manual only",
+  "auto.bot": "Bot", "auto.manual": "Manual",
+  "auto.manual.tip": "An interactive session that doesn't match known automation: could be a person. Worth a look."
+});

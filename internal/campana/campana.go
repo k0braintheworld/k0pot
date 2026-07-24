@@ -150,6 +150,26 @@ type senal struct {
 // diccionario o mismas rutas- y cuantas direcciones la comparten. Es lo que
 // permite explicar un ataque como "el ruido habitual" o "esto es raro", en
 // vez de contar cada uno como si fuera unico.
+// EnCampana marca, de una sola pasada, que episodios del lote (por su Clave)
+// forman parte de alguna campana. Sirve para etiquetar la lista sin llamar a
+// ContextoDe uno por uno.
+func EnCampana(episodios []store.EpisodioFila) map[string]bool {
+	claves := map[string]bool{}
+	for _, c := range Detectar(episodios) {
+		claves[string(c.Tipo)+"|"+c.Huella] = true
+	}
+	out := map[string]bool{}
+	for _, e := range episodios {
+		for _, s := range senales(e) {
+			if claves[string(s.tipo)+"|"+s.huella] {
+				out[e.Clave] = true
+				break
+			}
+		}
+	}
+	return out
+}
+
 func ContextoDe(episodios []store.EpisodioFila, e store.EpisodioFila) (Campana, bool) {
 	mias := map[string]bool{}
 	for _, s := range senales(e) {
