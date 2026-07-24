@@ -662,7 +662,7 @@ async function explicarAtaque() {
   boton.textContent = "Explicando…";
   try {
     const r = await pedirJSON(
-      `/api/episodio/explicar?clave=${encodeURIComponent(claveAbierta)}`, { method: "POST" });
+      `/api/episodio/explicar?clave=${encodeURIComponent(claveAbierta)}&idioma=${IDIOMA}`, { method: "POST" });
     pintarExplicacion("ataque-explicacion", r.explicacion);
   } catch (e) {
     pintarExplicacion("ataque-explicacion", `No se pudo explicar: ${e.message}`);
@@ -1226,7 +1226,7 @@ async function explicarCampana() {
   try {
     const r = await pedirJSON(
       `/api/campana/explicar?tipo=${encodeURIComponent(campanaAbierta.tipo)}` +
-      `&huella=${encodeURIComponent(campanaAbierta.huella)}&dias=${encodeURIComponent(rango())}`,
+      `&huella=${encodeURIComponent(campanaAbierta.huella)}&dias=${encodeURIComponent(rango())}&idioma=${IDIOMA}`,
       { method: "POST" });
     pintarExplicacion("campana-explicacion", r.explicacion);
   } catch (e) {
@@ -1312,7 +1312,7 @@ async function explicarArtefacto() {
   boton.textContent = "Explicando…";
   try {
     const r = await pedirJSON(
-      `/api/artefacto/explicar?hash=${encodeURIComponent(hashArtefactoAbierto)}`,
+      `/api/artefacto/explicar?hash=${encodeURIComponent(hashArtefactoAbierto)}&idioma=${IDIOMA}`,
       { method: "POST" });
     pintarExplicacion("artefacto-explicacion", r.explicacion);
   } catch (e) {

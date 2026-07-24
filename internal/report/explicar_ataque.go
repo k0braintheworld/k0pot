@@ -82,11 +82,11 @@ type PasoDeAtaque struct {
 
 // ExplicarAtaque pide al modelo que cuente un ataque concreto.
 func ExplicarAtaque(ctx context.Context, e Explicador, ep store.EpisodioFila,
-	pasos []PasoDeAtaque, notaProveedor string, tope int) (string, error) {
+	pasos []PasoDeAtaque, notaProveedor, idioma string, tope int) (string, error) {
 	if e == nil {
 		return "", fmt.Errorf("no hay ningun modelo configurado")
 	}
-	texto, err := e.Preguntar(ctx, sistemaAtaque,
+	texto, err := e.Preguntar(ctx, sistemaAtaque+instruccionIdioma(idioma),
 		recortarPrompt(ataqueComoTexto(ep, pasos, notaProveedor)), tope)
 	if err != nil {
 		return "", err

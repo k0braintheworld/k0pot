@@ -27,11 +27,11 @@ func recortarPrompt(s string) string {
 // explicarCon es el nucleo comun de las explicaciones bajo demanda: pregunta
 // al modelo y reconoce las negativas de su filtro. Lo comparten la
 // explicacion de artefactos y la de campanas.
-func explicarCon(ctx context.Context, e Explicador, sistema, usuario string, tope int) (string, error) {
+func explicarCon(ctx context.Context, e Explicador, sistema, usuario, idioma string, tope int) (string, error) {
 	if e == nil {
 		return "", fmt.Errorf("no hay ningun modelo configurado")
 	}
-	texto, err := e.Preguntar(ctx, sistema, recortarPrompt(usuario), tope)
+	texto, err := e.Preguntar(ctx, sistema+instruccionIdioma(idioma), recortarPrompt(usuario), tope)
 	if err != nil {
 		return "", err
 	}
@@ -41,6 +41,18 @@ func explicarCon(ctx context.Context, e Explicador, sistema, usuario string, top
 			"modelo en Ajustes -> Informes")
 	}
 	return texto, nil
+}
+
+// instruccionIdioma anade, si toca, una orden final de idioma. El sistema de
+// cada prompt esta en espanol y pide responder en espanol; para el ingles se
+// sobrescribe al final, que es donde mas caso hace el modelo.
+func instruccionIdioma(idioma string) string {
+	if idioma == "en" {
+		return "\n\nIMPORTANT — LANGUAGE OVERRIDE: ignore any instruction above " +
+			"to answer in Spanish. Write your ENTIRE answer in clear, plain " +
+			"English, keeping the same structure, tone and length."
+	}
+	return ""
 }
 
 // ── Artefactos ──────────────────────────────────────────────────────────
@@ -76,7 +88,7 @@ espanol, tono tranquilo. Entre 120 y 220 palabras.`
 // ExplicarArtefacto pide al modelo que cuente que es y que hace una muestra,
 // a partir de su tipo y sus cadenas de texto -nunca ejecutandola-.
 func ExplicarArtefacto(ctx context.Context, e Explicador, tipo string, bytes int64,
-	cadenas, urls []string, tope int) (string, error) {
+	cadenas, urls []string, idioma string, tope int) (string, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "FICHERO capturado en el honeypot\nTipo: %s\nTamano: %d bytes\n", tipo, bytes)
 	if len(urls) > 0 {
@@ -86,7 +98,7 @@ func ExplicarArtefacto(ctx context.Context, e Explicador, tipo string, bytes int
 	for _, c := range cadenas {
 		fmt.Fprintf(&b, "  %s\n", c)
 	}
-	return explicarCon(ctx, e, sistemaArtefacto, b.String(), tope)
+	return explicarCon(ctx, e, sistemaArtefacto, b.String(), idioma, tope)
 }
 
 // ── Campanas ────────────────────────────────────────────────────────────
@@ -119,7 +131,7 @@ Responde SIEMPRE en espanol, tono tranquilo. Entre 120 y 200 palabras.`
 // ExplicarCampana pide al modelo que cuente que operacion coordinada hay
 // detras de una campana.
 func ExplicarCampana(ctx context.Context, e Explicador, comparten, muestra string,
-	numIPs int, paises []string, severidad string, tope int) (string, error) {
+	numIPs int, paises []string, severidad, idioma string, tope int) (string, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "CAMPANA. Lo que comparten los ataques: %s\n", comparten)
 	fmt.Fprintf(&b, "El guion compartido, en concreto: %s\n", muestra)
@@ -128,5 +140,5 @@ func ExplicarCampana(ctx context.Context, e Explicador, comparten, muestra strin
 		fmt.Fprintf(&b, ", desde estos paises: %s", strings.Join(paises, " "))
 	}
 	fmt.Fprintf(&b, "\nLo mas lejos que llego algun ataque de la campana: %s\n", severidad)
-	return explicarCon(ctx, e, sistemaCampana, b.String(), tope)
+	return explicarCon(ctx, e, sistemaCampana, b.String(), idioma, tope)
 }

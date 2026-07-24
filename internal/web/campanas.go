@@ -62,6 +62,15 @@ func (s *Servidor) campana(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, respuesta)
 }
 
+// idiomaDe saca el idioma pedido para la explicacion con IA; por defecto
+// espanol. Solo distingue "en"; cualquier otra cosa es espanol.
+func idiomaDe(r *http.Request) string {
+	if r.URL.Query().Get("idioma") == "en" {
+		return "en"
+	}
+	return "es"
+}
+
 // queComparten pone en una frase lo que une a los ataques de una campana,
 // para dárselo al modelo en lenguaje llano.
 func queComparten(tipo campana.Tipo) string {
@@ -127,7 +136,7 @@ func (s *Servidor) explicarCampana(w http.ResponseWriter, r *http.Request) {
 	}
 	texto, err := report.ExplicarCampana(r.Context(), explicador,
 		queComparten(tipo), elegida.Muestra, len(elegida.IPs),
-		elegida.Paises, string(elegida.Severidad), 2000)
+		elegida.Paises, string(elegida.Severidad), idiomaDe(r), 2000)
 	if err != nil {
 		s.Almacen.DevolverCuotaLLM(dia)
 		responderError(w, http.StatusBadGateway, err.Error())
@@ -347,7 +356,7 @@ func (s *Servidor) explicarArtefacto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	texto, err := report.ExplicarArtefacto(r.Context(), explicador,
-		det.Tipo, det.Bytes, det.Cadenas, det.URLs, 2000)
+		det.Tipo, det.Bytes, det.Cadenas, det.URLs, idiomaDe(r), 2000)
 	if err != nil {
 		s.Almacen.DevolverCuotaLLM(dia)
 		responderError(w, http.StatusBadGateway, err.Error())

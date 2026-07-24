@@ -312,7 +312,7 @@ func (s *Servidor) explicarEpisodio(w http.ResponseWriter, r *http.Request) {
 	// deliberando dentro de la propia respuesta, y limpiarRazonamiento
 	// descarta esa parte. Con poco margen se queda todo en nada y el
 	// usuario ve "el modelo devolvio un informe vacio".
-	texto, err := report.ExplicarAtaque(r.Context(), explicador, ep, pasos, notaProv, 2000)
+	texto, err := report.ExplicarAtaque(r.Context(), explicador, ep, pasos, notaProv, idiomaDe(r), 2000)
 	if err != nil {
 		// No llego a redactarse nada: se devuelve la llamada apuntada.
 		s.Almacen.DevolverCuotaLLM(dia)
