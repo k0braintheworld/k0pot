@@ -41,7 +41,10 @@ CGO_ENABLED=0 go build -trimpath \
   -o "$DESTINO/k0pot" ./cmd/k0pot
 
 echo "== Montando el arbol del paquete"
-rm -rf "$ARBOL"
+# dist/ queda limpio en cada build: se van los .deb y arboles de versiones
+# anteriores, para poder entregar la carpeta sin restos que confundan.
+rm -rf "$DESTINO"/k0pot_*_amd64
+rm -f "$DESTINO"/k0pot_*.deb
 mkdir -p "$ARBOL"/DEBIAN \
          "$ARBOL"/usr/bin \
          "$ARBOL"/usr/sbin \
@@ -86,15 +89,22 @@ echo "== Construyendo"
 dpkg-deb --root-owner-group --build "$ARBOL" >/dev/null
 PAQUETE="$ARBOL.deb"
 
-# El instalador de un paso viaja junto al .deb, para copiar dist/ al servidor
-# y lanzar "sudo ./instalar.sh" sin mas.
-install -m 755 instalar.sh "$DESTINO/instalar.sh"
+# Junto al .deb viajan el instalador de un paso y una guia para no
+# entendidos, para copiar dist/ al servidor y lanzar "sudo ./instalar.sh".
+# El instalador del paquete NO es el instalar.sh de la raiz (ese instala
+# desde codigo, para desarrollo): es el de empaquetado/.
+install -m 755 empaquetado/instalar-paquete.sh "$DESTINO/instalar.sh"
+install -m 644 empaquetado/LEEME.txt            "$DESTINO/LEEME.txt"
 
 echo
 echo "  $PAQUETE"
 dpkg-deb --info "$PAQUETE" | grep -E "Package|Version|Architecture|Depends" | sed 's/^/  /'
 echo "  tamano: $(du -h "$PAQUETE" | cut -f1)"
 echo
+# Intermedios fuera: en dist/ solo quedan el .deb, instalar.sh y LEEME.txt.
+rm -rf "$ARBOL"
+rm -f "$DESTINO/k0pot"
+
 echo "  Instalar todo (un paso): copia la carpeta dist/ al servidor y ejecuta"
 echo "                           sudo ./instalar.sh"
 echo

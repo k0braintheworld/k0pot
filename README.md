@@ -33,7 +33,8 @@ k0Pot responde a tres preguntas, en este orden:
       |
       v
  [ Cowrie ]  SSH y Telnet, en contenedor
- [ trampas ] HTTP, Redis, FTP, nativas en Go
+ [ trampas ] HTTP, Redis, FTP, MySQL, PostgreSQL,
+             SMTP, RDP, VNC, Docker; nativas en Go
       |
       v
   collector --> enrich --> classify --> SQLite
@@ -71,6 +72,12 @@ unico episodio que habia que mirar.
 | HTTP | 8081 | nativo |
 | Redis | 6379 | nativo |
 | FTP | 2121 | nativo |
+| MySQL | 3306 | nativo |
+| PostgreSQL | 5432 | nativo |
+| SMTP | 2525 | nativo |
+| RDP | 3389 | nativo |
+| VNC | 5900 | nativo |
+| Docker API | 2375 | nativo |
 
 Se activan y desactivan desde el panel. Los puertos son configurables; el
 panel indica a cuales hay que redirigir el trafico.
@@ -79,8 +86,18 @@ panel indica a cuales hay que redirigir el trafico.
 
 ### Con paquete (recomendado)
 
+`./empaquetar.sh` deja en `dist/` el `.deb`, un instalador de un paso y una
+guia `LEEME.txt` para no entendidos. Copia la carpeta `dist/` al servidor y:
+
 ```sh
-sudo apt install ./k0pot_0.1.0_amd64.deb
+sudo ./instalar.sh
+```
+
+Instala el paquete con sus dependencias y lanza el asistente de un tiron. A
+mano seria:
+
+```sh
+sudo apt install ./k0pot_*.deb
 sudo k0pot-configurar
 ```
 
@@ -91,9 +108,10 @@ repositorio de Docker, sirven igual los suyos (`docker-ce`,
 `docker-compose-plugin`). **No hace falta Go**: el binario viene compilado y
 enlazado estaticamente.
 
-El asistente pregunta las dos IP —la de gestion y la expuesta—, las valida
-contra las interfaces reales de la maquina, crea tu cuenta y arranca los
-servicios.
+El asistente detecta las interfaces reales y **propone las IP que ya tiene
+la maquina** —basta con pulsar Enter para mantenerlas—, crea tu cuenta,
+**deja el cortafuegos generado con esas IP** (listo para `k0pot-nft aplicar`)
+y arranca los servicios. Al terminar indica la URL del panel.
 
 La diferencia importante frente a instalarlo a mano es **quien ejecuta el
 servicio**: el paquete crea un usuario propio del sistema, sin shell y **sin
@@ -179,10 +197,15 @@ Aplicalo siempre con el ayudante, que valida las IP antes de cargar y
 revierte solo a los 120 segundos si no confirmas:
 
 ```sh
-sudo install -m 755 deploy/k0pot-nft.sh /usr/local/sbin/k0pot-nft
+# symlink, NO copia: el script se busca sus .nft junto a si mismo, y copiado
+# a /usr/local/sbin no los encontraria.
+sudo ln -sf "$PWD/deploy/k0pot-nft.sh" /usr/local/sbin/k0pot-nft
 sudo k0pot-nft aplicar
 sudo k0pot-nft confirmar      # desde OTRA sesion, antes de 2 minutos
 ```
+
+Con el paquete esto es automatico: `k0pot-nft` ya queda instalado (como
+symlink) y el asistente genera el fichero de reglas con tus IP.
 
 Un `nft -f` a pelo con `policy drop` es la forma mas rapida de quedarse fuera
 de un servidor remoto.
@@ -224,7 +247,8 @@ Sobre la lista hay una barra con tres cosas:
   que hicieron. Se busca en todos esos campos a la vez, porque quien
   consulta recuerda un dato, no en que columna esta guardado.
 - **Gravedad minima**: de "toda" a "solo intrusiones".
-- **Servicio**: SSH, Telnet, HTTP, Redis o FTP.
+- **Servicio**: cualquiera de los activos (SSH, Telnet, HTTP, Redis, FTP,
+  MySQL, PostgreSQL, SMTP, RDP, VNC, Docker). La lista se genera sola.
 
 Con filtro puesto la lista **lo dice**: una lista corta sin explicacion se
 lee como "no ha pasado nada", que es justo lo contrario.
@@ -235,7 +259,7 @@ IP ya habia venido antes?" sin construir una pantalla aparte.
 
 ## Exportar un informe
 
-El boton **Exportar** del bloque de informe abre un documento HTML completo y
+El boton **Generar informe** de la cabecera abre un documento HTML completo y
 autocontenido: el veredicto, las cifras, y **cada ataque con su secuencia
 entera** -conexiones, credenciales probadas, comandos tal y como se tecleron,
 peticiones, tuneles- mas las IPs mas activas y las credenciales.
@@ -252,13 +276,16 @@ del panel, en un fichero que puede compartirse o guardarse como evidencia.
 
 El momento en que alguien quiere entender algo no es leyendo el resumen del
 periodo: es cuando abre **un ataque** y ve la secuencia. Por eso el dialogo
-de cada ataque tiene su propio boton de **Explicar con IA**, que responde
-tres cosas y nada mas:
+de cada ataque tiene su propio boton de **Explicar con IA**, pensado para
+alguien con conocimientos minimos: traduce cada termino y cuenta cuatro
+cosas:
 
-1. **Que querian.** El proposito en una frase.
-2. **Que consiguieron.** Hasta donde llegaron; "no pasaron de llamar a la
-   puerta" es una respuesta perfecta.
-3. **Que significaria en un servidor de verdad**, y que habria que mirar
+1. **Que buscan.** El proposito en una frase.
+2. **Como funciona el ataque.** El mecanismo paso a paso: que tecnica es,
+   por que funciona y como se encadenan los pasos del registro.
+3. **Hasta donde llegaron.** "No pasaron de llamar a la puerta" es una
+   respuesta perfecta.
+4. **Que significaria en un servidor de verdad**, y que habria que mirar
    alli. Esa es la parte aprovechable.
 
 La explicacion se guarda con el ataque: reabrir el dialogo no vuelve a
@@ -289,23 +316,19 @@ El panel ensena **cuanto ocupa cada cosa** al abrir los ajustes, porque
 elegir un plazo sin ese dato es elegir a ojo. Y cuenta el fichero `-wal` de
 SQLite, que puede ser mayor que la propia base.
 
-## Los informes automaticos no cuestan nada
+## La IA nunca se gasta sola
 
-El panel pide el informe en cada refresco. Que esa peticion llamara a un
-modelo de pago tenia dos problemas: gastaba la cuota del dia en mirar el
-panel, y la gastaba en lo rutinario, que es justo donde menos aporta un
-modelo.
+El principio: **nada que cueste dinero ocurre sin que lo pidas**.
 
-El reparto es tajante:
-
-- **Lo automatico lo redactan las reglas.** Deterministas, instantaneas y
-  gratis. Siempre al dia, porque se calculan en el momento.
-- **El modelo entra solo al pulsar "Redactar con IA".** Asi la cuota se
-  gasta en los informes que alguien va a leer de verdad.
-
-Un informe con IA ya pagado se conserva y se sigue mostrando. Si despues
-llega actividad nueva, **se avisa pero no se regenera solo**: quien lo pidio
-decide si vuelve a gastar.
+- **El panel es gratis y siempre al dia.** El semaforo, el reparto por
+  gravedad y por servicio y las metricas se calculan con reglas
+  deterministas, al momento. Ningun refresco llama a un modelo de pago.
+- **La IA entra solo cuando pulsas.** "Explicar con IA" en un ataque
+  concreto es el unico gasto, y es justo el momento en que alguien quiere
+  entender algo. La explicacion se guarda con el ataque: reabrirla no vuelve
+  a gastar.
+- **El informe completo** ("Generar informe") es un documento con toda la
+  actividad, redactado por reglas: se abre cuantas veces quieras sin coste.
 
 ## Los textos hablan de un senuelo, no de un servidor comprometido
 

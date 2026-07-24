@@ -1,0 +1,105 @@
+====================================================================
+  k0Pot — Guia de instalacion rapida
+====================================================================
+
+k0Pot es un "honeypot": un servidor senuelo, puesto a proposito para que
+los atacantes de internet lo ataquen. Captura esos ataques y te los explica
+en lenguaje normal, para que entiendas que pasa sin ser experto en
+seguridad.
+
+Esta carpeta trae todo lo necesario para instalarlo. Sigue los pasos.
+
+
+--------------------------------------------------------------------
+  ANTES DE EMPEZAR: lo que necesitas
+--------------------------------------------------------------------
+
+1) Un ordenador o maquina virtual con Ubuntu (Server 22.04 o 24.04).
+
+2) DOS tarjetas de red, cada una en una red distinta:
+     - Una "de gestion": tu red normal, por donde entraras al panel.
+     - Una "expuesta": la que dara a internet, donde escuchan las trampas.
+   Lo ideal es que la expuesta este en una red aparte (VLAN) sin acceso a
+   tu red normal. Si solo quieres probarlo sin abrirlo a internet, sirve
+   igual con dos tarjetas aunque esten en la misma red (el asistente te
+   avisara, pero te deja continuar).
+
+3) Conexion a internet en esa maquina (para descargar lo que necesita).
+
+4) Poder usar "sudo" (permisos de administrador).
+
+
+--------------------------------------------------------------------
+  INSTALACION: un solo comando
+--------------------------------------------------------------------
+
+1) Copia ESTA CARPETA ENTERA al servidor (por ejemplo con scp, o una USB).
+
+2) Abre una terminal en la carpeta y ejecuta:
+
+       sudo ./instalar.sh
+
+   Eso instala todo (incluido Docker si falta) y arranca un asistente.
+
+3) El asistente te hara unas pocas preguntas:
+
+     - Las dos IP (de gestion y expuesta). Te PROPONE las que ya tiene la
+       maquina: si al montarla ya las configuraste bien, solo pulsa ENTER
+       para aceptarlas.
+     - Si quieres el panel cifrado (HTTPS): pulsa ENTER para decir que si.
+     - Un usuario y contrasena para entrar al panel.
+
+4) Cuando termine, te dira la direccion del panel, algo asi como:
+
+       https://192.168.1.50:8080
+
+   Abrela en el navegador de otro equipo de tu red. La primera vez el
+   navegador avisara del certificado: es normal, dale a "continuar".
+
+
+--------------------------------------------------------------------
+  ULTIMOS DOS PASOS (para que reciba ataques de verdad)
+--------------------------------------------------------------------
+
+A) Activa el cortafuegos de aislamiento. El asistente ya lo dejo preparado
+   con tus IP; solo hay que aplicarlo:
+
+       sudo k0pot-nft aplicar
+
+   IMPORTANTE: sin cerrar esa terminal, abre OTRA y comprueba que sigues
+   pudiendo entrar por SSH. Si va bien, confirma desde la nueva (tienes 2
+   minutos; si no confirmas, se deshace solo y no te quedas fuera):
+
+       sudo k0pot-nft confirmar
+
+B) En tu router, redirige ("port forwarding") los puertos hacia la IP
+   EXPUESTA (la segunda que pusiste), NUNCA a la de gestion. El panel, en
+   Ajustes, te dice exactamente que puertos.
+
+
+--------------------------------------------------------------------
+  OPCIONAL: para que se vea todo (mapa e IA)
+--------------------------------------------------------------------
+
+k0Pot funciona sin nada de esto, pero para el "modo completo" puedes anadir,
+desde el propio panel (Ajustes), unas claves GRATUITAS:
+
+  - AbuseIPDB (abuseipdb.com): rellena el mapa y de donde viene cada ataque.
+  - Groq (u otro proveedor de IA): activa el boton "Explicar con IA".
+  - MaxMind GeoLite2: situa los ataques por ciudad en el mapa.
+
+No hacen falta para empezar. Las anades cuando quieras.
+
+
+--------------------------------------------------------------------
+  SI ALGO NO VA
+--------------------------------------------------------------------
+
+  - Ver si los servicios estan en marcha:
+        systemctl status k0pot-collector k0pot-panel k0pot-cowrie
+
+  - Volver a lanzar el asistente de configuracion:
+        sudo k0pot-configurar
+
+  - Estado del cortafuegos:
+        sudo k0pot-nft estado
