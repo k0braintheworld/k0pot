@@ -12,7 +12,20 @@ set -euo pipefail
 BASE="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 cd "$BASE"
 
-VERSION="${1:-$(git describe --tags --always 2>/dev/null | sed 's/^v//' || echo 0.1.0)}"
+# La version debe empezar por digito (dpkg lo exige). Con etiquetas se usa la
+# etiqueta; sin ellas, "git describe" devuelve el hash pelado -que no vale-,
+# asi que se cae a una base con el hash detras: 0.0.0+gitHASH.
+if [ -n "${1:-}" ]; then
+  VERSION="$1"
+else
+  # El "|| true" es imprescindible con "set -e -o pipefail": sin etiquetas,
+  # git describe sale con error y, aun capturado el stderr, la tuberia
+  # arrastraria al script entero fuera en la propia asignacion.
+  VERSION="$(git describe --tags 2>/dev/null | sed 's/^v//' || true)"
+  if [ -z "$VERSION" ]; then
+    VERSION="0.0.0+git$(git rev-parse --short HEAD 2>/dev/null || echo 0)"
+  fi
+fi
 ARCO="$(dpkg --print-architecture)"
 DESTINO="$BASE/dist"
 ARBOL="$DESTINO/k0pot_${VERSION}_${ARCO}"
@@ -73,10 +86,16 @@ echo "== Construyendo"
 dpkg-deb --root-owner-group --build "$ARBOL" >/dev/null
 PAQUETE="$ARBOL.deb"
 
+# El instalador de un paso viaja junto al .deb, para copiar dist/ al servidor
+# y lanzar "sudo ./instalar.sh" sin mas.
+install -m 755 instalar.sh "$DESTINO/instalar.sh"
+
 echo
 echo "  $PAQUETE"
 dpkg-deb --info "$PAQUETE" | grep -E "Package|Version|Architecture|Depends" | sed 's/^/  /'
 echo "  tamano: $(du -h "$PAQUETE" | cut -f1)"
 echo
-echo "  Instalar:  sudo apt install $PAQUETE"
-echo "  Configurar: sudo k0pot-configurar"
+echo "  Instalar todo (un paso): copia la carpeta dist/ al servidor y ejecuta"
+echo "                           sudo ./instalar.sh"
+echo
+echo "  O a mano:  sudo apt install $PAQUETE  &&  sudo k0pot-configurar"

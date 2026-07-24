@@ -52,13 +52,22 @@ func configurar(almacen *store.Store, ajustes *config.Gestor, rutaEnv string) er
 	}
 
 	fmt.Println()
-	fmt.Println("  Configurado. Lo que queda:")
+	esquema := "https"
+	if !c.PanelHTTPS {
+		esquema = "http"
+	}
 	fmt.Println()
-	fmt.Printf("    1. Cortafuegos: sudo k0pot-nft aplicar   (y confirmar en 2 min)\n")
-	fmt.Printf("    2. Panel:       https://%s:8080\n", c.EscuchaPanel)
-	fmt.Printf("    3. Avisos:      Ajustes → Avisos, para enterarte sin mirar\n")
-	fmt.Printf("    4. Router:      redirige los puertos a %s, NUNCA a %s\n",
+	fmt.Println("  Configurado. Ya puedes entrar al panel:")
+	fmt.Println()
+	fmt.Printf("      %s://%s:8080\n", esquema, c.EscuchaPanel)
+	fmt.Println()
+	fmt.Println("  Antes de exponerlo a internet, quedan estos pasos:")
+	fmt.Println()
+	fmt.Println("    1. Cortafuegos: sudo k0pot-nft aplicar  (ya generado con tus IP;")
+	fmt.Println("                    confirma en 2 min desde otra sesion)")
+	fmt.Printf("    2. Router:      redirige los puertos a %s, NUNCA a %s\n",
 		c.EscuchaHoneypots, c.EscuchaPanel)
+	fmt.Println("    3. Avisos:      Ajustes -> Avisos (opcional)")
 	fmt.Println()
 	return nil
 }
@@ -71,17 +80,26 @@ func preguntarRed(c *config.Config) error {
 	fmt.Println()
 
 	disponibles := ipsDeLaMaquina()
-	if len(disponibles) < 2 {
-		fmt.Println("  AVISO: solo se ve una direccion utilizable. Sin una segunda")
-		fmt.Println("  interfaz en otra red, k0Pot no puede aislar nada.")
+	reales := soloReales(disponibles)
+	if len(reales) < 2 {
+		fmt.Println("  AVISO: se ve menos de dos interfaces de red reales. Sin una")
+		fmt.Println("  segunda interfaz en otra red, k0Pot no puede aislar nada.")
 	}
-	for _, d := range disponibles {
+	fmt.Println("  Interfaces detectadas:")
+	for _, d := range reales {
 		fmt.Printf("    %-12s %s\n", d.iface, d.ip)
 	}
 	fmt.Println()
+	fmt.Println("  Se proponen las que ya tiene la maquina: pulsa Enter para")
+	fmt.Println("  mantenerlas, o escribe otra si prefieres.")
+	fmt.Println()
 
-	gestion := pedir("  IP de GESTION (para el panel)", c.EscuchaPanel)
-	expuesta := pedir("  IP EXPUESTA (para los honeypots)", c.EscuchaHoneypots)
+	// Si ya habia una IP configurada valida se respeta; si no, se propone la
+	// detectada. En una maquina ya bien direccionada basta con pulsar Enter.
+	gestion := pedir("  IP de GESTION (para el panel)",
+		porDefectoRed(c.EscuchaPanel, reales, 0))
+	expuesta := pedir("  IP EXPUESTA (para los honeypots)",
+		porDefectoRed(c.EscuchaHoneypots, reales, 1))
 
 	for nombre, ip := range map[string]string{"de gestion": gestion, "expuesta": expuesta} {
 		if ip == "" {
@@ -297,6 +315,39 @@ func ipsDeLaMaquina() []direccion {
 		}
 	}
 	return out
+}
+
+// soloReales descarta las interfaces virtuales (loopback, Docker, puentes):
+// ninguna sirve como gestion ni como exposicion, y solo estorban al elegir.
+func soloReales(dirs []direccion) []direccion {
+	var out []direccion
+	for _, d := range dirs {
+		if interfazReal(d.iface) {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+func interfazReal(nombre string) bool {
+	for _, prefijo := range []string{"lo", "docker", "br-", "veth", "virbr", "tap", "kube"} {
+		if strings.HasPrefix(nombre, prefijo) {
+			return false
+		}
+	}
+	return true
+}
+
+// porDefectoRed elige el valor propuesto: la IP que ya estaba configurada si
+// es de verdad, o la detectada en esa posicion (0 = gestion, 1 = expuesta).
+func porDefectoRed(actual string, reales []direccion, indice int) string {
+	if actual != "" && actual != "0.0.0.0" {
+		return actual
+	}
+	if indice < len(reales) {
+		return reales[indice].ip
+	}
+	return ""
 }
 
 func existeEnLaMaquina(ip string, dirs []direccion) bool {
