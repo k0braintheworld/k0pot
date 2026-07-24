@@ -152,7 +152,7 @@ function pintarAtaques(lienzo, m, recientes, paisPropio, propio) {
     const quien = svg("title");
     const donde = ev.ciudad
       ? `${ev.ciudad}, ${nombrePais(ev.pais)}`
-      : ev.pais ? nombrePais(ev.pais) : "origen desconocido";
+      : ev.pais ? nombrePais(ev.pais) : t("origen.desconocido");
     quien.textContent = `${ev.ip} — ${donde}`;
     linea.appendChild(quien);
     capa.appendChild(linea);
@@ -188,7 +188,7 @@ async function pintarMapa(porPais, recientes, paisPropio, propio) {
     viewBox: `0 0 ${m.ancho} ${m.alto}`,
     class: "lienzo-mapa",
     role: "img",
-    "aria-label": "Mapa de origen de los ataques",
+    "aria-label": t("mapa.aria"),
   });
 
   // Paises: los que atacan se tinen segun su peso relativo.
@@ -202,7 +202,7 @@ async function pintarMapa(porPais, recientes, paisPropio, propio) {
       forma.setAttribute("fill-opacity", (0.10 + peso * 0.40).toFixed(3));
     }
     const titulo = svg("title");
-    titulo.textContent = n > 0 ? `${pais.n}: ${n} eventos` : pais.n;
+    titulo.textContent = n > 0 ? t("mapa.eventospais", { pais: pais.n, n }) : pais.n;
     forma.appendChild(titulo);
     lienzo.appendChild(forma);
   }
@@ -226,13 +226,13 @@ async function pintarMapa(porPais, recientes, paisPropio, propio) {
   cont.appendChild(lienzo);
 
   $("leyenda-mapa").textContent = total === 0
-    ? "sin origen geolocalizado todavia"
+    ? t("mapa.sinorigen")
     : `${porIso.size} pais(es) · ${total} eventos` +
       (lineas > 0 ? ` · ${lineas} ataques recientes` : "");
 
   if (total === 0) {
     cont.appendChild(nodo("p", "aviso-mapa",
-      "Ningun evento tiene pais aun: las IPs privadas no se geolocalizan."));
+      t("mapa.sinpais")));
   }
 }
 
@@ -244,7 +244,7 @@ function pintarSerie(datos) {
 
   const puntos = datos.puntos || [];
   if (!puntos.length) {
-    cont.appendChild(nodo("p", "cargando", "Sin actividad en este periodo."));
+    cont.appendChild(nodo("p", "cargando", t("vivo.vacio")));
     $("leyenda-serie").textContent = "";
     return;
   }
@@ -270,8 +270,8 @@ function pintarSerie(datos) {
     }
 
     const cuando = new Date(p.momento);
-    col.title = `${cuando.toLocaleString("es")}\n${p.total} eventos ` +
-      `(${p.ruido} ruido, ${p.revisar} revisar, ${p.notable} notables)`;
+    col.title = `${cuando.toLocaleString(IDIOMA)}\n${p.total} eventos ` +
+      t("serie.reparto", { ruido: p.ruido, revisar: p.revisar, notable: p.notable });
     col.appendChild(pila);
     barras.appendChild(col);
   }
@@ -356,7 +356,7 @@ function pintarVivo(lista) {
   cont.replaceChildren();
 
   if (!lista.length) {
-    cont.appendChild(nodo("p", "cargando", "esperando actividad…"));
+    cont.appendChild(nodo("p", "cargando", t("vivo.esperando")));
     return;
   }
 
@@ -424,7 +424,7 @@ function pintarTabla(id, filas) {
   cuerpo.replaceChildren();
   if (!filas || !filas.length) {
     const tr = nodo("tr");
-    tr.appendChild(nodo("td", "vacio", "sin datos"));
+    tr.appendChild(nodo("td", "vacio", t("tabla.vacio")));
     cuerpo.appendChild(tr);
     return;
   }
@@ -477,11 +477,11 @@ function nombreServicio(id) {
 function pintarSemaforo(nivel, servicios) {
   const cont = $("frase");
   cont.replaceChildren();
-  cont.appendChild(nodo("strong", "sem-nivel", nivel));
+  cont.appendChild(nodo("strong", "sem-nivel", t("nivel." + nivel.toLowerCase())));
 
   servicios = servicios || [];
   if (!servicios.length) {
-    cont.appendChild(nodo("span", "sem-vacio", "sin ataques en este periodo"));
+    cont.appendChild(nodo("span", "sem-vacio", t("sem.vacio")));
     return;
   }
   cont.appendChild(nodo("span", "sep", "—"));
@@ -513,8 +513,8 @@ async function cargarEstado(recientes) {
   const nAcceso = sv.acceso || 0, nIntrusion = sv.intrusion || 0;
   const ataques = nRoce + nTanteo + nAcceso + nIntrusion;
   const ruido = nRoce + nTanteo;
-  $("m-total").textContent = e.total.toLocaleString("es");
-  $("m-ips").textContent = e.ips_unicas.toLocaleString("es");
+  $("m-total").textContent = e.total.toLocaleString(IDIOMA);
+  $("m-ips").textContent = e.ips_unicas.toLocaleString(IDIOMA);
   $("m-paises").textContent = (e.por_pais || []).length;
   $("m-ruido").textContent = ataques > 0 ? Math.round((ruido / ataques) * 100) : 0;
   $("m-revisar").textContent = nAcceso;
@@ -546,22 +546,19 @@ async function cargarEstado(recientes) {
 // fechado sin mas obliga a restar mentalmente para saber si esta al dia.
 function hace(iso) {
   const seg = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (seg < 90) return "hace un momento";
+  if (seg < 90) return t("hace.momento");
   const min = Math.round(seg / 60);
-  if (min < 60) return `hace ${min} min`;
+  if (min < 60) return t("hace.min", { n: min });
   const h = Math.round(min / 60);
-  if (h < 24) return `hace ${h} h`;
-  return `hace ${Math.round(h / 24)} d`;
+  if (h < 24) return t("hace.h", { n: h });
+  return t("hace.d", { n: Math.round(h / 24) });
 }
 
 // ── Ataques ─────────────────────────────────────────────────────────────
 
-const NOMBRE_SEV = {
-  roce: "roce",
-  tanteo: "tanteo",
-  acceso: "acceso",
-  intrusion: "intrusion",
-};
+function nombreSev(sev) {
+  return t("sev." + sev);
+}
 
 function horaCorta(iso) {
   const d = new Date(iso);
@@ -600,8 +597,8 @@ async function cargarAtaques() {
 
   if (!lista.length) {
     cont.appendChild(nodo("p", "vacio", hayFiltro()
-      ? "Ningun ataque casa con el filtro."
-      : "Todavia no se ha registrado ningun ataque."));
+      ? t("ataques.nofiltro")
+      : t("ataques.ninguno")));
     return;
   }
 
@@ -609,7 +606,7 @@ async function cargarAtaques() {
   // lee como "no ha pasado nada", que es justo lo contrario.
   if (hayFiltro()) {
     cont.appendChild(nodo("p", "aviso-filtrado",
-      `${lista.length} ataque${lista.length > 1 ? "s" : ""} con el filtro puesto`));
+      t("ataques.filtro", { n: lista.length })));
   }
 
   for (const a of lista) {
@@ -618,7 +615,7 @@ async function cargarAtaques() {
     const fila = nodo("button", "fila-ataque");
     fila.type = "button";
 
-    const sev = nodo("span", `sev sev-${a.severidad}`, NOMBRE_SEV[a.severidad] || a.severidad);
+    const sev = nodo("span", `sev sev-${a.severidad}`, nombreSev(a.severidad));
     fila.appendChild(sev);
 
     const texto = nodo("div", "fila-ataque-texto");
@@ -659,16 +656,16 @@ async function explicarAtaque() {
   if (!claveAbierta) return;
   const boton = $("explicar-ataque");
   boton.disabled = true;
-  boton.textContent = "Explicando…";
+  boton.textContent = t("dlg.explicando");
   try {
     const r = await pedirJSON(
       `/api/episodio/explicar?clave=${encodeURIComponent(claveAbierta)}&idioma=${IDIOMA}`, { method: "POST" });
     pintarExplicacion("ataque-explicacion", r.explicacion);
   } catch (e) {
-    pintarExplicacion("ataque-explicacion", `No se pudo explicar: ${e.message}`);
+    pintarExplicacion("ataque-explicacion", t("dlg.noexplicar", { msg: e.message }));
   } finally {
     boton.disabled = false;
-    boton.textContent = "Explicar con IA";
+    boton.textContent = t("dlg.explicar");
   }
 }
 
@@ -679,7 +676,7 @@ async function abrirAtaque(clave) {
   // Si ya se explico una vez, se ensena sin volver a preguntar: la
   // explicacion de un ataque terminado no cambia por reabrir el dialogo.
   pintarExplicacion("ataque-explicacion", d.explicacion);
-  $("explicar-ataque").textContent = d.explicacion ? "Volver a explicar" : "Explicar con IA";
+  $("explicar-ataque").textContent = d.explicacion ? t("dlg.reexplicar") : t("dlg.explicar");
 
   const titulo = $("ataque-titulo");
   titulo.replaceChildren();
@@ -688,7 +685,7 @@ async function abrirAtaque(clave) {
   enlaceIP.type = "button";
   enlaceIP.title = "Ver la ficha de esta IP";
   enlaceIP.addEventListener("click", () => abrirIP(d.ip).catch((e) => {
-    $("ataque-sub").textContent = `no se pudo abrir la ficha: ${e.message}`;
+    $("ataque-sub").textContent = t("ip.nofichar", { msg: e.message });
   }));
   titulo.appendChild(enlaceIP);
   const donde = [d.pais, d.isp].filter(Boolean).join(" · ");
@@ -734,7 +731,7 @@ async function abrirAtaque(clave) {
     cuerpo.appendChild(fila);
   }
   if (!(d.pasos || []).length) {
-    cuerpo.appendChild(nodo("p", "vacio", "Sin detalle: los eventos ya se purgaron."));
+    cuerpo.appendChild(nodo("p", "vacio", t("det.purgado")));
   }
   dlg.showModal();
 }
@@ -748,15 +745,15 @@ async function subirGeoIP(fichero) {
   const estado = $("estado-geoip");
   const boton = $("subir-geoip");
   boton.disabled = true;
-  estado.textContent = `Subiendo ${(fichero.size / 1048576).toFixed(0)} MB…`;
+  estado.textContent = t("subiendo", { mb: (fichero.size / 1048576).toFixed(0) });
   try {
     const resp = await fetch("/api/geoip", { method: "POST", body: fichero });
     const r = await resp.json();
     if (!resp.ok) throw new Error(r.error || `respondio ${resp.status}`);
     $("c-ruta-geoip").value = r.ruta;
-    estado.textContent = `Base ${r.tipo} cargada. ${r.aviso}`;
+    estado.textContent = t("geoip.cargada", { tipo: r.tipo, aviso: r.aviso });
   } catch (e) {
-    estado.textContent = `No se pudo subir: ${e.message}`;
+    estado.textContent = t("geoip.nosubir", { msg: e.message });
   } finally {
     boton.disabled = false;
   }
@@ -937,7 +934,7 @@ async function cargarNovedades() {
   chip.textContent = n.graves
     ? `${n.total} nuevos · ${n.graves} grave${n.graves > 1 ? "s" : ""}`
     : `${n.total} nuevos`;
-  chip.title = `Desde ${new Date(n.desde).toLocaleString("es")}. Pulsa para marcarlos como vistos.`;
+  chip.title = `Desde ${new Date(n.desde).toLocaleString(IDIOMA)}. Pulsa para marcarlos como vistos.`;
 }
 
 // Marcar como visto es explicito: si se hiciera al cargar la pagina, el
@@ -970,16 +967,16 @@ async function probarAviso() {
   const boton = $("probar-aviso");
   const estado = $("estado-aviso");
   boton.disabled = true;
-  estado.textContent = "Enviando…";
+  estado.textContent = t("aviso.enviando");
   try {
     // Se guardan los ajustes primero: probar con lo que hay en pantalla y
     // no con lo guardado daria un resultado que no se corresponde con lo
     // que hara el servicio luego.
     await guardarAjustes();
     const r = await pedirJSON("/api/aviso/probar", { method: "POST" });
-    estado.textContent = `Enviado por ${r.enviado}. Si no llega, revisa el destino.`;
+    estado.textContent = t("aviso.enviado", { canal: r.enviado });
   } catch (e) {
-    estado.textContent = `No se pudo enviar: ${e.message}`;
+    estado.textContent = t("aviso.noenviado", { msg: e.message });
   } finally {
     boton.disabled = false;
   }
@@ -996,9 +993,9 @@ function dato(etiqueta, valor, malo) {
 
 function cuantoLleva(desde, hasta) {
   const dias = (new Date(hasta) - new Date(desde)) / 86400000;
-  if (dias < 1) return "el mismo dia";
-  if (dias < 2) return "a lo largo de 1 dia";
-  return `a lo largo de ${Math.round(dias)} dias`;
+  if (dias < 1) return t("lleva.mismodia");
+  if (dias < 2) return t("lleva.undia");
+  return t("lleva.dias", { n: Math.round(dias) });
 }
 
 async function abrirIP(ip) {
@@ -1016,12 +1013,12 @@ async function abrirIP(ip) {
   caja.replaceChildren();
   const frases = [];
   if (p.episodios > 1) {
-    frases.push(`Ha vuelto: ${p.episodios} ataques ${cuantoLleva(p.vista, p.ultima_vez)}.`);
+    frases.push(t("ip.volvio", { n: p.episodios, cuando: cuantoLleva(p.vista, p.ultima_vez) }));
   } else {
-    frases.push("Primera y unica vez que aparece.");
+    frases.push(t("ip.unica"));
   }
-  if (p.llego_a_entrar) frases.push("Consiguio entrar.");
-  if (p.escalo) frases.push("Fue a mas con el tiempo: empezo mas suave de lo que acabo.");
+  if (p.llego_a_entrar) frases.push(t("ip.entro"));
+  if (p.escalo) frases.push(t("ip.escalo"));
   if (p.nota_proveedor) {
     frases.push(`${p.nota_proveedor.que}: ${p.nota_proveedor.por}.`);
   }
@@ -1030,30 +1027,30 @@ async function abrirIP(ip) {
 
   const datos = $("ip-datos");
   datos.replaceChildren();
-  datos.appendChild(dato("Primera vez", new Date(p.vista).toLocaleString("es")));
-  datos.appendChild(dato("Ultima vez", hace(p.ultima_vez)));
-  datos.appendChild(dato("Ataques", String(p.episodios)));
-  datos.appendChild(dato("Eventos", String(p.eventos)));
-  datos.appendChild(dato("Servicios", (p.servicios || []).join(", ") || "—"));
-  datos.appendChild(dato("Lo peor que hizo", NOMBRE_SEV[p.peor_hasta] || p.peor_hasta,
+  datos.appendChild(dato(t("dato.primera"), new Date(p.vista).toLocaleString(IDIOMA)));
+  datos.appendChild(dato(t("dato.ultima"), hace(p.ultima_vez)));
+  datos.appendChild(dato(t("dato.ataquescount"), String(p.episodios)));
+  datos.appendChild(dato(t("dato.eventos"), String(p.eventos)));
+  datos.appendChild(dato(t("dato.servicios"), (p.servicios || []).join(", ") || "—"));
+  datos.appendChild(dato(t("dato.peor"), nombreSev(p.peor_hasta),
     p.peor_hasta === "intrusion" || p.peor_hasta === "acceso"));
   if (p.origen.reputacion) {
-    datos.appendChild(dato("Reputacion", `${p.origen.reputacion}/100`, p.origen.reputacion >= 75));
+    datos.appendChild(dato(t("dato.reputacion"), `${p.origen.reputacion}/100`, p.origen.reputacion >= 75));
   }
   if (p.origen.total_reportes) {
-    datos.appendChild(dato("Denuncias", String(p.origen.total_reportes)));
+    datos.appendChild(dato(t("dato.denuncias"), String(p.origen.total_reportes)));
   }
-  if (p.origen.tor) datos.appendChild(dato("Red", "nodo de salida Tor", true));
+  if (p.origen.tor) datos.appendChild(dato(t("dato.red"), t("dato.tor"), true));
 
   const lista = $("ip-ataques");
   lista.replaceChildren();
-  lista.appendChild(nodo("p", "sub", "Sus ataques, del mas reciente al mas antiguo:"));
+  lista.appendChild(nodo("p", "sub", t("ip.ataques.intro")));
   for (const a of p.ataques || []) {
     const fila = nodo("button", "fila-ataque");
     fila.type = "button";
-    fila.appendChild(nodo("span", `sev sev-${a.severidad}`, NOMBRE_SEV[a.severidad] || a.severidad));
+    fila.appendChild(nodo("span", `sev sev-${a.severidad}`, nombreSev(a.severidad)));
     const texto = nodo("div", "fila-ataque-texto");
-    texto.appendChild(nodo("strong", null, `${a.protocolo} — ${new Date(a.inicio).toLocaleString("es")}`));
+    texto.appendChild(nodo("strong", null, `${a.protocolo} — ${new Date(a.inicio).toLocaleString(IDIOMA)}`));
     texto.appendChild(nodo("span", "sub", a.resumen));
     fila.appendChild(texto);
     fila.appendChild(nodo("span", "fila-ataque-cuando", hace(a.fin)));
@@ -1066,12 +1063,9 @@ async function abrirIP(ip) {
 
 // ── Campanas y artefactos ───────────────────────────────────────────────
 
-const QUE_COMPARTEN = {
-  credenciales: "el mismo diccionario",
-  descarga: "el mismo fichero",
-  comandos: "la misma secuencia de comandos",
-  rutas: "las mismas rutas",
-};
+function queCompartenTxt(tipo) {
+  return t("comparten." + tipo);
+}
 
 async function cargarCampanas() {
   const lista = await traer("/api/campanas");
@@ -1093,13 +1087,13 @@ async function cargarCampanas() {
     fila.appendChild(nodo("span", `sev sev-${c.severidad}`, c.severidad));
 
     const que = nodo("div", "campana-que");
-    que.appendChild(nodo("strong", null, QUE_COMPARTEN[c.tipo] || c.tipo));
+    que.appendChild(nodo("strong", null, queCompartenTxt(c.tipo)));
     que.appendChild(nodo("code", null, c.muestra));
     fila.appendChild(que);
 
     const paises = (c.paises || []).length ? ` · ${c.paises.join(" ")}` : "";
     fila.appendChild(nodo("span", "campana-alcance",
-      `${c.ips.length} IPs${paises}`));
+      t("camp.alcance", { ips: c.ips.length, paises })));
     // Pulsable: abre el detalle con los ataques que la componen.
     fila.classList.add("pulsable");
     fila.addEventListener("click", () => abrirCampana(c));
@@ -1116,10 +1110,10 @@ let campanaAbierta = null;
 async function abrirCampana(c) {
   campanaAbierta = { tipo: c.tipo, huella: c.huella };
   pintarExplicacion("campana-explicacion", "");
-  $("explicar-campana").textContent = "Explicar con IA";
+  $("explicar-campana").textContent = t("dlg.explicar");
   const paises = (c.paises || []).length ? ` · ${c.paises.join(" ")}` : "";
-  $("campana-titulo").textContent = QUE_COMPARTEN[c.tipo] || c.tipo;
-  $("campana-sub").textContent = `${c.ips.length} IPs${paises} · ${c.episodios} ataques`;
+  $("campana-titulo").textContent = queCompartenTxt(c.tipo);
+  $("campana-sub").textContent = t("camp.sub", { ips: c.ips.length, paises, eps: c.episodios });
 
   const muestra = $("campana-muestra");
   muestra.replaceChildren();
@@ -1132,15 +1126,15 @@ async function abrirCampana(c) {
 
   const datos = $("campana-datos");
   datos.replaceChildren();
-  datos.appendChild(dato("Gravedad", c.severidad));
-  datos.appendChild(dato("Primera vez", new Date(c.desde).toLocaleString("es")));
-  datos.appendChild(dato("Ultima vez", new Date(c.hasta).toLocaleString("es")));
-  if ((c.paises || []).length) datos.appendChild(dato("Paises", c.paises.join(" ")));
-  datos.appendChild(dato("Direcciones", c.ips.join(", ")));
+  datos.appendChild(dato(t("dato.gravedad"), c.severidad));
+  datos.appendChild(dato(t("dato.primera"), new Date(c.desde).toLocaleString(IDIOMA)));
+  datos.appendChild(dato(t("dato.ultima"), new Date(c.hasta).toLocaleString(IDIOMA)));
+  if ((c.paises || []).length) datos.appendChild(dato(t("dato.paises"), c.paises.join(" ")));
+  datos.appendChild(dato(t("dato.direcciones"), c.ips.join(", ")));
 
   const lista = $("campana-ataques");
   lista.replaceChildren();
-  lista.appendChild(nodo("p", "sub", "Cargando ataques…"));
+  lista.appendChild(nodo("p", "sub", t("dlg.cargando.ataques")));
   $("dialogo-campana").showModal();
 
   let resp = { episodios: [] };
@@ -1149,19 +1143,19 @@ async function abrirCampana(c) {
       `/api/campana?tipo=${encodeURIComponent(c.tipo)}` +
       `&huella=${encodeURIComponent(c.huella)}&dias=${encodeURIComponent(rango())}`);
   } catch (e) {
-    lista.replaceChildren(nodo("p", "sub", `No se pudo cargar: ${e.message}`));
+    lista.replaceChildren(nodo("p", "sub", t("dlg.nocargar", { msg: e.message })));
     return;
   }
   pintarExplicacion("campana-explicacion", resp.explicacion);
-  $("explicar-campana").textContent = resp.explicacion ? "Volver a explicar" : "Explicar con IA";
+  $("explicar-campana").textContent = resp.explicacion ? t("dlg.reexplicar") : t("dlg.explicar");
 
   lista.replaceChildren();
   lista.appendChild(nodo("p", "sub",
-    "Los ataques de esta campana — pulsa uno para ver su proceso paso a paso:"));
+    t("camp.ataques.intro")));
   for (const a of resp.episodios || []) {
     const fila = nodo("button", "fila-ataque");
     fila.type = "button";
-    fila.appendChild(nodo("span", `sev sev-${a.severidad}`, NOMBRE_SEV[a.severidad] || a.severidad));
+    fila.appendChild(nodo("span", `sev sev-${a.severidad}`, nombreSev(a.severidad)));
     const texto = nodo("div", "fila-ataque-texto");
     texto.appendChild(nodo("strong", null, `${a.ip} · ${a.protocolo}`));
     texto.appendChild(nodo("span", "sub", a.resumen));
@@ -1222,7 +1216,7 @@ async function explicarCampana() {
   if (!campanaAbierta) return;
   const boton = $("explicar-campana");
   boton.disabled = true;
-  boton.textContent = "Explicando…";
+  boton.textContent = t("dlg.explicando");
   try {
     const r = await pedirJSON(
       `/api/campana/explicar?tipo=${encodeURIComponent(campanaAbierta.tipo)}` +
@@ -1230,10 +1224,10 @@ async function explicarCampana() {
       { method: "POST" });
     pintarExplicacion("campana-explicacion", r.explicacion);
   } catch (e) {
-    pintarExplicacion("campana-explicacion", `No se pudo explicar: ${e.message}`);
+    pintarExplicacion("campana-explicacion", t("dlg.noexplicar", { msg: e.message }));
   } finally {
     boton.disabled = false;
-    boton.textContent = "Volver a explicar";
+    boton.textContent = t("dlg.reexplicar");
   }
 }
 
@@ -1244,20 +1238,19 @@ let hashArtefactoAbierto = null;
 // cadenas de texto internas y quien la trajo, y permite descargarla como
 // fichero inerte para analizarla aparte. Nunca la ejecuta.
 async function abrirArtefacto(hash) {
-  $("artefacto-titulo").textContent = "Artefacto capturado";
+  $("artefacto-titulo").textContent = t("artef.titulo");
   $("artefacto-sub").textContent = hash;
 
   const aviso = $("artefacto-aviso");
   aviso.replaceChildren(nodo("p", null,
-    "Muestra sin procesar, posible malware. Se descarga como fichero inerte " +
-    "para analizarla en un entorno aislado; no la ejecutes en tu equipo."));
+t("artef.aviso")));
 
   hashArtefactoAbierto = hash;
   pintarExplicacion("artefacto-explicacion", "");
-  $("explicar-artefacto").textContent = "Explicar con IA";
+  $("explicar-artefacto").textContent = t("dlg.explicar");
 
   const datos = $("artefacto-datos");
-  datos.replaceChildren(nodo("p", "sub", "Cargando…"));
+  datos.replaceChildren(nodo("p", "sub", t("cargando")));
   const cadenas = $("artefacto-cadenas");
   cadenas.replaceChildren();
 
@@ -1276,31 +1269,31 @@ async function abrirArtefacto(hash) {
   try {
     d = await pedirJSON(`/api/artefacto?hash=${encodeURIComponent(hash)}`);
   } catch (e) {
-    datos.replaceChildren(nodo("p", "sub", `No se pudo cargar: ${e.message}`));
+    datos.replaceChildren(nodo("p", "sub", t("dlg.nocargar", { msg: e.message })));
     return;
   }
 
   datos.replaceChildren();
-  datos.appendChild(dato("Tipo", d.tipo));
-  datos.appendChild(dato("Tamano", tamano(d.bytes)));
+  datos.appendChild(dato(t("dato.tipo"), d.tipo));
+  datos.appendChild(dato(t("dato.tamano"), tamano(d.bytes)));
   datos.appendChild(dato("SHA-256", d.sha256));
-  if (d.urls?.length) datos.appendChild(dato("Origen", d.urls.join("  ")));
-  if (d.ips?.length) datos.appendChild(dato("Lo trajeron", d.ips.join(", ")));
-  if (d.primera) datos.appendChild(dato("Primera vez", new Date(d.primera).toLocaleString("es")));
+  if (d.urls?.length) datos.appendChild(dato(t("dato.origen"), d.urls.join("  ")));
+  if (d.ips?.length) datos.appendChild(dato(t("dato.trajeron"), d.ips.join(", ")));
+  if (d.primera) datos.appendChild(dato(t("dato.primera"), new Date(d.primera).toLocaleString(IDIOMA)));
 
   cadenas.replaceChildren();
   if (d.cadenas?.length) {
     cadenas.appendChild(nodo("p", "sub",
-      "Cadenas de texto dentro del fichero (URLs, comandos, direcciones incrustadas):"));
+t("artef.cadenas.intro")));
     const pre = nodo("pre", "cadenas-artefacto");
     pre.textContent = d.cadenas.join("\n");
     cadenas.appendChild(pre);
   } else {
-    cadenas.appendChild(nodo("p", "sub", "Sin cadenas de texto legibles en la cabecera."));
+    cadenas.appendChild(nodo("p", "sub", t("artef.cadenas.vacio")));
   }
 
   pintarExplicacion("artefacto-explicacion", d.explicacion);
-  $("explicar-artefacto").textContent = d.explicacion ? "Volver a explicar" : "Explicar con IA";
+  $("explicar-artefacto").textContent = d.explicacion ? t("dlg.reexplicar") : t("dlg.explicar");
 }
 
 // Explica con IA que es y que hace la muestra. Igual que en ataques: POST,
@@ -1309,17 +1302,17 @@ async function explicarArtefacto() {
   if (!hashArtefactoAbierto) return;
   const boton = $("explicar-artefacto");
   boton.disabled = true;
-  boton.textContent = "Explicando…";
+  boton.textContent = t("dlg.explicando");
   try {
     const r = await pedirJSON(
       `/api/artefacto/explicar?hash=${encodeURIComponent(hashArtefactoAbierto)}&idioma=${IDIOMA}`,
       { method: "POST" });
     pintarExplicacion("artefacto-explicacion", r.explicacion);
   } catch (e) {
-    pintarExplicacion("artefacto-explicacion", `No se pudo explicar: ${e.message}`);
+    pintarExplicacion("artefacto-explicacion", t("dlg.noexplicar", { msg: e.message }));
   } finally {
     boton.disabled = false;
-    boton.textContent = "Volver a explicar";
+    boton.textContent = t("dlg.reexplicar");
   }
 }
 
@@ -1331,15 +1324,15 @@ function pintarGravedad(severidades) {
   cont.replaceChildren();
 
   const orden = [
-    ["intrusion", "Intrusion — entraron y actuaron"],
-    ["acceso", "Acceso — consiguieron entrar"],
-    ["tanteo", "Tanteo — probaron credenciales o rutas"],
-    ["roce", "Roce — solo tocaron el puerto"],
+    ["intrusion", t("grav.intrusion")],
+    ["acceso", t("grav.acceso")],
+    ["tanteo", t("grav.tanteo")],
+    ["roce", t("grav.roce")],
   ];
   const cuenta = (k) => severidades?.[k] || 0;
   const total = orden.reduce((s, [k]) => s + cuenta(k), 0);
   if (!total) {
-    cont.appendChild(nodo("p", "vacio", "Sin ataques en este periodo."));
+    cont.appendChild(nodo("p", "vacio", t("grav.vacio")));
     return;
   }
   const max = Math.max(...orden.map(([k]) => cuenta(k)), 1);
@@ -1387,14 +1380,13 @@ function pintarGravedad(severidades) {
     it.appendChild(nodo("span", "n", String(n)));
     return it;
   };
-  leyenda.appendChild(marca("ruido", "Ruido de fondo", ruido));
-  leyenda.appendChild(marca("serio", "Llegaron a algo", serio));
+  leyenda.appendChild(marca("ruido", t("grav.ruidofondo"), ruido));
+  leyenda.appendChild(marca("serio", t("grav.serio"), serio));
   embudo.appendChild(leyenda);
 
   const frase = serio === 0
-    ? `Los ${total} son ruido: escaneos y pruebas que rebotan solas.`
-    : `De ${total} ataques, el ${pctRuido}% es ruido. ${serio} ` +
-      `${serio === 1 ? "consiguio" : "consiguieron"} entrar o actuar: esos son los que miras.`;
+    ? t("grav.todoruido", { n: total })
+    : t("grav.mixto", { total, pct: pctRuido, serio });
   embudo.appendChild(nodo("p", "nota", frase));
   cont.appendChild(embudo);
 }
@@ -1617,7 +1609,7 @@ function pintarServicios(datos) {
     puerto.dataset.id = sv.id;
     campo.appendChild(puerto);
     puertos.appendChild(campo);
-    puertos.appendChild(nodo("span", "ayuda", "redirige aqui el trafico del puerto real"));
+    puertos.appendChild(nodo("span", "ayuda", t("serv.redirige")));
     fila.appendChild(puertos);
 
     cont.appendChild(fila);
@@ -1658,7 +1650,7 @@ function avisarSiMismaRed(interfaces) {
       "en el hipervisor y en el router.";
     aviso.className = "ayuda peligro";
   } else {
-    aviso.textContent = "El panel y los honeypots pueden escuchar en interfaces distintas.";
+    aviso.textContent = t("red.distintas");
     aviso.className = "ayuda";
   }
 }
@@ -1756,7 +1748,7 @@ function leerRed() {
 
 async function accionRed(accion) {
   const estado = $("estado-red");
-  estado.textContent = "Procesando…";
+  estado.textContent = t("red.procesando");
   estado.className = "ayuda";
   try {
     const r = await pedirJSON("/api/red", {
@@ -1849,15 +1841,15 @@ async function subirActualizacion(fichero) {
   const estado = $("estado-deb");
   const boton = $("subir-deb");
   boton.disabled = true;
-  estado.textContent = `Subiendo ${(fichero.size / 1048576).toFixed(1)} MB…`;
+  estado.textContent = t("subiendo", { mb: (fichero.size / 1048576).toFixed(1) });
   try {
     const resp = await fetch("/api/actualizacion", { method: "POST", body: fichero });
     const r = await resp.json();
     if (!resp.ok) throw new Error(r.error || `respondio ${resp.status}`);
-    estado.textContent = "Subida y verificada. Aplicala en el servidor.";
+    estado.textContent = t("act.subida");
     cargarActualizaciones();
   } catch (e) {
-    estado.textContent = `No se pudo subir: ${e.message}`;
+    estado.textContent = t("geoip.nosubir", { msg: e.message });
   } finally {
     boton.disabled = false;
   }
@@ -1866,10 +1858,10 @@ async function subirActualizacion(fichero) {
 async function descartarActualizacion() {
   try {
     await pedirJSON("/api/actualizacion", { method: "DELETE" });
-    $("estado-deb").textContent = "Actualizacion descartada.";
+    $("estado-deb").textContent = t("act.descartada");
     cargarActualizaciones();
   } catch (e) {
-    $("estado-deb").textContent = `No se pudo descartar: ${e.message}`;
+    $("estado-deb").textContent = t("act.nodescartar", { msg: e.message });
   }
 }
 
@@ -1890,7 +1882,7 @@ async function abrirAjustes() {
   try {
     await cargarRed();
   } catch (err) {
-    $("estado-red").textContent = `No se pudo leer la red: ${err.message}`;
+    $("estado-red").textContent = t("red.noleer", { msg: err.message });
   }
 
   // Elegir un plazo sin saber cuanto ocupa es elegir a ojo.
@@ -1920,7 +1912,7 @@ async function abrirAjustes() {
 
 async function guardarAjustes() {
   const estado = $("estado-ajustes");
-  estado.textContent = "Guardando…";
+  estado.textContent = t("aj.guardando");
   try {
     const c = await pedirJSON("/api/ajustes", {
       method: "POST",
@@ -1932,7 +1924,7 @@ async function guardarAjustes() {
     for (const id of ["c-clave-abuse", "c-clave-anthropic", "c-clave-compatible"]) {
       $(id).value = "";
     }
-    estado.textContent = "Guardado.";
+    estado.textContent = t("aj.guardado");
     aplicarRefresco(c.refresco_segundos);
     refrescar();
   } catch (err) {
@@ -1942,7 +1934,7 @@ async function guardarAjustes() {
 
 async function cambiarContrasena() {
   const estado = $("estado-contrasena");
-  estado.textContent = "Cambiando…";
+  estado.textContent = t("pass.cambiando");
   try {
     await pedirJSON("/api/contrasena", {
       method: "POST",
@@ -1951,7 +1943,7 @@ async function cambiarContrasena() {
     });
     $("p-actual").value = "";
     $("p-nueva").value = "";
-    estado.textContent = "Contrasena cambiada. Las demas sesiones se han cerrado.";
+    estado.textContent = t("pass.cambiada");
   } catch (err) {
     estado.textContent = err.message;
   }
@@ -1977,7 +1969,7 @@ $("cancelar-deb").addEventListener("click", descartarActualizacion);
 $("guardar-contrasena").addEventListener("click", cambiarContrasena);
 $("restaurar").addEventListener("click", async () => {
   volcarAjustes(await pedirJSON("/api/ajustes/defecto"));
-  $("estado-ajustes").textContent = "Valores por defecto cargados. Pulsa Guardar para aplicarlos.";
+  $("estado-ajustes").textContent = t("aj.restaurado");
 });
 $("salir").addEventListener("click", async () => {
   await fetch("/api/salir", { method: "POST" });
