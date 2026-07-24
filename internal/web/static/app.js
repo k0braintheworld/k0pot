@@ -950,12 +950,9 @@ async function marcarVisto() {
 // obliga a adivinar cuales tocan.
 function camposDelCanal() {
   const canal = $("c-aviso-canal").value;
-  const etiquetas = {
-    ntfy: ["Tema de ntfy", "Elige un nombre largo y dificil de adivinar: cualquiera que sepa el tema puede leer tus avisos. Instala la app ntfy y suscribete a ese mismo tema."],
-    telegram: ["Chat de Telegram", "El identificador numerico del chat. Escribe a @userinfobot para saber el tuyo."],
-    webhook: ["URL del webhook", "Recibira un POST con el aviso en JSON."],
-  };
-  const [titulo, ayuda] = etiquetas[canal] || etiquetas.ntfy;
+  const cual = ["ntfy", "telegram", "webhook"].includes(canal) ? canal : "ntfy";
+  const titulo = t("cfg.av.dst." + cual);
+  const ayuda = t("cfg.av.dst." + cual + ".ayuda");
   const etiqueta = $("etiqueta-aviso-destino");
   etiqueta.childNodes[0].nodeValue = titulo;
   $("ayuda-aviso-destino").textContent = ayuda;
