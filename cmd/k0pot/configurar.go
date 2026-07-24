@@ -257,7 +257,7 @@ func interfazDe(ip string, dirs []direccion) string {
 	return ""
 }
 
-// red24 deriva la red /24 de una IP: 192.168.86.11 -> 192.168.86.0/24. El
+// red24 deriva la red /24 de una IP: 192.168.10.5 -> 192.168.10.0/24. El
 // aislamiento asume /24, igual que el aviso de "misma red" del asistente.
 func red24(ip string) string {
 	p := strings.Split(ip, ".")

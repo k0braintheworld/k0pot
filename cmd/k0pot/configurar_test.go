@@ -4,9 +4,9 @@ import "testing"
 
 func TestRed24(t *testing.T) {
 	casos := map[string]string{
-		"192.168.86.11":   "192.168.86.0/24",
-		"192.168.100.188": "192.168.100.0/24",
-		"10.0.0.5":        "10.0.0.0/24",
+		"192.168.10.5": "192.168.10.0/24",
+		"192.168.20.5": "192.168.20.0/24",
+		"10.0.0.5":     "10.0.0.0/24",
 	}
 	for ip, espera := range casos {
 		if got := red24(ip); got != espera {
@@ -25,17 +25,17 @@ define RED_INTERNA = { 192.168.1.0/24, 10.0.0.0/8 }
 define PUERTOS_HONEYPOT = { 2222, 6379 }`
 
 	got := sustituirDefines(plantilla, map[string]string{
-		"IP_GESTION":  "192.168.86.11",
-		"IP_EXPUESTA": "192.168.100.188",
-		"RED_GESTION": "192.168.86.0/24",
+		"IP_GESTION":  "192.168.10.5",
+		"IP_EXPUESTA": "192.168.20.5",
+		"RED_GESTION": "192.168.10.0/24",
 		"IF_GESTION":  `"enp1s0"`,
 		"IF_EXPUESTA": `"enp2s0"`,
 	})
 
 	debeContener := []string{
-		"define IP_GESTION = 192.168.86.11",
-		"define IP_EXPUESTA = 192.168.100.188",
-		"define RED_GESTION = 192.168.86.0/24",
+		"define IP_GESTION = 192.168.10.5",
+		"define IP_EXPUESTA = 192.168.20.5",
+		"define RED_GESTION = 192.168.10.0/24",
 		`define IF_GESTION = "enp1s0"`,
 		`define IF_EXPUESTA = "enp2s0"`,
 		// intactos: no estan en el mapa
