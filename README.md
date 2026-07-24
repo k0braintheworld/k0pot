@@ -10,9 +10,6 @@ Ligero a proposito: un unico binario en Go y Cowrie en un contenedor, sin
 stacks de gigabytes ni bases de datos que administrar. Reutiliza honeypots que
 ya funcionan bien y aporta la capa que suele faltar: **la interpretacion**.
 
-> **Estado: en desarrollo.** Funciona y captura ataques reales, pero cambia a
-> menudo y no ha pasado por una auditoria independiente.
-
 ## Por que
 
 Un honeypot genera miles de lineas al dia. La inmensa mayoria es ruido: bots
