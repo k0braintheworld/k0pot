@@ -181,7 +181,11 @@ func (s *Servidor) artefactos(w http.ResponseWriter, r *http.Request) {
 
 	porURL := map[string]*Artefacto{}
 	for _, e := range eps {
-		for _, u := range e.Descargas {
+		// Cowrie solo registra como "descarga" lo que llega a bajar; el
+		// resto -la mayoria- queda escondido en los wget/curl/tftp que se
+		// teclean, y ahi esta lo mas util: de donde se sirve el malware.
+		fuentes := append(append([]string{}, e.Descargas...), urlsDeDescarga(e.Comandos)...)
+		for _, u := range fuentes {
 			if u == "" {
 				continue
 			}
@@ -204,7 +208,7 @@ func (s *Servidor) artefactos(w http.ResponseWriter, r *http.Request) {
 		sort.Strings(a.IPs)
 		out = append(out, *a)
 	}
-	out = append(out, ficherosCapturados(s.DirDescargas)...)
+	out = append(out, s.ficherosCapturados()...)
 
 	sort.Slice(out, func(i, j int) bool { return out[i].Momento.After(out[j].Momento) })
 	responderJSON(w, out)
@@ -214,7 +218,8 @@ func (s *Servidor) artefactos(w http.ResponseWriter, r *http.Request) {
 //
 // El nombre que les pone Cowrie es el resumen SHA-256 del contenido, asi
 // que sirve tal cual para buscarlo en VirusTotal sin subir nada.
-func ficherosCapturados(dir string) []Artefacto {
+func (s *Servidor) ficherosCapturados() []Artefacto {
+	dir := s.DirDescargas
 	if dir == "" {
 		return nil
 	}
@@ -233,14 +238,55 @@ func ficherosCapturados(dir string) []Artefacto {
 		if err != nil {
 			continue
 		}
-		out = append(out, Artefacto{
+		a := Artefacto{
 			Fichero: filepath.Base(e.Name()),
 			Bytes:   info.Size(),
 			Momento: info.ModTime(),
-		})
+		}
+		// De quien y cuando vino: sin esto, un fichero capturado es un hash
+		// suelto sin decir cuantos lo trajeron ni desde donde.
+		if fu, err := s.Almacen.FuentesDeArtefacto(e.Name()); err == nil {
+			a.IPs = fu.IPs
+			if !fu.Ultima.IsZero() {
+				a.Momento = fu.Ultima
+			}
+		}
+		out = append(out, a)
 	}
 	return out
 }
+
+// urlsDeDescarga saca las URLs de descarga que un atacante teclea en la
+// shell (wget/curl/tftp). Es lo que separa "vimos 3 ficheros" de "estos son
+// los servidores que reparten el malware", que es lo que de verdad importa.
+func urlsDeDescarga(comandos []string) []string {
+	vistas := map[string]bool{}
+	var out []string
+	add := func(u string) {
+		if u != "" && !vistas[u] {
+			vistas[u] = true
+			out = append(out, u)
+		}
+	}
+	for _, cmd := range comandos {
+		for _, u := range reURLDescarga.FindAllString(cmd, -1) {
+			add(strings.TrimRight(u, ".,)"))
+		}
+		for _, m := range reTFTP.FindAllStringSubmatch(cmd, -1) {
+			add("tftp://" + m[1])
+		}
+	}
+	return out
+}
+
+// reURLDescarga casa una URL http(s) dentro de una linea de shell, cortando
+// en los caracteres que no pueden formar parte de ella (comillas, tuberias,
+// separadores de comando).
+var reURLDescarga = regexp.MustCompile("https?://[^\\s\x27\"|>&`;)]+")
+
+// reTFTP saca la IP a la que se conecta un tftp: no lleva esquema http, asi
+// que hay que reconocerlo por el verbo y la direccion.
+var reTFTP = regexp.MustCompile(`(?i)\btftp\b[^\n]*?\b(\d{1,3}(?:\.\d{1,3}){3})\b`)
 
 func contiene(v []string, s string) bool {
 	for _, x := range v {
