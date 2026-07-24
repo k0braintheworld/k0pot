@@ -27,7 +27,12 @@ set -uo pipefail
 # .local.nft -ignorada por git- se usa esa: asi tu direccionamiento real no
 # acaba en el repositorio y actualizar el proyecto no te pisa la config.
 BASE="$(cd "$(dirname "$(readlink -f "$0")")" 2>/dev/null && pwd || echo /home/k0pot/k0pot/deploy)"
-if [ -r "$BASE/aislamiento.local.nft" ]; then
+# En una instalacion por paquete la config real vive en /etc (persiste entre
+# actualizaciones); en desarrollo, junto al script. Se prueban en ese orden,
+# y como ultimo recurso la plantilla del repositorio.
+if [ -r /etc/k0pot/aislamiento.local.nft ]; then
+  FICHERO_POR_DEFECTO=/etc/k0pot/aislamiento.local.nft
+elif [ -r "$BASE/aislamiento.local.nft" ]; then
   FICHERO_POR_DEFECTO="$BASE/aislamiento.local.nft"
 else
   FICHERO_POR_DEFECTO="$BASE/aislamiento.nft"

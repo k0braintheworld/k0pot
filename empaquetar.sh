@@ -38,7 +38,12 @@ mkdir -p "$ARBOL"/DEBIAN \
 
 install -m 755 "$DESTINO/k0pot"                        "$ARBOL/usr/bin/k0pot"
 install -m 755 empaquetado/sistema/k0pot-configurar    "$ARBOL/usr/sbin/k0pot-configurar"
-install -m 755 deploy/k0pot-nft.sh                     "$ARBOL/usr/sbin/k0pot-nft"
+# El script se busca sus .nft JUNTO A SI MISMO (readlink -f), asi que va
+# donde estan, en /usr/share/k0pot/deploy, y en /usr/sbin queda solo un
+# symlink para tenerlo en el PATH. Copiarlo a /usr/sbin lo separaria de sus
+# ficheros y "aplicar" no encontraria el aislamiento.
+install -m 755 deploy/k0pot-nft.sh                     "$ARBOL/usr/share/k0pot/deploy/k0pot-nft"
+ln -s /usr/share/k0pot/deploy/k0pot-nft                "$ARBOL/usr/sbin/k0pot-nft"
 install -m 644 empaquetado/sistema/*.service           "$ARBOL/usr/lib/systemd/system/"
 install -m 644 docker-compose.yml                      "$ARBOL/usr/share/k0pot/"
 install -m 644 deploy/cowrie.cfg                       "$ARBOL/usr/share/k0pot/"

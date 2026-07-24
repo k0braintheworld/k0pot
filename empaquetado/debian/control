@@ -13,7 +13,8 @@ Description: Honeypot ligero con informes comprensibles
  con un catalogo propio: "GET /SDK/webLanguage" pasa a ser "buscan camaras IP
  Hikvision expuestas para reclutarlas en una botnet".
  .
- Reutiliza Cowrie para SSH y Telnet, y trae trampas propias para HTTP, Redis
- y FTP. Avisa por ntfy, Telegram o webhook cuando alguien consigue entrar.
+ Reutiliza Cowrie para SSH y Telnet, y trae trampas propias para HTTP, Redis,
+ FTP, MySQL, PostgreSQL, SMTP, RDP, VNC y la API de Docker. Avisa por ntfy,
+ Telegram o webhook cuando alguien consigue entrar.
  .
  Tras instalar, ejecuta: sudo k0pot-configurar
