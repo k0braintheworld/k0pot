@@ -44,7 +44,7 @@ func (s *Servidor) reporte(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no se pudo leer la clasificacion", http.StatusInternalServerError)
 		return
 	}
-	ataques, err := s.Almacen.Episodios(store.FiltroEpisodios{Desde: desde, Limite: 500})
+	ataques, err := s.Almacen.Episodios(store.FiltroEpisodios{Desde: desde, Limite: 2000})
 	if err != nil {
 		http.Error(w, "no se pudieron leer los ataques", http.StatusInternalServerError)
 		return
@@ -103,6 +103,9 @@ type reporteVista struct {
 	Informe                 []string
 	Total, IPsUnicas        int
 	NumAtaques, Intrusiones int
+	// MasAtaques es cuantos quedan sin detallar por debajo del tope: el
+	// informe detalla solo los mas graves, no vuelca cientos.
+	MasAtaques int
 	Ataques                 []ataqueVista
 	TopIPs                  []filaIP
 	Credenciales            []filaCred
@@ -129,6 +132,8 @@ func (v reporteVista) T(clave string) string {
 		"th_usuario":     {"Usuario", "User"},
 		"th_password":    {"Contrasena", "Password"},
 		"lang":           {"es", "en"},
+		"mas_ataques_1":  {"y", "and"},
+		"mas_ataques_2": {"ataques mas, ordenados por gravedad.", "more attacks, ordered by severity."},
 	}
 	par := m[clave]
 	if v.Idioma == "en" {
@@ -178,11 +183,21 @@ func datosReporte(desde time.Time, r *store.Resumen, niveles map[model.Clasifica
 		}
 	}
 
-	for _, e := range ataques {
+	// Se detallan solo los mas graves: cada ataque detallado cuesta una
+	// consulta de sus eventos, y con una sola conexion a la BD volcar
+	// cientos deja el servicio sin atender nada mas. Las cifras siguen
+	// contando todos.
+	const topeDetalle = 30
+	for i, e := range ataques {
 		if e.Severidad == episodio.Intrusion {
 			v.Intrusiones++
 		}
-		v.Ataques = append(v.Ataques, ataqueDeEpisodio(e, alm, idioma))
+		if i < topeDetalle {
+			v.Ataques = append(v.Ataques, ataqueDeEpisodio(e, alm, idioma))
+		}
+	}
+	if len(ataques) > topeDetalle {
+		v.MasAtaques = len(ataques) - topeDetalle
 	}
 	for _, ip := range r.TopIPs {
 		v.TopIPs = append(v.TopIPs, filaIP{IP: ip.IP, Eventos: ip.Eventos, Contexto: contextoDeIP(ip, idioma)})

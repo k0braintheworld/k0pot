@@ -158,6 +158,7 @@
   {{else}}
   <p style="color:#8b949e">{{.T "sin_ataques"}}</p>
   {{end}}
+  {{if .MasAtaques}}<p style="color:#8b949e;margin-top:.6rem">{{.T "mas_ataques_1"}} {{.MasAtaques}} {{.T "mas_ataques_2"}}</p>{{end}}
 
   <div class="dos-tablas">
     {{if .TopIPs}}
