@@ -315,7 +315,7 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 
 /* ── Dialogo de ajustes ─────────────────────────────────────── */
 .dialogo {
-  width: min(34rem, 92vw); max-height: 88vh;
+  width: min(42rem, 94vw); max-height: 88vh; overflow-y: auto;
   padding: 0; border: 1px solid var(--borde); border-radius: .7rem;
   background: var(--panel); color: var(--texto);
 }
@@ -546,7 +546,7 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .fila-ataque-cuando { font-size: .74rem; color: var(--sub); white-space: nowrap; }
 
 /* ── Narracion de un ataque ───────────────────────────────────────────── */
-.cabecera-dialogo { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; }
+.cabecera-dialogo { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; }
 .cabecera-dialogo h2 { margin: 0; }
 .cuerpo-dialogo { overflow-y: auto; max-height: 65vh; }
 
