@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/k0braintheworld/k0pot/internal/config"
@@ -37,6 +39,13 @@ func configurar(almacen *store.Store, ajustes *config.Gestor, rutaEnv string) er
 	}
 	if err := escribirEnv(rutaEnv, c.EscuchaHoneypots); err != nil {
 		return err
+	}
+	if err := generarCortafuegos(&c, rutaEnv); err != nil {
+		// No es fatal: el resto de la configuracion vale igual, y siempre
+		// queda crear el .local a mano. Pero se avisa, porque sin el la capa
+		// de aislamiento no se aplica.
+		fmt.Printf("  AVISO: no se pudo dejar el cortafuegos listo (%v).\n", err)
+		fmt.Println("  Tendras que crear el aislamiento.local.nft a mano.")
 	}
 	if err := preguntarCuenta(almacen); err != nil {
 		return err
@@ -166,6 +175,104 @@ func escribirEnv(ruta, expuesta string) error {
 	}
 	fmt.Printf("  %s actualizado\n", ruta)
 	return nil
+}
+
+// generarCortafuegos deja listo el aislamiento.local.nft con las IP e
+// interfaces reales, para que "k0pot-nft aplicar" funcione a la primera sin
+// editar nada a mano. Parte de la plantilla del sistema y solo cambia las
+// lineas de cabecera -IPs, red de gestion e interfaces-; el resto de las
+// reglas no se tocan. Se escribe junto al .env (en el paquete, /etc/k0pot),
+// que es justo donde el aplicador lo busca primero.
+func generarCortafuegos(c *config.Config, rutaEnv string) error {
+	plantilla, err := leerPlantillaNft()
+	if err != nil {
+		return err
+	}
+	disponibles := ipsDeLaMaquina()
+	ifGestion := interfazDe(c.EscuchaPanel, disponibles)
+	ifExpuesta := interfazDe(c.EscuchaHoneypots, disponibles)
+	if ifGestion == "" || ifExpuesta == "" {
+		return fmt.Errorf("no se pudo determinar el nombre de las interfaces")
+	}
+
+	generado := sustituirDefines(plantilla, map[string]string{
+		"IP_GESTION":  c.EscuchaPanel,
+		"IP_EXPUESTA": c.EscuchaHoneypots,
+		"RED_GESTION": red24(c.EscuchaPanel),
+		"IF_GESTION":  strconv.Quote(ifGestion),
+		"IF_EXPUESTA": strconv.Quote(ifExpuesta),
+	})
+
+	destino := filepath.Join(dirDe(rutaEnv), "aislamiento.local.nft")
+	if err := os.WriteFile(destino, []byte(generado), 0o640); err != nil {
+		return fmt.Errorf("escribiendo %s: %w", destino, err)
+	}
+	fmt.Printf("  %s generado (IP e interfaces reales)\n", destino)
+	return nil
+}
+
+// leerPlantillaNft encuentra la plantilla de reglas, este instalado por
+// paquete o en el arbol de desarrollo.
+func leerPlantillaNft() (string, error) {
+	for _, ruta := range []string{
+		"/usr/share/k0pot/deploy/aislamiento.nft",
+		"deploy/aislamiento.nft",
+	} {
+		if datos, err := os.ReadFile(ruta); err == nil {
+			return string(datos), nil
+		}
+	}
+	return "", fmt.Errorf("no se encontro la plantilla aislamiento.nft")
+}
+
+// interfazDe devuelve el nombre de la interfaz que tiene esa IP.
+func interfazDe(ip string, dirs []direccion) string {
+	for _, d := range dirs {
+		if d.ip == ip {
+			return d.iface
+		}
+	}
+	return ""
+}
+
+// red24 deriva la red /24 de una IP: 192.168.86.11 -> 192.168.86.0/24. El
+// aislamiento asume /24, igual que el aviso de "misma red" del asistente.
+func red24(ip string) string {
+	p := strings.Split(ip, ".")
+	if len(p) != 4 {
+		return ip
+	}
+	return fmt.Sprintf("%s.%s.%s.0/24", p[0], p[1], p[2])
+}
+
+// dirDe da el directorio del .env, donde se co-ubica el cortafuegos. Si no
+// hay ruta, el directorio actual.
+func dirDe(rutaEnv string) string {
+	if rutaEnv == "" {
+		return "."
+	}
+	return filepath.Dir(rutaEnv)
+}
+
+// sustituirDefines reemplaza el valor de los "define" indicados, dejando el
+// resto del fichero intacto.
+func sustituirDefines(plantilla string, valores map[string]string) string {
+	lineas := strings.Split(plantilla, "\n")
+	for i, l := range lineas {
+		t := strings.TrimSpace(l)
+		if !strings.HasPrefix(t, "define ") {
+			continue
+		}
+		for nombre, valor := range valores {
+			resto := strings.TrimPrefix(t, "define "+nombre)
+			// El nombre tiene que casar entero: lo siguiente es espacio o '='.
+			if resto != t && (strings.HasPrefix(resto, " ") || strings.HasPrefix(resto, "=")) {
+				lineas[i] = fmt.Sprintf("define %s = %s", nombre, valor)
+				break
+			}
+		}
+	}
+	return strings.Join(lineas, "\n")
 }
 
 type direccion struct{ iface, ip string }
