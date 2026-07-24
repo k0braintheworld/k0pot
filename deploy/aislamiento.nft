@@ -54,6 +54,17 @@ table inet aislamiento {
     chain forward {
         type filter hook forward priority filter; policy accept;
 
+        # Los contenedores (Cowrie) no pueden alcanzar la red de gestion ni
+        # otras redes internas. Su trafico sale por el bridge de Docker, no por
+        # la interfaz expuesta, asi que la regla del pivote de mas abajo
+        # -anclada a IF_EXPUESTA- no lo cubre: sin esto, un contenedor
+        # comprometido pivota a tu LAN. Se excluye 172.16/12 (las redes de
+        # Docker) para no cortar el trafico entre contenedores; a internet
+        # (destino publico) siguen saliendo, que hace falta para capturar el
+        # malware que descargan.
+        iifname "br-*"    ip daddr { 10.0.0.0/8, 192.168.0.0/16 } log prefix "k0pot-PIVOTE-CONT " drop
+        iifname "docker0" ip daddr { 10.0.0.0/8, 192.168.0.0/16 } log prefix "k0pot-PIVOTE-CONT " drop
+
         # Docker necesita reenviar lo suyo; se deja pasar antes de cortar.
         iifname "br-*" oifname "br-*" accept
         iifname "docker0" accept
@@ -73,6 +84,10 @@ table inet aislamiento {
         iifname $IF_EXPUESTA ct status dnat tcp dport $PUERTOS_HONEYPOT accept
 
         # Nada mas que entre por la VLAN expuesta sigue hacia la red interna.
+        # Se cubre RED_GESTION (que el asistente fija bien) ademas de
+        # RED_INTERNA, por si esta se quedara con la red de ejemplo.
+        iifname $IF_EXPUESTA ip daddr $RED_GESTION \
+            log prefix "k0pot-PIVOTE-BLOQUEADO " drop
         iifname $IF_EXPUESTA ip daddr $RED_INTERNA \
             log prefix "k0pot-PIVOTE-BLOQUEADO " drop
 
@@ -105,6 +120,12 @@ table inet aislamiento {
         # no protege de nada.
         ip daddr 255.255.255.255 drop
         pkttype { broadcast, multicast } drop
+
+        # El contenedor de Cowrie no habla con los servicios del host en la
+        # red de gestion (SSH, panel). Va ANTES de las reglas que aceptan por
+        # IP de gestion, que si no lo dejarian entrar por el bridge de Docker.
+        iifname "br-*"    ip daddr $RED_GESTION log prefix "k0pot-PIVOTE-CONT " drop
+        iifname "docker0" ip daddr $RED_GESTION log prefix "k0pot-PIVOTE-CONT " drop
 
         # Contra la IP expuesta: SOLO honeypots. Ni SSH, ni panel, ni nada.
         # Esto cierra el 22, que escucha en todas las interfaces.

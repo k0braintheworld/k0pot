@@ -217,6 +217,10 @@ func generarCortafuegos(c *config.Config, rutaEnv string) error {
 		"IP_GESTION":  c.EscuchaPanel,
 		"IP_EXPUESTA": c.EscuchaHoneypots,
 		"RED_GESTION": red24(c.EscuchaPanel),
+		// RED_INTERNA se pone con la red real, no la de ejemplo, para que la
+		// regla anti-pivote proteja tu gestion y no la 192.168.1.0/24 del
+		// fichero de plantilla.
+		"RED_INTERNA": fmt.Sprintf("{ %s, 10.0.0.0/8, 172.16.0.0/12 }", red24(c.EscuchaPanel)),
 		"IF_GESTION":  strconv.Quote(ifGestion),
 		"IF_EXPUESTA": strconv.Quote(ifExpuesta),
 	})
