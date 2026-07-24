@@ -32,7 +32,7 @@ define IF_GESTION  = "ens18"
 define RED_INTERNA = { 192.168.1.0/24, 10.0.0.0/8, 172.16.0.0/12 }
 
 # Puertos de honeypot. Deben coincidir con lo configurado en el panel.
-define PUERTOS_HONEYPOT = { 2222, 2223, 8081, 6379, 2121 }
+define PUERTOS_HONEYPOT = { 2222, 2223, 8081, 6379, 2121, 3306, 5432, 3389, 5900, 2375, 2525 }
 
 # Reaplicar tiene que REEMPLAZAR, no acumular.
 #

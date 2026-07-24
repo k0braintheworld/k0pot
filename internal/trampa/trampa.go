@@ -132,5 +132,11 @@ func Disponibles() []Trampa {
 		&HTTP{},
 		&Redis{},
 		&FTP{},
+		&MySQL{},
+		&Postgres{},
+		&SMTP{},
+		&RDP{},
+		&VNC{},
+		&Docker{},
 	}
 }

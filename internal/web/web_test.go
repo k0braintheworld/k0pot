@@ -13,6 +13,7 @@ import (
 
 	"github.com/k0braintheworld/k0pot/internal/auth"
 	"github.com/k0braintheworld/k0pot/internal/config"
+	"github.com/k0braintheworld/k0pot/internal/episodio"
 	"github.com/k0braintheworld/k0pot/internal/model"
 	"github.com/k0braintheworld/k0pot/internal/report"
 	"github.com/k0braintheworld/k0pot/internal/store"
@@ -48,6 +49,15 @@ func servidorDePrueba(t *testing.T) *Servidor {
 		if _, err := s.Guardar(e); err != nil {
 			t.Fatalf("guardando: %v", err)
 		}
+	}
+	// El semaforo cuenta ataques, no eventos: hay que derivar los episodios
+	// igual que el mantenimiento en produccion, o no habria gravedad que leer.
+	evs := make([]model.Evento, len(eventos))
+	for i, e := range eventos {
+		evs[i] = *e
+	}
+	if err := s.GuardarEpisodios(episodio.Agrupar(evs, episodio.HuecoPorDefecto)); err != nil {
+		t.Fatalf("guardando episodios: %v", err)
 	}
 	if err := s.GuardarOrigen(model.Origen{
 		IP: "185.220.101.1", Pais: "DE", ISP: "Ejemplo", Reputacion: 100,
