@@ -6,6 +6,24 @@ import (
 	"strings"
 )
 
+// topeCaracteresPrompt acota el mensaje que se manda al modelo. Los
+// proveedores limitan los tokens por minuto -Groq gratis, 8000 TPM- y un solo
+// ataque con un reconocimiento gigante de una linea puede generar mas de
+// 10.000 tokens el solo, lo que devuelve un 413. Se recorta con aviso: para
+// entender la intencion basta el principio, y el detalle completo sigue en el
+// panel.
+const topeCaracteresPrompt = 9000
+
+// recortarPrompt deja el mensaje dentro del presupuesto, cortando en frontera
+// de caracter para no partir un simbolo por la mitad.
+func recortarPrompt(s string) string {
+	r := []rune(s)
+	if len(r) <= topeCaracteresPrompt {
+		return s
+	}
+	return string(r[:topeCaracteresPrompt]) + "\n\n[...el resto se recorto por tamano...]"
+}
+
 // explicarCon es el nucleo comun de las explicaciones bajo demanda: pregunta
 // al modelo y reconoce las negativas de su filtro. Lo comparten la
 // explicacion de artefactos y la de campanas.
@@ -13,7 +31,7 @@ func explicarCon(ctx context.Context, e Explicador, sistema, usuario string, top
 	if e == nil {
 		return "", fmt.Errorf("no hay ningun modelo configurado")
 	}
-	texto, err := e.Preguntar(ctx, sistema, usuario, tope)
+	texto, err := e.Preguntar(ctx, sistema, recortarPrompt(usuario), tope)
 	if err != nil {
 		return "", err
 	}

@@ -86,7 +86,8 @@ func ExplicarAtaque(ctx context.Context, e Explicador, ep store.EpisodioFila,
 	if e == nil {
 		return "", fmt.Errorf("no hay ningun modelo configurado")
 	}
-	texto, err := e.Preguntar(ctx, sistemaAtaque, ataqueComoTexto(ep, pasos, notaProveedor), tope)
+	texto, err := e.Preguntar(ctx, sistemaAtaque,
+		recortarPrompt(ataqueComoTexto(ep, pasos, notaProveedor)), tope)
 	if err != nil {
 		return "", err
 	}
@@ -122,16 +123,29 @@ func ataqueComoTexto(ep store.EpisodioFila, pasos []PasoDeAtaque, notaProveedor 
 
 	b.WriteString("SECUENCIA COMPLETA:\n")
 	for i, p := range pasos {
-		if i == 60 {
-			fmt.Fprintf(&b, "  (y %d pasos mas, del mismo tipo)\n", len(pasos)-60)
+		// Un comando de reconocimiento puede ocupar dos kilobytes el solo; se
+		// recorta cada linea y se para al llegar al presupuesto, para no
+		// pasarse del limite de tokens del proveedor.
+		if i == 60 || b.Len() > topeCaracteresPrompt {
+			fmt.Fprintf(&b, "  (y %d pasos mas)\n", len(pasos)-i)
 			break
 		}
-		fmt.Fprintf(&b, "  %s  %s\n", p.Hora, p.Texto)
+		fmt.Fprintf(&b, "  %s  %s\n", p.Hora, recortarLinea(p.Texto, 400))
 		if p.Nota != "" {
 			fmt.Fprintf(&b, "            [%s]\n", p.Nota)
 		}
 	}
 	return b.String()
+}
+
+// recortarLinea acorta un paso largo -un comando gigante- a su principio, que
+// es lo que revela la intencion.
+func recortarLinea(s string, max int) string {
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max]) + "… (recortado)"
 }
 
 // EsNegativa reconoce cuando el modelo se ha negado a responder.
