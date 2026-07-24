@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/k0braintheworld/k0pot/internal/campana"
 	"github.com/k0braintheworld/k0pot/internal/episodio"
 	"github.com/k0braintheworld/k0pot/internal/model"
 	"github.com/k0braintheworld/k0pot/internal/report"
@@ -344,7 +345,8 @@ func (s *Servidor) explicarEpisodio(w http.ResponseWriter, r *http.Request) {
 	// deliberando dentro de la propia respuesta, y limpiarRazonamiento
 	// descarta esa parte. Con poco margen se queda todo en nada y el
 	// usuario ve "el modelo devolvio un informe vacio".
-	texto, err := report.ExplicarAtaque(r.Context(), explicador, ep, pasos, notaProv, idiomaDe(r), 2000)
+	contexto := contextoCampana(s.Almacen, ep)
+	texto, err := report.ExplicarAtaque(r.Context(), explicador, ep, pasos, notaProv, contexto, idiomaDe(r), 2000)
 	if err != nil {
 		// No llego a redactarse nada: se devuelve la llamada apuntada.
 		s.Almacen.DevolverCuotaLLM(dia)
@@ -414,4 +416,23 @@ func visible(s string) string {
 		}
 	}
 	return b.String()
+}
+
+// contextoCampana resume, para la explicacion con IA, cuan comun es el patron
+// de un ataque: si lo repiten muchas direcciones (campana automatizada), si es
+// raro, o si es el ruido de escaneo habitual. Es lo que hace que dos ataques
+// del mismo tipo se expliquen distinto segun encajen o no en el periodo.
+func contextoCampana(alm *store.Store, ep store.EpisodioFila) string {
+	eps, err := alm.Episodios(store.FiltroEpisodios{Desde: time.Now().AddDate(0, 0, -7), Limite: 500})
+	if err != nil {
+		return ""
+	}
+	if c, hay := campana.ContextoDe(eps, ep); hay && len(c.IPs) >= 2 {
+		return fmt.Sprintf("este ataque forma parte de una campana: otras %d direcciones distintas repiten %s en la ultima semana; es actividad automatizada y coordinada, no dirigida a esta maquina en particular",
+			len(c.IPs)-1, queComparten(c.Tipo))
+	}
+	if len(ep.Comandos) > 0 || len(ep.Descargas) > 0 || ep.LoginExitoso {
+		return "este patron es poco comun: no coincide con las campanas automatizadas que se repiten estos dias, asi que merece mas atencion que el ruido habitual"
+	}
+	return "es un escaneo o tanteo automatico de los mas comunes: el ruido de fondo constante de estar expuesto en internet"
 }

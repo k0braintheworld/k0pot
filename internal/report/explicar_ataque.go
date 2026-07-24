@@ -69,7 +69,10 @@ Ajusta la profundidad a lo que ocurrio, no rellenes por rellenar:
 Es prosa corrida: sin numerar, sin titulos, sin listas ni markdown. Cada
 termino tecnico, explicalo ahi mismo con palabras llanas. Lo que va [entre
 corchetes] sale de nuestro catalogo y es fiable: usalo; para lo que no lo
-lleve, describe lo que se ve sin inventar que significa.
+lleve, describe lo que se ve sin inventar que significa. Si aparece una linea
+de CONTEXTO EN EL PERIODO, usala para situar el ataque: si es una campana que
+repiten muchas direcciones, dilo con naturalidad -es ruido automatizado, no
+algo dirigido a esta maquina-; si es un patron poco comun, resaltalo.
 
 Responde SIEMPRE en espanol, en tono tranquilo y didactico. No pases de 250
 palabras, y muchas veces con bastantes menos basta.`
@@ -85,12 +88,12 @@ type PasoDeAtaque struct {
 
 // ExplicarAtaque pide al modelo que cuente un ataque concreto.
 func ExplicarAtaque(ctx context.Context, e Explicador, ep store.EpisodioFila,
-	pasos []PasoDeAtaque, notaProveedor, idioma string, tope int) (string, error) {
+	pasos []PasoDeAtaque, notaProveedor, contexto, idioma string, tope int) (string, error) {
 	if e == nil {
 		return "", fmt.Errorf("no hay ningun modelo configurado")
 	}
 	texto, err := e.Preguntar(ctx, sistemaAtaque+instruccionIdioma(idioma),
-		recortarPrompt(ataqueComoTexto(ep, pasos, notaProveedor)), tope)
+		recortarPrompt(ataqueComoTexto(ep, pasos, notaProveedor, contexto)), tope)
 	if err != nil {
 		return "", err
 	}
@@ -103,7 +106,7 @@ func ExplicarAtaque(ctx context.Context, e Explicador, ep store.EpisodioFila,
 }
 
 // ataqueComoTexto describe el ataque para el modelo.
-func ataqueComoTexto(ep store.EpisodioFila, pasos []PasoDeAtaque, notaProveedor string) string {
+func ataqueComoTexto(ep store.EpisodioFila, pasos []PasoDeAtaque, notaProveedor, contexto string) string {
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "ATAQUE contra el servicio %s, gravedad %s\n",
@@ -124,6 +127,9 @@ func ataqueComoTexto(ep store.EpisodioFila, pasos []PasoDeAtaque, notaProveedor 
 	fmt.Fprintf(&b, "\nCuando: %s, durante %s\n\n",
 		ep.Inicio.Local().Format("02/01 15:04"), duracionLegible(ep.Duracion()))
 
+	if contexto != "" {
+		fmt.Fprintf(&b, "CONTEXTO EN EL PERIODO: %s\n\n", contexto)
+	}
 	b.WriteString("SECUENCIA COMPLETA:\n")
 	for i, p := range pasos {
 		// Un comando de reconocimiento puede ocupar dos kilobytes el solo; se

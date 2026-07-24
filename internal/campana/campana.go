@@ -145,6 +145,29 @@ type senal struct {
 }
 
 // senales extrae de un ataque todo lo que podria delatar un guion comun.
+// ContextoDe situa un episodio dentro de lo que se ve en el periodo: la
+// mayor campana a la que pertenece -misma secuencia, mismo fichero, mismo
+// diccionario o mismas rutas- y cuantas direcciones la comparten. Es lo que
+// permite explicar un ataque como "el ruido habitual" o "esto es raro", en
+// vez de contar cada uno como si fuera unico.
+func ContextoDe(episodios []store.EpisodioFila, e store.EpisodioFila) (Campana, bool) {
+	mias := map[string]bool{}
+	for _, s := range senales(e) {
+		mias[string(s.tipo)+"|"+s.huella] = true
+	}
+	if len(mias) == 0 {
+		return Campana{}, false
+	}
+	var mejor Campana
+	hay := false
+	for _, c := range Detectar(episodios) {
+		if mias[string(c.Tipo)+"|"+c.Huella] && (!hay || len(c.IPs) > len(mejor.IPs)) {
+			mejor, hay = c, true
+		}
+	}
+	return mejor, hay
+}
+
 func senales(e store.EpisodioFila) []senal {
 	var out []senal
 
