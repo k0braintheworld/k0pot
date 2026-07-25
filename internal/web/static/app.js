@@ -1756,12 +1756,14 @@ const CAMPOS = {
   "c-aviso-servidor": "aviso_servidor",
   "c-aviso-minima": "aviso_minima",
   "c-aviso-enlace": "aviso_enlace",
+  "c-resumen-cadencia": "resumen_cadencia",
 };
 const INTERRUPTORES = {
   "c-enriquecer": "enriquecer_activo",
   "c-usar-llm": "usar_llm",
   "c-avisos-activos": "avisos_activos",
   "c-panel-https": "panel_https",
+  "c-resumen-activo": "resumen_activo",
 };
 
 function volcarAjustes(c) {

@@ -314,6 +314,9 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 		if err := avisarDeLoGrave(ctx, almacen, ajustes.Actual()); err != nil {
 			log.Printf("avisos: %v", err)
 		}
+		if err := enviarResumen(ctx, almacen, ajustes.Actual()); err != nil {
+			log.Printf("resumen: %v", err)
+		}
 
 		// Activar o desactivar un servicio desde el panel surte efecto
 		// aqui, sin reiniciar nada.
@@ -343,6 +346,61 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 		case <-time.After(intervalo):
 		}
 	}
+}
+
+
+// enviarResumen manda por el canal de avisos un digest del periodo, si toca.
+// Se autolimita leyendo cuando se envio el ultimo, para no repetirlo en cada
+// vuelta del bucle ni tras un reinicio.
+func enviarResumen(ctx context.Context, almacen *store.Store, c config.Config) error {
+	if !c.ResumenActivo || c.AvisoCanal == "" {
+		return nil
+	}
+	dias := 7
+	cada := 7 * 24 * time.Hour
+	if c.ResumenCadencia == "diario" {
+		dias, cada = 1, 24*time.Hour
+	}
+	if ult, _ := almacen.LeerEstado("ultimo_resumen"); ult != "" {
+		if t, err := time.Parse(time.RFC3339, ult); err == nil && time.Since(t) < cada-time.Hour {
+			return nil
+		}
+	}
+	desde := time.Now().AddDate(0, 0, -dias)
+	resumen, err := almacen.Resumir(desde)
+	if err != nil {
+		return err
+	}
+	niveles, _ := almacen.PorClasificacion(desde)
+	ataques, _ := almacen.Episodios(store.FiltroEpisodios{Desde: desde, Limite: 50})
+	nuevos, _ := almacen.ArtefactosNuevos(desde)
+	res, _ := report.PorReglas{}.Generar(ctx, report.Datos{
+		Desde: desde, Hasta: time.Now(), Resumen: resumen,
+		Niveles: niveles, Episodios: ataques, Idioma: c.Idioma,
+	})
+	cuerpo := res.Texto
+	if len(nuevos) > 0 {
+		if c.Idioma == "en" {
+			cuerpo += fmt.Sprintf("\n%d new malware sample(s) captured.", len(nuevos))
+		} else {
+			cuerpo += fmt.Sprintf("\n%d muestra(s) de malware nueva(s).", len(nuevos))
+		}
+	}
+	canal, err := aviso.De(aviso.Config{
+		Canal: c.AvisoCanal, Destino: c.AvisoDestino, Clave: c.ClaveAviso,
+		Servidor: c.AvisoServidor, Enlace: c.AvisoEnlace,
+	}, nil)
+	if err != nil || canal == nil {
+		return err
+	}
+	titulo := "k0Pot: resumen"
+	if c.Idioma == "en" {
+		titulo = "k0Pot: summary"
+	}
+	if err := canal.Enviar(ctx, aviso.Mensaje{Titulo: titulo, Cuerpo: cuerpo, Enlace: c.AvisoEnlace}); err != nil {
+		return err
+	}
+	return almacen.GuardarEstado("ultimo_resumen", time.Now().Format(time.RFC3339))
 }
 
 // avisarDeLoGrave saca del panel lo que no puede esperar a que alguien

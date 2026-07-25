@@ -65,6 +65,8 @@ type entradaAjustes struct {
 	AvisoDestino  *string `json:"aviso_destino"`
 	AvisoServidor *string `json:"aviso_servidor"`
 	AvisoMinima   *string `json:"aviso_minima"`
+	ResumenActivo   *bool   `json:"resumen_activo"`
+	ResumenCadencia *string `json:"resumen_cadencia"`
 	AvisoEnlace   *string `json:"aviso_enlace"`
 
 	// Claves: cadena vacia o ausente = dejar la que hay. Para borrar una
@@ -117,6 +119,10 @@ func (s *Servidor) guardarAjustes(w http.ResponseWriter, r *http.Request) {
 	if e.AvisosActivos != nil {
 		c.AvisosActivos = *e.AvisosActivos
 	}
+	if e.ResumenActivo != nil {
+		c.ResumenActivo = *e.ResumenActivo
+	}
+	aplicarTexto(&c.ResumenCadencia, e.ResumenCadencia)
 
 	if e.EnriquecerActivo != nil {
 		c.EnriquecerActivo = *e.EnriquecerActivo

@@ -101,6 +101,9 @@ type Config struct {
 	// de "acceso" son cientos de mensajes al dia, y eso es garantizar que
 	// se dejen de leer.
 	AvisoMinima string `json:"aviso_minima"`
+	// Resumen periodico: un digest por la misma via de los avisos.
+	ResumenActivo   bool   `json:"resumen_activo"`
+	ResumenCadencia string `json:"resumen_cadencia"`
 	// AvisoEnlace es la direccion del panel que se incluye en el aviso.
 	AvisoEnlace string `json:"aviso_enlace"`
 
@@ -162,6 +165,7 @@ func PorDefecto() Config {
 		RetencionEpisodiosDias: 0,
 		AvisosActivos:          false,
 		AvisoCanal:             "ntfy",
+		ResumenCadencia:        "semanal",
 		AvisoMinima:            "acceso",
 	}
 }

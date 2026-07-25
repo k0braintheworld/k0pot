@@ -37,6 +37,12 @@ CREATE TABLE IF NOT EXISTS config (
     id     INTEGER PRIMARY KEY CHECK (id = 1),
     datos  TEXT NOT NULL
 );
+
+-- Estado interno clave-valor: por ejemplo cuando se envio el ultimo resumen.
+CREATE TABLE IF NOT EXISTS estado (
+    clave  TEXT PRIMARY KEY,
+    valor  TEXT NOT NULL
+);
 `
 
 // ErrNoExiste lo devuelven las lecturas que no encuentran nada.
@@ -323,4 +329,23 @@ func (s *Store) AtaquesPorServicio(desde time.Time) ([]Recuento, error) {
 		out = append(out, r)
 	}
 	return out, filas.Err()
+}
+
+// LeerEstado lee un valor de estado interno; cadena vacia si no existe (la
+// ausencia no es un error).
+func (s *Store) LeerEstado(clave string) (string, error) {
+	var v string
+	err := s.db.QueryRow(`SELECT valor FROM estado WHERE clave = ?`, clave).Scan(&v)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return v, err
+}
+
+// GuardarEstado persiste un valor de estado interno.
+func (s *Store) GuardarEstado(clave, valor string) error {
+	_, err := s.db.Exec(
+		`INSERT INTO estado (clave, valor) VALUES (?, ?)
+		 ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor`, clave, valor)
+	return err
 }

@@ -212,6 +212,16 @@
         <button id="probar-aviso" type="button" class="boton-menor" data-i18n="cfg.av.probar">Enviar un aviso de prueba</button>
         <span id="estado-aviso" class="sub"></span>
       </div>
+      <label class="interruptor" data-i18n-first="cfg.resumen">
+        <input type="checkbox" id="c-resumen-activo"> Enviar un resumen periódico
+      </label>
+      <label data-i18n-first="cfg.resumen.cadencia">Cada cuánto
+        <select id="c-resumen-cadencia">
+          <option value="semanal" data-i18n="cfg.resumen.semanal">Semanal</option>
+          <option value="diario" data-i18n="cfg.resumen.diario">Diario</option>
+        </select>
+      </label>
+      <p class="ayuda" data-i18n="cfg.resumen.ayuda">Un digest del periodo por el mismo canal de avisos: cifras, orígenes y malware nuevo.</p>
     </div>
 
     <div class="grupo" data-pestana="general">

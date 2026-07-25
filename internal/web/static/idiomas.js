@@ -680,3 +680,15 @@ Object.assign(IDIOMAS.en, {
   "aj.reportar.nada": "No new intrusions to report",
   "aj.reportar.error": "Couldn't report: {msg}"
 });
+Object.assign(IDIOMAS.es, {
+  "cfg.resumen": "Enviar un resumen periódico",
+  "cfg.resumen.cadencia": "Cada cuánto",
+  "cfg.resumen.semanal": "Semanal", "cfg.resumen.diario": "Diario",
+  "cfg.resumen.ayuda": "Un digest del periodo por el mismo canal de avisos: cifras, orígenes y malware nuevo."
+});
+Object.assign(IDIOMAS.en, {
+  "cfg.resumen": "Send a periodic summary",
+  "cfg.resumen.cadencia": "How often",
+  "cfg.resumen.semanal": "Weekly", "cfg.resumen.diario": "Daily",
+  "cfg.resumen.ayuda": "A digest of the period through the same alert channel: figures, origins and new malware."
+});
