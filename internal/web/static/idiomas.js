@@ -638,3 +638,13 @@ Object.assign(IDIOMAS.en, {
   "artef.vt.limpio": "0/{total} flag it",
   "artef.vt.desconocido": "VirusTotal doesn't have it yet (uncommon sample)"
 });
+Object.assign(IDIOMAS.es, {
+  "sec.novedades": "Novedades", "sec.novedades.sub": "Lo que no habíamos visto antes",
+  "novedades.malware": "Ficheros nunca vistos ({n})",
+  "novedades.manual": "Sesiones a revisar ({n})"
+});
+Object.assign(IDIOMAS.en, {
+  "sec.novedades": "What's new", "sec.novedades.sub": "Things we hadn't seen before",
+  "novedades.malware": "Files never seen before ({n})",
+  "novedades.manual": "Sessions to review ({n})"
+});

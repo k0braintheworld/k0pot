@@ -915,3 +915,18 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 
 .vt-link { color: var(--acento); margin-left: .5rem; white-space: nowrap; }
 .vt-link:hover { text-decoration: underline; }
+
+/* Novedades: el bloque de "mira esto". Resalta con el acento porque es lo
+   contrario del ruido -aparece solo cuando hay algo que de verdad importa-. */
+.bloque-novedades { grid-column: span 12; border-color: var(--acento); }
+.novedades { display: flex; flex-direction: column; gap: .4rem; }
+.novedades-titulo { margin: .5rem 0 .1rem; font-size: .78rem; color: var(--acento); font-weight: 600; }
+.novedad {
+  display: flex; align-items: center; gap: .7rem; width: 100%; text-align: left;
+  padding: .5rem .6rem; border: 1px solid var(--borde); border-radius: .4rem;
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.novedad:hover { border-color: var(--acento); }
+.novedad-icono { font-size: 1.1rem; flex: none; }
+.novedad-texto { min-width: 0; }
+.novedad-texto .sub { display: block; font-size: .74rem; margin-top: .1rem; }

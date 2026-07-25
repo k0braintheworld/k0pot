@@ -85,6 +85,44 @@ func (s *Store) ShaDeURL(url string) (string, bool) {
 	return sha, true
 }
 
+// ArtefactoNuevo es un fichero capturado cuya primera aparicion es reciente.
+type ArtefactoNuevo struct {
+	SHA256  string    `json:"sha256"`
+	Primera time.Time `json:"primera"`
+	IPs     int       `json:"ips"`
+}
+
+// ArtefactosNuevos devuelve los ficheros cuya PRIMERA aparicion en toda la
+// historia cae dentro del periodo: las muestras que no habiamos visto nunca.
+// Es lo que de verdad merece una mirada entre tanto Mirai repetido.
+func (s *Store) ArtefactosNuevos(desde time.Time) ([]ArtefactoNuevo, error) {
+	filas, err := s.db.Query(
+		`SELECT sha, primera, ips FROM (
+		   SELECT json_extract(detalle,'$.sha256') AS sha,
+		          MIN(timestamp) AS primera,
+		          COUNT(DISTINCT ip) AS ips
+		     FROM eventos
+		    WHERE tipo = ? AND json_extract(detalle,'$.sha256') IS NOT NULL
+		    GROUP BY sha
+		 ) WHERE primera >= ? ORDER BY primera DESC`,
+		string(model.DescargaFichero), desde.UTC().Format(time.RFC3339Nano))
+	if err != nil {
+		return nil, fmt.Errorf("artefactos nuevos: %w", err)
+	}
+	defer filas.Close()
+	var out []ArtefactoNuevo
+	for filas.Next() {
+		var a ArtefactoNuevo
+		var ts string
+		if err := filas.Scan(&a.SHA256, &ts, &a.IPs); err != nil {
+			return nil, err
+		}
+		a.Primera, _ = time.Parse(time.RFC3339Nano, ts)
+		out = append(out, a)
+	}
+	return out, filas.Err()
+}
+
 func (s *Store) FuentesDeArtefacto(sha256 string) (FuenteArtefacto, error) {
 	filas, err := s.db.Query(
 		`SELECT ip, COALESCE(json_extract(detalle,'$.url'),''), timestamp

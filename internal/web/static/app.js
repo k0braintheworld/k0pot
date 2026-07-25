@@ -1228,6 +1228,53 @@ function tamano(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+// cargarNovedades pinta el radar: ficheros nunca vistos y sesiones a revisar.
+// Es el bloque que corta el ruido -si esta vacio, no molesta-.
+async function cargarNovedades() {
+  const r = await traer("/api/radar");
+  const cont = $("novedades");
+  cont.replaceChildren();
+  const seccion = document.querySelector(".bloque-novedades");
+  const malware = r.malware || [], manual = r.manual || [];
+  if (!malware.length && !manual.length) {
+    if (seccion) seccion.hidden = true;
+    return;
+  }
+  if (seccion) seccion.hidden = false;
+
+  if (malware.length) {
+    cont.appendChild(nodo("p", "novedades-titulo", t("novedades.malware", { n: malware.length })));
+    for (const m of malware) {
+      const caja = nodo("button", "novedad pulsable");
+      caja.type = "button";
+      caja.appendChild(nodo("span", "novedad-icono", "🧬"));
+      const txt = nodo("div", "novedad-texto");
+      txt.appendChild(nodo("code", null, m.sha256.slice(0, 24) + "…"));
+      const sub = [];
+      if (m.ips) sub.push(`${m.ips} IP${m.ips > 1 ? "s" : ""}`);
+      if (m.primera) sub.push(hace(m.primera));
+      txt.appendChild(nodo("span", "sub", sub.join(" · ")));
+      caja.appendChild(txt);
+      caja.addEventListener("click", () => abrirArtefacto(m.sha256));
+      cont.appendChild(caja);
+    }
+  }
+  if (manual.length) {
+    cont.appendChild(nodo("p", "novedades-titulo", t("novedades.manual", { n: manual.length })));
+    for (const s of manual) {
+      const caja = nodo("button", "novedad pulsable");
+      caja.type = "button";
+      caja.appendChild(nodo("span", "novedad-icono", "👁"));
+      const txt = nodo("div", "novedad-texto");
+      txt.appendChild(nodo("strong", null, `${s.protocolo} — ${s.ip}`));
+      txt.appendChild(nodo("span", "sub", s.resumen));
+      caja.appendChild(txt);
+      caja.addEventListener("click", () => abrirAtaque(s.clave));
+      cont.appendChild(caja);
+    }
+  }
+}
+
 async function cargarArtefactos() {
   const lista = await traer("/api/artefactos");
   const cont = $("artefactos");
@@ -1539,6 +1586,7 @@ async function refrescar() {
       cargarAtaques(),
       cargarCampanas(),
       cargarArtefactos(),
+      cargarNovedades(),
       traer("/api/serie").then(pintarSerie),
     ]);
     latido.className = "punto conectado";

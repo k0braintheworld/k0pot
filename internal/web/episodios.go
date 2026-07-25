@@ -501,3 +501,38 @@ func pareceDropper(comandos []string) bool {
 	}
 	return false
 }
+
+
+// radar reune lo que merece atencion por ser NUEVO o inusual, no por volumen:
+// ficheros que no habiamos visto nunca y sesiones que no encajan con la
+// automatizacion conocida. Es el antidoto al monocultivo de Mirai.
+func (s *Servidor) radar(w http.ResponseWriter, r *http.Request) {
+	idioma := idiomaDe(r)
+	desde := time.Now().AddDate(0, 0, -dias(r))
+
+	nuevos, err := s.Almacen.ArtefactosNuevos(desde)
+	if err != nil {
+		http.Error(w, "no se pudieron leer los ficheros nuevos", http.StatusInternalServerError)
+		return
+	}
+
+	lista, err := s.Almacen.Episodios(store.FiltroEpisodios{Desde: desde, Limite: 500})
+	if err != nil {
+		http.Error(w, "no se pudieron leer los ataques", http.StatusInternalServerError)
+		return
+	}
+	enCamp := campana.EnCampana(lista)
+	veces := map[string]int{}
+	for _, e := range lista {
+		veces[e.IP]++
+	}
+	manual := make([]store.EpisodioFila, 0)
+	for i := range lista {
+		if automatismoDe(lista[i], enCamp[lista[i].Clave], veces[lista[i].IP]) == "manual" {
+			lista[i].Resumen = episodio.Redactar(lista[i].Episodio, idioma)
+			lista[i].Automatismo = "manual"
+			manual = append(manual, lista[i])
+		}
+	}
+	responderJSON(w, map[string]any{"malware": nuevos, "manual": manual})
+}
