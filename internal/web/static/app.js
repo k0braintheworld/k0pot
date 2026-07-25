@@ -693,6 +693,7 @@ async function explicarAtaque() {
   }
 }
 
+let ataqueAbierto = null;
 async function abrirAtaque(clave) {
   const d = await pedirJSON(`/api/episodio?clave=${encodeURIComponent(clave)}&idioma=${IDIOMA}`);
   const dlg = $("dialogo-ataque");
@@ -716,11 +717,16 @@ async function abrirAtaque(clave) {
   const rep = d.reputacion > 0 ? ` · reputacion ${d.reputacion}/100` : "";
   $("ataque-sub").textContent = `${donde}${rep} — ${d.resumen}`;
 
+  ataqueAbierto = d;
   const cuerpo = $("ataque-cuerpo");
-  cuerpo.replaceChildren();
+  pintarPasos(cuerpo, d);
+  $("reproducir-ataque").hidden = !(d.pasos || []).length;
+  dlg.showModal();
+}
 
-  // Quien opera la IP va lo primero: un escaner de investigacion y una
-  // botnet dejan el mismo rastro, y solo esto los distingue.
+// pintarPasos dibuja la secuencia narrada del ataque (la vista estatica).
+function pintarPasos(cuerpo, d) {
+  cuerpo.replaceChildren();
   if (d.nota_proveedor) {
     const av = nodo("p", "nota-proveedor");
     av.appendChild(nodo("strong", null, d.nota_proveedor.que));
@@ -730,22 +736,14 @@ async function abrirAtaque(clave) {
   for (const p of d.pasos || []) {
     const fila = nodo("div", p.destacado ? "paso paso-clave" : "paso");
     fila.appendChild(nodo("span", "paso-hora", horaCorta(p.momento)));
-
     const texto = nodo("div", "paso-texto");
     texto.appendChild(nodo("span", null, p.texto));
-    // La nota explica que significa el paso. Va debajo y en tono menor:
-    // acompana a lo observado, no lo sustituye.
     if (p.nota) {
       const nota = nodo("span", "paso-nota");
       nota.appendChild(nodo("strong", null, p.nota.que));
       if (p.nota.por) nota.appendChild(nodo("span", null, ` — ${p.nota.por}`));
       texto.appendChild(nota);
     }
-    // El dato crudo -lo que envio EXACTAMENTE- se ensena en monoespaciado
-    // debajo, salvo cuando la narracion ya ES el comando literal: repetir
-    // "ejecuta: uname -a" y luego "uname -a" es ruido. Se muestra cuando
-    // aporta algo que la narracion no dice: el user-agent, los bytes de un
-    // saludo de otro protocolo, la ruta completa.
     if (p.crudo && !p.texto.includes(p.crudo)) {
       const pre = nodo("pre", "paso-crudo");
       pre.textContent = p.crudo;
@@ -757,7 +755,47 @@ async function abrirAtaque(clave) {
   if (!(d.pasos || []).length) {
     cuerpo.appendChild(nodo("p", "vacio", t("det.purgado")));
   }
-  dlg.showModal();
+}
+
+let reproduciendoSesion = false;
+
+// reproducirSesion "toca" el ataque con su ritmo REAL: revela cada paso al
+// tiempo (escalado) en que ocurrio, para VER como se desarrollo -las rafagas
+// de un bot, las pausas de una persona-. Es lo mas parecido a estar delante.
+async function reproducirSesion() {
+  const d = ataqueAbierto;
+  if (!d || !(d.pasos || []).length || reproduciendoSesion) return;
+  reproduciendoSesion = true;
+  const btn = $("reproducir-ataque");
+  btn.disabled = true;
+  btn.textContent = t("dlg.reproduciendo");
+  const cuerpo = $("ataque-cuerpo");
+  cuerpo.replaceChildren();
+  const term = nodo("pre", "replay-term");
+  cuerpo.appendChild(term);
+
+  const pasos = d.pasos;
+  const t0 = new Date(pasos[0].momento).getTime();
+  let anterior = t0;
+  for (const p of pasos) {
+    const real = new Date(p.momento).getTime() - anterior;
+    anterior = new Date(p.momento).getTime();
+    // Escala: rafagas rapidas, pausas perceptibles pero acotadas (nunca
+    // minutos). El ritmo se conserva; la espera, no.
+    const espera = real <= 0 ? 250 : Math.min(1800, Math.max(250, real / 8));
+    await new Promise((r) => setTimeout(r, espera));
+    const seg = Math.round((new Date(p.momento).getTime() - t0) / 1000);
+    const linea = nodo("span", p.destacado ? "replay-linea clave" : "replay-linea",
+      `[+${seg}s] ${p.crudo || p.texto}\n`);
+    term.appendChild(linea);
+    term.scrollTop = term.scrollHeight;
+  }
+  term.appendChild(nodo("span", "replay-fin", `\n— ${t("replay.fin")} —`));
+  await new Promise((r) => setTimeout(r, 1400));
+  pintarPasos(cuerpo, d);
+  btn.disabled = false;
+  btn.textContent = t("dlg.reproducir");
+  reproduciendoSesion = false;
 }
 
 // ── Subir la base GeoIP ─────────────────────────────────────────────────
@@ -1619,6 +1657,7 @@ $("rango").addEventListener("change", refrescar);
 $("generar-informe").addEventListener("click", () => {
   window.open(`/api/reporte?dias=${encodeURIComponent(rango())}&idioma=${IDIOMA}`, "_blank", "noopener");
 });
+$("reproducir-ataque").addEventListener("click", () => reproducirSesion().catch(() => {}));
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
 $("explicar-ataque").addEventListener("click", explicarAtaque);
 $("cerrar-ip").addEventListener("click", () => $("dialogo-ip").close());

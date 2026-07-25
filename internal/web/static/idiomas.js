@@ -648,3 +648,11 @@ Object.assign(IDIOMAS.en, {
   "novedades.malware": "Files never seen before ({n})",
   "novedades.manual": "Sessions to review ({n})"
 });
+Object.assign(IDIOMAS.es, {
+  "dlg.reproducir": "▶ Reproducir", "dlg.reproduciendo": "Reproduciendo…",
+  "replay.fin": "fin de la reproducción"
+});
+Object.assign(IDIOMAS.en, {
+  "dlg.reproducir": "▶ Play", "dlg.reproduciendo": "Playing…",
+  "replay.fin": "end of replay"
+});
