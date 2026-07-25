@@ -117,6 +117,7 @@ type Config struct {
 	ClaveAbuseIPDB  string `json:"clave_abuseipdb"`
 	ClaveAnthropic  string `json:"clave_anthropic"`
 	ClaveCompatible string `json:"clave_compatible"`
+	ClaveVirusTotal string `json:"clave_virustotal"`
 	// ClaveAviso es el token del bot de Telegram. Se trata como clave: no
 	// sale nunca en claro del servidor.
 	ClaveAviso string `json:"clave_aviso"`
@@ -254,10 +255,12 @@ type Publica struct {
 	ClaveAbuseIPDB  string `json:"clave_abuseipdb"`
 	ClaveAnthropic  string `json:"clave_anthropic"`
 	ClaveCompatible string `json:"clave_compatible"`
+	ClaveVirusTotal string `json:"clave_virustotal"`
 	ClaveAviso      string `json:"clave_aviso"`
 	TieneAbuseIPDB  bool   `json:"tiene_abuseipdb"`
 	TieneAnthropic  bool   `json:"tiene_anthropic"`
 	TieneCompatible bool   `json:"tiene_compatible"`
+	TieneVirusTotal bool   `json:"tiene_virustotal"`
 	TieneAviso      bool   `json:"tiene_aviso"`
 }
 
@@ -268,10 +271,12 @@ func (c Config) ParaPanel() Publica {
 		ClaveAbuseIPDB:  enmascarar(c.ClaveAbuseIPDB),
 		ClaveAnthropic:  enmascarar(c.ClaveAnthropic),
 		ClaveCompatible: enmascarar(c.ClaveCompatible),
+		ClaveVirusTotal: enmascarar(c.ClaveVirusTotal),
 		ClaveAviso:      enmascarar(c.ClaveAviso),
 		TieneAbuseIPDB:  c.ClaveAbuseIPDB != "",
 		TieneAnthropic:  c.ClaveAnthropic != "",
 		TieneCompatible: c.ClaveCompatible != "",
+		TieneVirusTotal: c.ClaveVirusTotal != "",
 		TieneAviso:      c.ClaveAviso != "",
 	}
 }
@@ -314,6 +319,7 @@ func Abrir(almacen *store.Store) (*Gestor, error) {
 			"K0POT_CLAVE_ANTHROPIC", "HONEY_ANTHROPIC_KEY", "ANTHROPIC_API_KEY")
 		g.actual.ClaveCompatible = primeraNoVacia(
 			"K0POT_CLAVE_COMPATIBLE", "HONEY_GROQ_KEY", "HONEY_LLM_KEY")
+		g.actual.ClaveVirusTotal = primeraNoVacia("K0POT_CLAVE_VIRUSTOTAL")
 		if m := primeraNoVacia("K0POT_MODELO", "HONEY_MODELO"); m != "" {
 			g.actual.Modelo = m
 		}

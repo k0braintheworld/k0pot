@@ -622,3 +622,19 @@ Object.assign(IDIOMAS.en, {
   "artef.url.aviso": "The file from this address wasn't captured (TFTP isn't stored, the download failed, or only the command was logged). Here is what we do know.",
   "artef.url.verfichero": "→ View the file that was captured"
 });
+Object.assign(IDIOMAS.es, {
+  "cfg.enr.vt": "Clave de VirusTotal",
+  "cfg.enr.vt.small": "Comprueba por el hash si un fichero ya se conoce, sin subir la muestra. Clave gratis en virustotal.com.",
+  "artef.vt.ver": "Ver en VirusTotal ↗",
+  "artef.vt.detectado": "detectado por {n}/{total} motores",
+  "artef.vt.limpio": "0/{total} lo marcan",
+  "artef.vt.desconocido": "VirusTotal no lo tiene todavía (muestra poco común)"
+});
+Object.assign(IDIOMAS.en, {
+  "cfg.enr.vt": "VirusTotal key",
+  "cfg.enr.vt.small": "Checks by hash whether a file is already known, without uploading it. Free key at virustotal.com.",
+  "artef.vt.ver": "View on VirusTotal ↗",
+  "artef.vt.detectado": "flagged by {n}/{total} engines",
+  "artef.vt.limpio": "0/{total} flag it",
+  "artef.vt.desconocido": "VirusTotal doesn't have it yet (uncommon sample)"
+});

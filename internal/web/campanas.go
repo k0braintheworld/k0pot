@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/k0braintheworld/k0pot/internal/artefacto"
 	"github.com/k0braintheworld/k0pot/internal/campana"
+	"github.com/k0braintheworld/k0pot/internal/enrich"
 	"github.com/k0braintheworld/k0pot/internal/episodio"
 	"github.com/k0braintheworld/k0pot/internal/report"
 	"github.com/k0braintheworld/k0pot/internal/store"
@@ -342,6 +344,8 @@ type DetalleArtefacto struct {
 	Primera     time.Time `json:"primera,omitempty"`
 	Ultima      time.Time `json:"ultima,omitempty"`
 	Explicacion string    `json:"explicacion,omitempty"`
+	// VT es el veredicto de VirusTotal por el hash, si hay clave configurada.
+	VT *enrich.VeredictoVT `json:"vt,omitempty"`
 }
 
 // rutaArtefacto valida el hash y devuelve la ruta al fichero, garantizando
@@ -395,6 +399,13 @@ func (s *Servidor) detalleArtefacto(hash string) (DetalleArtefacto, bool) {
 	if fu, err := s.Almacen.FuentesDeArtefacto(hash); err == nil {
 		det.IPs, det.URLs = fu.IPs, fu.URLs
 		det.Primera, det.Ultima = fu.Primera, fu.Ultima
+	}
+	if clave := s.Config.Actual().ClaveVirusTotal; clave != "" {
+		ctx, cancelar := context.WithTimeout(context.Background(), 9*time.Second)
+		defer cancelar()
+		if v, err := enrich.VirusTotal(ctx, nil, clave, hash); err == nil {
+			det.VT = &v
+		}
 	}
 	return det, true
 }

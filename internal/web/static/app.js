@@ -1369,6 +1369,22 @@ t("artef.aviso")));
   datos.appendChild(dato(t("dato.tipo"), d.tipo));
   datos.appendChild(dato(t("dato.tamano"), tamano(d.bytes)));
   datos.appendChild(dato("SHA-256", d.sha256));
+  // VirusTotal: veredicto por hash si hay clave, y enlace siempre.
+  let vtTexto = "";
+  if (d.vt && d.vt.conocido) {
+    vtTexto = t(d.vt.maliciosos > 0 ? "artef.vt.detectado" : "artef.vt.limpio",
+      { n: d.vt.maliciosos, total: d.vt.total });
+    if (d.vt.etiqueta) vtTexto += ` · ${d.vt.etiqueta}`;
+  } else if (d.vt) {
+    vtTexto = t("artef.vt.desconocido");
+  }
+  const vtFila = dato("VirusTotal", vtTexto);
+  const vtLink = nodo("a", "vt-link", t("artef.vt.ver"));
+  vtLink.href = `https://www.virustotal.com/gui/file/${encodeURIComponent(d.sha256)}`;
+  vtLink.target = "_blank";
+  vtLink.rel = "noopener";
+  vtFila.appendChild(vtLink);
+  datos.appendChild(vtFila);
   if (d.urls?.length) datos.appendChild(dato(t("dato.origen"), d.urls.join("  ")));
   if (d.ips?.length) datos.appendChild(dato(t("dato.trajeron"), d.ips.join(", ")));
   if (d.primera) datos.appendChild(dato(t("dato.primera"), new Date(d.primera).toLocaleString(IDIOMA)));
@@ -1683,6 +1699,7 @@ function leerAjustes() {
     ["c-clave-abuse", "clave_abuseipdb"],
     ["c-clave-anthropic", "clave_anthropic"],
     ["c-clave-compatible", "clave_compatible"],
+    ["c-clave-virustotal", "clave_virustotal"],
     ["c-aviso-clave", "clave_aviso"],
   ]) {
     const v = $(id).value.trim();
@@ -2040,7 +2057,7 @@ async function guardarAjustes() {
     });
     volcarAjustes(c);
     pintarServicios(await pedirJSON("/api/servicios"));
-    for (const id of ["c-clave-abuse", "c-clave-anthropic", "c-clave-compatible"]) {
+    for (const id of ["c-clave-abuse", "c-clave-anthropic", "c-clave-compatible", "c-clave-virustotal"]) {
       $(id).value = "";
     }
     estado.textContent = t("aj.guardado");

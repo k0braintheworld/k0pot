@@ -72,6 +72,7 @@ type entradaAjustes struct {
 	ClaveAbuseIPDB   *string `json:"clave_abuseipdb"`
 	ClaveAnthropic   *string `json:"clave_anthropic"`
 	ClaveCompatible  *string `json:"clave_compatible"`
+	ClaveVirusTotal  *string `json:"clave_virustotal"`
 	ClaveAviso       *string `json:"clave_aviso"`
 	BorrarAbuseIPDB  bool    `json:"borrar_abuseipdb"`
 	BorrarAnthropic  bool    `json:"borrar_anthropic"`
@@ -166,6 +167,9 @@ func (s *Servidor) guardarAjustes(w http.ResponseWriter, r *http.Request) {
 		c.ClaveAbuseIPDB = ""
 	} else if e.ClaveAbuseIPDB != nil && *e.ClaveAbuseIPDB != "" {
 		c.ClaveAbuseIPDB = *e.ClaveAbuseIPDB
+	}
+	if e.ClaveVirusTotal != nil && *e.ClaveVirusTotal != "" {
+		c.ClaveVirusTotal = *e.ClaveVirusTotal
 	}
 	if e.BorrarAnthropic {
 		c.ClaveAnthropic = ""
