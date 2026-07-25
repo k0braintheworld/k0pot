@@ -664,3 +664,19 @@ Object.assign(IDIOMAS.en, {
   "hdr.blocklist": "Blocklist",
   "hdr.blocklist.t": "Download the IPs that attacked (access or intrusion) to block them on your real servers"
 });
+Object.assign(IDIOMAS.es, {
+  "aj.reportar": "Reportar los ataques a AbuseIPDB",
+  "aj.reportar.confirm": "Esto PUBLICA en AbuseIPDB las IPs que te han atacado (intrusiones de las últimas 24 h), para contribuir al feed comunitario. ¿Continuar?",
+  "aj.reportar.enviando": "Reportando…",
+  "aj.reportar.hecho": "Reportadas {n} de {total} IPs",
+  "aj.reportar.nada": "No había intrusiones nuevas que reportar",
+  "aj.reportar.error": "No se pudo reportar: {msg}"
+});
+Object.assign(IDIOMAS.en, {
+  "aj.reportar": "Report attackers to AbuseIPDB",
+  "aj.reportar.confirm": "This PUBLISHES to AbuseIPDB the IPs that attacked you (intrusions from the last 24h), contributing to the community feed. Continue?",
+  "aj.reportar.enviando": "Reporting…",
+  "aj.reportar.hecho": "Reported {n} of {total} IPs",
+  "aj.reportar.nada": "No new intrusions to report",
+  "aj.reportar.error": "Couldn't report: {msg}"
+});

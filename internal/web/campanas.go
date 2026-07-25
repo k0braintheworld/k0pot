@@ -536,3 +536,49 @@ func (s *Servidor) explicarURL(w http.ResponseWriter, r *http.Request) {
 	}
 	responderJSON(w, map[string]string{"explicacion": texto})
 }
+
+
+// reportarAbuse denuncia a AbuseIPDB las intrusiones recientes, para devolver
+// al feed comunitario lo que el senuelo ha visto. Es una PUBLICACION externa:
+// solo por POST y a peticion expresa del usuario, nunca automatica.
+func (s *Servidor) reportarAbuse(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		responderError(w, http.StatusMethodNotAllowed, "usa POST")
+		return
+	}
+	if !mismoOrigen(r) {
+		responderError(w, http.StatusForbidden, "origen no permitido")
+		return
+	}
+	clave := s.Config.Actual().ClaveAbuseIPDB
+	if clave == "" {
+		responderError(w, http.StatusBadRequest, "no hay clave de AbuseIPDB configurada")
+		return
+	}
+	ips, err := s.Almacen.IPsAtacantes(time.Now().AddDate(0, 0, -1), "intrusion")
+	if err != nil {
+		http.Error(w, "no se pudieron leer las IPs", http.StatusInternalServerError)
+		return
+	}
+	if len(ips) > 40 {
+		ips = ips[:40] // acotar por los limites de reporte de la API
+	}
+	cliente := &http.Client{Timeout: 10 * time.Second}
+	reportadas := 0
+	var ultimoErr string
+	for _, ip := range ips {
+		ctx, cancelar := context.WithTimeout(r.Context(), 12*time.Second)
+		err := enrich.ReportarAbuseIPDB(ctx, cliente, clave, ip, "18,15,20",
+			"Unauthorized access / intrusion against a honeypot (k0Pot).")
+		cancelar()
+		if err != nil {
+			ultimoErr = err.Error()
+			if strings.Contains(ultimoErr, "limite") {
+				break
+			}
+			continue
+		}
+		reportadas++
+	}
+	responderJSON(w, map[string]any{"reportadas": reportadas, "total": len(ips), "error": ultimoErr})
+}

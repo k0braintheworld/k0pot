@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -164,4 +165,47 @@ func (a *AbuseIPDB) Restantes() int {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.restantes
+}
+
+
+// URLReporteAbuseIPDB es el endpoint de denuncia. Variable para los tests.
+var URLReporteAbuseIPDB = "https://api.abuseipdb.com/api/v2/report"
+
+// ReportarAbuseIPDB denuncia una IP atacante para contribuir al feed
+// comunitario. categorias son los codigos de AbuseIPDB (18=fuerza bruta,
+// 15=hacking, 20=host comprometido). Es una PUBLICACION: la lanza el usuario a
+// mano, nunca sola.
+func ReportarAbuseIPDB(ctx context.Context, cliente *http.Client, clave, ip, categorias, comentario string) error {
+	if clave == "" {
+		return fmt.Errorf("sin clave de AbuseIPDB")
+	}
+	if cliente == nil {
+		cliente = &http.Client{Timeout: 10 * time.Second}
+	}
+	datos := url.Values{}
+	datos.Set("ip", ip)
+	datos.Set("categories", categorias)
+	if comentario != "" {
+		datos.Set("comment", comentario)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, URLReporteAbuseIPDB,
+		strings.NewReader(datos.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Key", clave)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cliente.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return fmt.Errorf("limite de reportes de AbuseIPDB alcanzado")
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("AbuseIPDB respondio %d", resp.StatusCode)
+	}
+	return nil
 }

@@ -1697,6 +1697,25 @@ $("f-limpiar").addEventListener("click", () => {
   cargarAtaques().catch(() => {});
 });
 $("c-aviso-canal").addEventListener("change", camposDelCanal);
+$("reportar-abuse").addEventListener("click", async () => {
+  if (!confirm(t("aj.reportar.confirm"))) return;
+  const btn = $("reportar-abuse"), est = $("estado-reportar");
+  btn.disabled = true;
+  est.textContent = t("aj.reportar.enviando");
+  try {
+    const r = await pedirJSON("/api/reportar-abuse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    est.textContent = r.reportadas
+      ? t("aj.reportar.hecho", { n: r.reportadas, total: r.total })
+      : t("aj.reportar.nada");
+  } catch (e) {
+    est.textContent = t("aj.reportar.error", { msg: e.message });
+  } finally {
+    btn.disabled = false;
+  }
+});
 $("probar-aviso").addEventListener("click", probarAviso);
 $("novedades").addEventListener("click", marcarVisto);
 

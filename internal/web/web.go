@@ -93,6 +93,7 @@ func (s *Servidor) Rutas() http.Handler {
 	mux.HandleFunc("/api/uso", s.protegido(s.uso))
 	mux.HandleFunc("/api/reporte", s.protegido(s.reporte))
 	mux.HandleFunc("/api/blocklist", s.protegido(s.blocklist))
+	mux.HandleFunc("/api/reportar-abuse", s.protegido(s.reportarAbuse))
 	mux.HandleFunc("/api/geoip", s.protegido(s.subirGeoIP))
 	mux.HandleFunc("/api/actualizacion", s.protegido(s.actualizacion))
 	mux.HandleFunc("/api/campanas", s.protegido(s.campanas))
