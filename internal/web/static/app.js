@@ -1654,6 +1654,9 @@ $("tema").addEventListener("click", () => {
 $("rango").addEventListener("change", refrescar);
 // El informe se abre en otra pestana: es un documento para revisar e
 // imprimir, no algo que sustituya al panel. Lleva el periodo seleccionado.
+$("descargar-blocklist").addEventListener("click", () => {
+  window.open(`/api/blocklist?dias=${encodeURIComponent(rango())}`, "_blank", "noopener");
+});
 $("generar-informe").addEventListener("click", () => {
   window.open(`/api/reporte?dias=${encodeURIComponent(rango())}&idioma=${IDIOMA}`, "_blank", "noopener");
 });

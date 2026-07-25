@@ -18,6 +18,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/k0braintheworld/k0pot/internal/config"
@@ -91,6 +92,7 @@ func (s *Servidor) Rutas() http.Handler {
 	mux.HandleFunc("/api/ip", s.protegido(s.perfilIP))
 	mux.HandleFunc("/api/uso", s.protegido(s.uso))
 	mux.HandleFunc("/api/reporte", s.protegido(s.reporte))
+	mux.HandleFunc("/api/blocklist", s.protegido(s.blocklist))
 	mux.HandleFunc("/api/geoip", s.protegido(s.subirGeoIP))
 	mux.HandleFunc("/api/actualizacion", s.protegido(s.actualizacion))
 	mux.HandleFunc("/api/campanas", s.protegido(s.campanas))
@@ -150,6 +152,49 @@ func dias(r *http.Request) int {
 		return 365
 	}
 	return n
+}
+
+// blocklist devuelve las IPs que atacaron de verdad, para bloquearlas en los
+// servidores REALES. Se sirve como descarga: es un fichero para aplicar fuera,
+// no algo que se lea en pantalla.
+func (s *Servidor) blocklist(w http.ResponseWriter, r *http.Request) {
+	minima := severidadValida(r.URL.Query().Get("minima"))
+	if minima == "" {
+		minima = "acceso" // por defecto, solo los que consiguieron entrar
+	}
+	d := dias(r)
+	ips, err := s.Almacen.IPsAtacantes(time.Now().AddDate(0, 0, -d), minima)
+	if err != nil {
+		http.Error(w, "no se pudieron leer las IPs", http.StatusInternalServerError)
+		return
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "# k0Pot blocklist: %d IPs con gravedad >= %s en los ultimos %d dias\n",
+		len(ips), minima, d)
+	fmt.Fprintf(&b, "# Generado %s. Son direcciones que ATACARON un senuelo; bloquearlas\n",
+		time.Now().Format("2006-01-02 15:04"))
+	b.WriteString("# en tus servidores reales es seguro. Revisa antes de aplicar.\n")
+
+	nombre := "k0pot-blocklist.txt"
+	if r.URL.Query().Get("formato") == "nft" && len(ips) > 0 {
+		nombre = "k0pot-blocklist.nft"
+		b.WriteString("define ATACANTES = {\n")
+		for i, ip := range ips {
+			b.WriteString("  " + ip)
+			if i < len(ips)-1 {
+				b.WriteString(",")
+			}
+			b.WriteString("\n")
+		}
+		b.WriteString("}\n")
+	} else {
+		for _, ip := range ips {
+			b.WriteString(ip + "\n")
+		}
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+nombre+"\"")
+	w.Write([]byte(b.String()))
 }
 
 func responderJSON(w http.ResponseWriter, v any) {

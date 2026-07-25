@@ -656,3 +656,11 @@ Object.assign(IDIOMAS.en, {
   "dlg.reproducir": "▶ Play", "dlg.reproduciendo": "Playing…",
   "replay.fin": "end of replay"
 });
+Object.assign(IDIOMAS.es, {
+  "hdr.blocklist": "Blocklist",
+  "hdr.blocklist.t": "Descargar las IPs que han atacado (acceso o intrusión) para bloquearlas en tus servidores reales"
+});
+Object.assign(IDIOMAS.en, {
+  "hdr.blocklist": "Blocklist",
+  "hdr.blocklist.t": "Download the IPs that attacked (access or intrusion) to block them on your real servers"
+});

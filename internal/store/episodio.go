@@ -85,6 +85,35 @@ func (s *Store) ShaDeURL(url string) (string, bool) {
 	return sha, true
 }
 
+// IPsAtacantes devuelve, sin repetir, las direcciones que llegaron al menos a
+// la gravedad indicada en el periodo. Es la materia prima de una blocklist:
+// lo que de verdad ataco, no el escaneo de fondo.
+func (s *Store) IPsAtacantes(desde time.Time, minima string) ([]string, error) {
+	q := "SELECT DISTINCT ip FROM episodios WHERE fin >= ?"
+	args := []any{desde.UTC().Format(time.RFC3339Nano)}
+	if minima != "" {
+		q += fmt.Sprintf(" AND %s >= %s",
+			fmt.Sprintf(rangoSeveridad, "severidad"),
+			fmt.Sprintf(rangoSeveridad, "?"))
+		args = append(args, minima)
+	}
+	q += " ORDER BY ip"
+	filas, err := s.db.Query(q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("ips atacantes: %w", err)
+	}
+	defer filas.Close()
+	var ips []string
+	for filas.Next() {
+		var ip string
+		if err := filas.Scan(&ip); err != nil {
+			return nil, err
+		}
+		ips = append(ips, ip)
+	}
+	return ips, filas.Err()
+}
+
 // ArtefactoNuevo es un fichero capturado cuya primera aparicion es reciente.
 type ArtefactoNuevo struct {
 	SHA256  string    `json:"sha256"`
