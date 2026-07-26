@@ -771,7 +771,7 @@ async function reproducirSesion() {
   btn.textContent = t("dlg.reproduciendo");
   const cuerpo = $("ataque-cuerpo");
   cuerpo.replaceChildren();
-  const term = nodo("pre", "replay-term");
+  const term = nodo("div", "replay-term");
   cuerpo.appendChild(term);
 
   const pasos = d.pasos;
@@ -785,12 +785,28 @@ async function reproducirSesion() {
     const espera = real <= 0 ? 250 : Math.min(1800, Math.max(250, real / 8));
     await new Promise((r) => setTimeout(r, espera));
     const seg = Math.round((new Date(p.momento).getTime() - t0) / 1000);
-    const linea = nodo("span", p.destacado ? "replay-linea clave" : "replay-linea",
-      `[+${seg}s] ${p.crudo || p.texto}\n`);
-    term.appendChild(linea);
+    const fila = nodo("div", "replay-paso");
+    fila.appendChild(nodo("code", p.destacado ? "replay-linea clave" : "replay-linea",
+      `[+${seg}s] ${p.crudo || p.texto}`));
+    term.appendChild(fila);
     term.scrollTop = term.scrollHeight;
+    // El bocadillo explica en llano QUE hace el paso y PARA QUE. Aparece un
+    // instante despues de la linea, para que se lea como una anotacion sobre
+    // lo que acaba de pasar. Solo cuando el catalogo tiene algo que decir:
+    // sin nota no se inventa nada.
+    if (p.nota) {
+      await new Promise((r) => setTimeout(r, 350));
+      const b = nodo("div", "replay-bocadillo");
+      b.appendChild(nodo("span", "replay-globo-icono", "\ud83d\udca1"));
+      const txt = nodo("span", "replay-globo-txt");
+      txt.appendChild(nodo("strong", null, p.nota.que));
+      if (p.nota.por) txt.appendChild(nodo("span", "replay-globo-por", ` — ${p.nota.por}`));
+      b.appendChild(txt);
+      fila.appendChild(b);
+      term.scrollTop = term.scrollHeight;
+    }
   }
-  term.appendChild(nodo("span", "replay-fin", `\n— ${t("replay.fin")} —`));
+  term.appendChild(nodo("div", "replay-fin", `— ${t("replay.fin")} —`));
   await new Promise((r) => setTimeout(r, 1400));
   pintarPasos(cuerpo, d);
   btn.disabled = false;

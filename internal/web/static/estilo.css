@@ -939,9 +939,22 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   font-size: .82rem; line-height: 1.65;
   background: var(--mar); border-radius: .5rem; color: var(--texto);
 }
+.replay-paso { display: block; }
 .replay-linea { display: block; }
 .replay-linea.clave { color: var(--acento); font-weight: 600; }
-.replay-fin { display: block; color: var(--sub); }
+.replay-fin { display: block; color: var(--sub); margin-top: .4rem; }
+.replay-bocadillo {
+  display: flex; gap: .45rem; align-items: flex-start;
+  margin: .3rem 0 .8rem 1.4rem; padding: .5rem .7rem; max-width: 46rem;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  white-space: normal; font-size: .8rem; line-height: 1.45;
+  background: var(--panel-alto); border-left: 3px solid var(--acento);
+  border-radius: .4rem; color: var(--texto);
+  animation: bocadillo-in .25s ease-out;
+}
+.replay-globo-icono { flex: none; }
+.replay-globo-por { color: var(--sub); }
+@keyframes bocadillo-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 
 /* Asistente conversacional: burbujas de chat. */
 .asistente-hilo { display: flex; flex-direction: column; gap: .55rem; max-height: 55vh; overflow-y: auto; padding: .3rem 0 .6rem; }
