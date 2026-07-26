@@ -225,6 +225,16 @@ func narrar(ev model.Evento, idioma string) (string, bool) {
 		if linea == " " {
 			linea = tr("peticion HTTP", "HTTP request")
 		}
+		// Mordio el cebo: teclo credenciales en el panel falso. Es lo mas
+		// jugoso que puede pasar aqui, asi que se cuenta entero.
+		if u := d["usuario"]; u != "" {
+			cred := u
+			if pw := d["password"]; pw != "" {
+				cred += " / " + pw
+			}
+			return linea + tr(" — envio ", " — sent ") + cred +
+				tr(" al panel falso", " to the fake panel"), true
+		}
 		// Una peticion a /.env o /wp-admin no es una visita: es tanteo, y
 		// el clasificador ya lo sabe. Se hereda su veredicto.
 		return linea, ev.Clasificacion != model.RuidoFondo
@@ -502,7 +512,6 @@ func pareceDropper(comandos []string) bool {
 	return false
 }
 
-
 // radar reune lo que merece atencion por ser NUEVO o inusual, no por volumen:
 // ficheros que no habiamos visto nunca y sesiones que no encajan con la
 // automatizacion conocida. Es el antidoto al monocultivo de Mirai.
@@ -536,7 +545,6 @@ func (s *Servidor) radar(w http.ResponseWriter, r *http.Request) {
 	}
 	responderJSON(w, map[string]any{"malware": nuevos, "manual": manual})
 }
-
 
 // tendencias compara el periodo con el anterior: si la cosa va a mas o a
 // menos, y que ha aparecido de nuevo. Es el eje del tiempo, que al panel le
@@ -579,7 +587,6 @@ func (s *Servidor) tendencias(w http.ResponseWriter, r *http.Request) {
 		"serie":       serie,
 	})
 }
-
 
 // aprende localiza, entre lo capturado, un caso REAL para cada concepto del
 // modo aprende: la campana de comandos mas grande (Mirai), un fichero

@@ -120,6 +120,15 @@ func (c *Clasificador) porAccion(ev *model.Evento) (Resultado, bool) {
 		}, true
 
 	case model.PeticionHTTP:
+		// Mordio el cebo: envio credenciales a un panel de la maquina trampa.
+		// Nadie legitimo teclea su usuario aqui; es intencion pura, no ruido.
+		if ev.Detalle["usuario"] != "" || ev.Detalle["password"] != "" {
+			return Resultado{
+				Clasificacion: model.Notable,
+				Motivo: "envio credenciales a un panel de administracion falso: " +
+					"pico el cebo e intento entrar",
+			}, true
+		}
 		// El escaneo web es ruido puro salvo que la ruta delate a que va.
 		if ruta := ev.Detalle["ruta"]; ruta != "" {
 			if _, desc := patronMalicioso(ruta); desc != "" {
