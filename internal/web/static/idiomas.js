@@ -718,3 +718,5 @@ Object.assign(IDIOMAS.en, {
   "tend.ataques": "attacks", "tend.intrusiones": "intrusions", "tend.malware": "new malware",
   "tend.nuevo": "new", "tend.igual": "same", "tend.previo": "Previous period: {n}"
 });
+Object.assign(IDIOMAS.es, { "ip.vida.intro": "Actividad a lo largo de {dias} día(s):" });
+Object.assign(IDIOMAS.en, { "ip.vida.intro": "Activity over {dias} day(s):" });

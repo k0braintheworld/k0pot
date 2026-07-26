@@ -961,3 +961,13 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .tend-delta { font-size: .82rem; margin-top: .25rem; font-weight: 600; }
 .tend-delta.sube { color: var(--acento); }
 .tend-delta.baja { color: var(--sub); }
+
+/* Linea de vida de una IP: cuando estuvo activa, un ataque por marca. */
+.linea-vida { margin: .2rem 0 .7rem; }
+.vida-track { position: relative; height: 1.6rem; background: var(--mar); border-radius: .3rem; margin: .35rem 0; }
+.vida-marca { position: absolute; top: .3rem; width: 3px; height: 1rem; border-radius: 2px; transform: translateX(-50%); }
+.vida-marca.sev-roce { background: var(--sub); }
+.vida-marca.sev-tanteo { background: #d9a441; }
+.vida-marca.sev-acceso { background: #e8833a; }
+.vida-marca.sev-intrusion { background: #c0392b; }
+.vida-ejes { display: flex; justify-content: space-between; font-size: .72rem; color: var(--sub); }

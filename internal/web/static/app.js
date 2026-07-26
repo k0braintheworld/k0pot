@@ -1057,6 +1057,39 @@ function cuantoLleva(desde, hasta) {
   return t("lleva.dias", { n: Math.round(dias) });
 }
 
+// pintarLineaVida traza cuando estuvo activa la IP: un ataque por marca en
+// una barra que va de su primera a su ultima aparicion, coloreado por
+// gravedad. Con un solo ataque no hay linea que trazar, asi que se oculta.
+function pintarLineaVida(p) {
+  const cont = $("ip-linea");
+  cont.replaceChildren();
+  const ataques = (p.ataques || []).filter((a) => a.inicio);
+  if (ataques.length < 2) {
+    cont.hidden = true;
+    return;
+  }
+  cont.hidden = false;
+  const ini = new Date(p.vista).getTime();
+  const fin = new Date(p.ultima_vez).getTime();
+  const span = Math.max(fin - ini, 1);
+  cont.appendChild(nodo("p", "sub",
+    t("ip.vida.intro", { dias: Math.max(1, Math.round(span / 86400000)) })));
+  const track = nodo("div", "vida-track");
+  for (const a of ataques) {
+    const pct = ((new Date(a.inicio).getTime() - ini) / span) * 100;
+    const marca = nodo("span", `vida-marca sev-${a.severidad}`);
+    // Posicion por CSSOM: la CSP bloquea el atributo style en linea.
+    marca.style.left = `${Math.min(100, Math.max(0, pct))}%`;
+    marca.title = `${nombreSev(a.severidad)} · ${new Date(a.inicio).toLocaleString(IDIOMA)}`;
+    track.appendChild(marca);
+  }
+  cont.appendChild(track);
+  const ejes = nodo("div", "vida-ejes");
+  ejes.appendChild(nodo("span", null, new Date(ini).toLocaleDateString(IDIOMA)));
+  ejes.appendChild(nodo("span", null, new Date(fin).toLocaleDateString(IDIOMA)));
+  cont.appendChild(ejes);
+}
+
 async function abrirIP(ip) {
   const p = await pedirJSON(`/api/ip?ip=${encodeURIComponent(ip)}&idioma=${IDIOMA}`);
   $("dialogo-ataque").close();
@@ -1100,6 +1133,8 @@ async function abrirIP(ip) {
     datos.appendChild(dato(t("dato.denuncias"), String(p.origen.total_reportes)));
   }
   if (p.origen.tor) datos.appendChild(dato(t("dato.red"), t("dato.tor"), true));
+
+  pintarLineaVida(p);
 
   const lista = $("ip-ataques");
   lista.replaceChildren();
