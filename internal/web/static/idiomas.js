@@ -810,3 +810,7 @@ Object.assign(IDIOMAS.en, {
   "apr.huellas.t": "Covering their tracks",
   "apr.huellas.d": "Before leaving, a careful attacker cleans up: wipes the command history, empties the system logs (/var/log) and sometimes shreds files so you can't reconstruct what they did. If you see commands like 'history -c' or 'rm -rf /var/log' in your data, it's not innocent tidying: it's someone hiding what they just did."
 });
+Object.assign(IDIOMAS.es, { "apr.sinvisto": "Aún no visto en tu honeypot" });
+Object.assign(IDIOMAS.en, { "apr.sinvisto": "Not seen in your honeypot yet" });
+Object.assign(IDIOMAS.es, { "replay.continuar": "Continuar ▼ ({n} restantes)", "replay.resumen": "Volver al resumen" });
+Object.assign(IDIOMAS.en, { "replay.continuar": "Continue ▼ ({n} left)", "replay.resumen": "Back to summary" });

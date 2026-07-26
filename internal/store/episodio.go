@@ -583,3 +583,43 @@ func (s *Store) Explicacion(clave string) (string, error) {
 	}
 	return texto, nil
 }
+
+// CasosAprende busca, para cada concepto del modo aprende que se puede
+// ejemplificar con datos, UNA IP real que lo protagonice en el periodo.
+// A diferencia de recorrer la lista de Episodios() -que va acotada y
+// ordenada por gravedad, y deja fuera lo de menor severidad-, aqui cada
+// consulta barre TODO el periodo, asi que si el caso existe se encuentra.
+// Las condiciones son fijas (no entra texto del usuario): sin riesgo de
+// inyeccion. Devuelve solo los conceptos con ejemplo; los que faltan es
+// que el honeypot aun no ha visto ese ataque.
+func (s *Store) CasosAprende(desde time.Time) (map[string]string, error) {
+	d := desde.UTC().Format(time.RFC3339Nano)
+	casos := []struct{ clave, cond string }{
+		{"escaneo", "solo_conexiones = 1"},
+		{"fuerzabruta", "logins_fallidos >= 5 AND login_exitoso = 0"},
+		{"credenciales", "passwords LIKE '%xc3511%' OR passwords LIKE '%admin%' OR passwords LIKE '%12345%' OR usuarios LIKE '%root%'"},
+		{"servicios", "protocolo IN ('redis','mysql','postgres','ftp','docker','smtp','vnc','rdp') AND comandos <> '[]'"},
+		{"exploit", "rutas LIKE '%jndi%' OR rutas LIKE '%struts%' OR rutas LIKE '%solr%' OR rutas LIKE '%cgi-bin%' OR rutas LIKE '%actuator%'"},
+		{"cripto", "comandos LIKE '%xmrig%' OR comandos LIKE '%minerd%' OR comandos LIKE '%stratum%' OR comandos LIKE '%cpuminer%'"},
+		{"proxy", "motivos LIKE '%pasarela%' OR motivos LIKE '%reenviar%'"},
+		{"persistencia", "comandos LIKE '%authorized_keys%' OR comandos LIKE '%ssh-rsa%' OR comandos LIKE '%ssh-ed25519%' OR comandos LIKE '%useradd%' OR comandos LIKE '%adduser%'"},
+		{"huellas", "comandos LIKE '%history -c%' OR comandos LIKE '%/var/log%' OR comandos LIKE '%shred%' OR comandos LIKE '%histfile%'"},
+	}
+	out := map[string]string{}
+	for _, c := range casos {
+		var ip sql.NullString
+		err := s.db.QueryRow(
+			"SELECT ip FROM episodios WHERE fin >= ? AND ("+c.cond+") ORDER BY fin DESC LIMIT 1",
+			d).Scan(&ip)
+		if err == sql.ErrNoRows {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("casos aprende (%s): %w", c.clave, err)
+		}
+		if ip.Valid && ip.String != "" {
+			out[c.clave] = ip.String
+		}
+	}
+	return out, nil
+}

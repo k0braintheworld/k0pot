@@ -773,29 +773,20 @@ async function reproducirSesion() {
   cuerpo.replaceChildren();
   const term = nodo("div", "replay-term");
   cuerpo.appendChild(term);
+  const barra = nodo("div", "replay-barra");
+  cuerpo.appendChild(barra);
 
   const pasos = d.pasos;
   const t0 = new Date(pasos[0].momento).getTime();
-  let anterior = t0;
-  for (const p of pasos) {
-    const real = new Date(p.momento).getTime() - anterior;
-    anterior = new Date(p.momento).getTime();
-    // Escala: rafagas rapidas, pausas perceptibles pero acotadas (nunca
-    // minutos). El ritmo se conserva; la espera, no.
-    const espera = real <= 0 ? 250 : Math.min(1800, Math.max(250, real / 8));
-    await new Promise((r) => setTimeout(r, espera));
+
+  // Pinta un paso: su linea de comando y, si el catalogo tiene algo que
+  // decir, el bocadillo con el que y el para que.
+  function pintarPasoReplay(p) {
     const seg = Math.round((new Date(p.momento).getTime() - t0) / 1000);
     const fila = nodo("div", "replay-paso");
     fila.appendChild(nodo("code", p.destacado ? "replay-linea clave" : "replay-linea",
       `[+${seg}s] ${p.crudo || p.texto}`));
-    term.appendChild(fila);
-    term.scrollTop = term.scrollHeight;
-    // El bocadillo explica en llano QUE hace el paso y PARA QUE. Aparece un
-    // instante despues de la linea, para que se lea como una anotacion sobre
-    // lo que acaba de pasar. Solo cuando el catalogo tiene algo que decir:
-    // sin nota no se inventa nada.
     if (p.nota) {
-      await new Promise((r) => setTimeout(r, 350));
       const b = nodo("div", "replay-bocadillo");
       b.appendChild(nodo("span", "replay-globo-icono", "\ud83d\udca1"));
       const txt = nodo("span", "replay-globo-txt");
@@ -803,12 +794,67 @@ async function reproducirSesion() {
       if (p.nota.por) txt.appendChild(nodo("span", "replay-globo-por", ` — ${p.nota.por}`));
       b.appendChild(txt);
       fila.appendChild(b);
-      term.scrollTop = term.scrollHeight;
+    }
+    return fila;
+  }
+
+  function esperarClic(etiqueta) {
+    return new Promise((resolve) => {
+      barra.replaceChildren();
+      const b = nodo("button", "boton-secundario", etiqueta);
+      b.addEventListener("click", () => resolve(), { once: true });
+      barra.appendChild(b);
+    });
+  }
+
+  // Avanza por paginas: revela con ritmo hasta que el cuadro se llena, y
+  // entonces se detiene para que de tiempo a LEER -sobre todo los bocadillos-
+  // antes de seguir. Nada se pierde de vista por un scroll automatico.
+  let i = 0;
+  while (i < pasos.length) {
+    term.replaceChildren();
+    barra.replaceChildren();
+    let anterior = new Date(pasos[i].momento).getTime();
+    let hayEnPagina = false;
+    while (i < pasos.length) {
+      const p = pasos[i];
+      const real = new Date(p.momento).getTime() - anterior;
+      anterior = new Date(p.momento).getTime();
+      // El primer paso de la pagina entra ya; los siguientes, con el ritmo
+      // real escalado (rafagas rapidas, pausas acotadas).
+      if (hayEnPagina) {
+        const espera = real <= 0 ? 200 : Math.min(1200, Math.max(200, real / 8));
+        await new Promise((r) => setTimeout(r, espera));
+      }
+      const fila = pintarPasoReplay(p);
+      term.appendChild(fila);
+      i++;
+      if (term.scrollHeight > term.clientHeight + 4) {
+        // No cabe entero: si la pagina ya tenia algo, este paso pasa a la
+        // siguiente para no dejarlo a medias. Si era el unico (un paso
+        // enorme), se queda y se corta igual.
+        if (hayEnPagina) {
+          term.removeChild(fila);
+          i--;
+        }
+        hayEnPagina = true;
+        break;
+      }
+      hayEnPagina = true;
+    }
+    term.scrollTop = 0;
+    if (i < pasos.length) {
+      await esperarClic(t("replay.continuar", { n: pasos.length - i }));
     }
   }
+
+  // Fin: se queda en pantalla. Ni auto-reset ni bucle; se vuelve al resumen
+  // cuando el lector quiere.
+  barra.replaceChildren();
   term.appendChild(nodo("div", "replay-fin", `— ${t("replay.fin")} —`));
-  await new Promise((r) => setTimeout(r, 1400));
-  pintarPasos(cuerpo, d);
+  const volver = nodo("button", "boton-secundario", t("replay.resumen"));
+  volver.addEventListener("click", () => pintarPasos(cuerpo, d), { once: true });
+  barra.appendChild(volver);
   btn.disabled = false;
   btn.textContent = t("dlg.reproducir");
   reproduciendoSesion = false;
@@ -1796,9 +1842,9 @@ $("asistente-form").addEventListener("submit", preguntarAsistente);
 // que de verdad ha pasado aqui, no sobre un ejemplo de manual.
 const CONCEPTOS_APRENDE = [
   { k: "honeypot", icono: "\ud83c\udf6f" },
-  { k: "escaneo", icono: "\ud83d\udd0d" },
+  { k: "escaneo", icono: "\ud83d\udd0d", ej: "escaneo" },
   { k: "fuerzabruta", icono: "\ud83d\udd11", ej: "fuerzabruta" },
-  { k: "credenciales", icono: "\ud83d\udeaa" },
+  { k: "credenciales", icono: "\ud83d\udeaa", ej: "credenciales" },
   { k: "servicios", icono: "\ud83d\udd13", ej: "servicios" },
   { k: "exploit", icono: "\ud83d\udca5", ej: "exploit" },
   { k: "botnet", icono: "\ud83e\udd16", ej: "botnet" },
@@ -1847,6 +1893,10 @@ async function abrirAprende() {
       const enlace = nodo("button", "apr-caso", t("apr.vercaso"));
       enlace.addEventListener("click", abrir);
       tarjeta.appendChild(enlace);
+    } else if (c.ej) {
+      // Admite ejemplo pero aun no hay: se dice, para que no parezca un fallo
+      // -y de paso es buena noticia: ese ataque no te ha tocado todavia-.
+      tarjeta.appendChild(nodo("span", "apr-sinvisto", t("apr.sinvisto")));
     }
     cont.appendChild(tarjeta);
   }
