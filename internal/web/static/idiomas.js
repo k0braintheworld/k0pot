@@ -720,3 +720,45 @@ Object.assign(IDIOMAS.en, {
 });
 Object.assign(IDIOMAS.es, { "ip.vida.intro": "Actividad a lo largo de {dias} día(s):" });
 Object.assign(IDIOMAS.en, { "ip.vida.intro": "Activity over {dias} day(s):" });
+Object.assign(IDIOMAS.es, {
+  "hdr.aprende": "Aprende",
+  "hdr.aprende.t": "Aprende qué es cada ataque con lo que le ha pasado a esta máquina, no con ejemplos de manual",
+  "apr.titulo": "Aprende con lo que te ha pasado",
+  "apr.sub": "Cada concepto, explicado con un ataque real de tu honeypot",
+  "apr.vercaso": "Ver un caso real →",
+  "apr.honeypot.t": "¿Qué es un honeypot?",
+  "apr.honeypot.d": "Un honeypot es un señuelo: una máquina que finge ser un servidor real para que los atacantes la ataquen a ella y no a lo que de verdad te importa. Nadie legítimo tiene por qué entrar aquí, así que TODO lo que ves en k0Pot es, por definición, alguien husmeando donde no debe. Por eso es el mejor sitio para aprender: puedes mirar un ataque de cerca sin que nadie salga perjudicado.",
+  "apr.escaneo.t": "Escaneo de puertos",
+  "apr.escaneo.d": "Antes de atacar hay que encontrar la puerta. Un escaneo es llamar a miles de direcciones y puertos para ver cuáles responden: ¿hay un SSH abierto?, ¿un servidor web? Es ruido de fondo constante en internet, casi siempre automático. Cuando veas muchas IPs distintas que tocan y se van sin insistir, suele ser esto: te están fichando, todavía no atacando.",
+  "apr.fuerzabruta.t": "Fuerza bruta",
+  "apr.fuerzabruta.d": "Encontrada una puerta con contraseña (típicamente SSH), el atacante prueba miles de combinaciones usuario/clave hasta acertar: root/root, admin/admin, root/123456… Es lento y ruidoso, pero funciona sorprendentemente a menudo porque mucha gente no cambia las contraseñas de fábrica. Lo reconoces por una misma IP con montones de intentos fallidos seguidos.",
+  "apr.credenciales.t": "Contraseñas de fábrica",
+  "apr.credenciales.d": "Muchos aparatos (cámaras, routers, grabadoras) salen de fábrica con un usuario y una contraseña fijos que casi nadie cambia. Los atacantes se los saben de memoria: root/xc3511, admin/admin, support/support. No hace falta «hackear» nada; basta con probar la lista. Es la puerta de entrada favorita de las botnets del internet de las cosas.",
+  "apr.botnet.t": "Botnets (Mirai y compañía)",
+  "apr.botnet.d": "Una botnet es un ejército de aparatos infectados que obedecen a un mismo dueño. Cuando algo entra en tu máquina, rara vez es una persona tecleando: es otro equipo ya infectado que ejecuta siempre el MISMO guion de comandos para sumar una víctima más. Si ves la misma secuencia exacta llegando desde muchos países a la vez, estás mirando una botnet en plena expansión — Mirai es la más famosa.",
+  "apr.dropper.t": "Dropper (el instalador del malware)",
+  "apr.dropper.d": "El atacante rara vez trae el virus consigo: primero entra y luego ejecuta un pequeño script que DESCARGA el malware de verdad desde un servidor suyo y lo arranca. A ese script se le llama dropper. Es la fase clave: si lo capturas, ves de dónde sacan el bicho y qué intentan instalar. k0Pot guarda esos ficheros para que puedas mirarlos por dentro.",
+  "apr.c2.t": "Mando y control (C2)",
+  "apr.c2.d": "Una vez infectado, el aparato necesita recibir órdenes: a quién atacar, qué descargar. El servidor que da esas órdenes es el C2 (mando y control). En los comandos capturados suelen aparecer las direcciones a las que el bot «llama a casa». Localizar esos destinos es media investigación: es lo que comparten los defensores para cortarle las piernas a toda la botnet."
+});
+Object.assign(IDIOMAS.en, {
+  "hdr.aprende": "Learn",
+  "hdr.aprende.t": "Learn what each attack is using what happened to THIS machine, not textbook examples",
+  "apr.titulo": "Learn from what happened to you",
+  "apr.sub": "Each concept, explained with a real attack from your honeypot",
+  "apr.vercaso": "See a real case →",
+  "apr.honeypot.t": "What is a honeypot?",
+  "apr.honeypot.d": "A honeypot is a decoy: a machine that pretends to be a real server so attackers go after it instead of what you actually care about. No legitimate user has any reason to be here, so EVERYTHING you see in k0Pot is, by definition, someone poking where they shouldn't. That's what makes it the best place to learn: you can watch an attack up close without anyone getting hurt.",
+  "apr.escaneo.t": "Port scanning",
+  "apr.escaneo.d": "Before attacking you have to find the door. A scan means knocking on thousands of addresses and ports to see which ones answer: is SSH open? A web server? It's constant background noise on the internet, almost always automated. When you see lots of different IPs touching and leaving without insisting, that's usually this: they're taking note of you, not attacking yet.",
+  "apr.fuerzabruta.t": "Brute force",
+  "apr.fuerzabruta.d": "Once a password-protected door is found (typically SSH), the attacker tries thousands of user/password combinations until one works: root/root, admin/admin, root/123456… It's slow and noisy, but it works surprisingly often because many people never change the factory passwords. You recognize it as one IP with piles of failed attempts in a row.",
+  "apr.credenciales.t": "Factory passwords",
+  "apr.credenciales.d": "Many devices (cameras, routers, recorders) ship with a fixed username and password that almost nobody changes. Attackers know them by heart: root/xc3511, admin/admin, support/support. No 'hacking' needed; just run down the list. It's the favorite way in for Internet-of-Things botnets.",
+  "apr.botnet.t": "Botnets (Mirai and friends)",
+  "apr.botnet.d": "A botnet is an army of infected devices obeying a single owner. When something gets into your machine, it's rarely a person typing: it's another already-infected device running the exact SAME script of commands to add one more victim. If you see the same exact sequence arriving from many countries at once, you're watching a botnet spread — Mirai is the most famous.",
+  "apr.dropper.t": "Dropper (the malware installer)",
+  "apr.dropper.d": "The attacker rarely brings the virus along: first they get in, then they run a small script that DOWNLOADS the real malware from a server of theirs and launches it. That script is called a dropper. It's the key stage: if you capture it, you see where they pull the bug from and what they try to install. k0Pot saves those files so you can look inside them.",
+  "apr.c2.t": "Command and control (C2)",
+  "apr.c2.d": "Once infected, the device needs to receive orders: who to attack, what to download. The server giving those orders is the C2 (command and control). The captured commands usually contain the addresses the bot 'phones home' to. Pinning down those destinations is half the investigation: it's what defenders share to cut the legs off the whole botnet."
+});

@@ -971,3 +971,13 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .vida-marca.sev-acceso { background: #e8833a; }
 .vida-marca.sev-intrusion { background: #c0392b; }
 .vida-ejes { display: flex; justify-content: space-between; font-size: .72rem; color: var(--sub); }
+
+/* ── Modo aprende ──────────────────────────────────────────────────── */
+.aprende-lista { display: grid; gap: 0.75rem; max-height: 65vh; overflow-y: auto; padding-right: 0.25rem; }
+.apr-tarjeta { border: 1px solid var(--borde); border-radius: 10px; padding: 0.85rem 1rem; background: var(--fondo-2); }
+.apr-cab { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
+.apr-icono { font-size: 1.2rem; line-height: 1; }
+.apr-titulo { font-size: 1rem; }
+.apr-texto { margin: 0; color: var(--texto); font-size: 0.92rem; line-height: 1.5; }
+.apr-caso { margin-top: 0.6rem; padding: 0; border: 0; background: none; color: var(--acento); font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+.apr-caso:hover { text-decoration: underline; }

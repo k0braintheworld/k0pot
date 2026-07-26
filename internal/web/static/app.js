@@ -1161,8 +1161,10 @@ function queCompartenTxt(tipo) {
   return t("comparten." + tipo);
 }
 
+let campanasCargadas = [];
 async function cargarCampanas() {
   const lista = await traer("/api/campanas");
+  campanasCargadas = lista;
   const cont = $("campanas");
   cont.replaceChildren();
 
@@ -1771,6 +1773,64 @@ $("abrir-asistente").addEventListener("click", () => {
 });
 $("cerrar-asistente").addEventListener("click", () => $("dialogo-asistente").close());
 $("asistente-form").addEventListener("submit", preguntarAsistente);
+
+// ── Modo aprende: cada concepto, con un caso REAL de esta maquina ────────
+// La lista es fija (el temario), pero el "ver un caso real" solo aparece si
+// el honeypot ha capturado algo que lo ejemplifica. Asi se aprende sobre lo
+// que de verdad ha pasado aqui, no sobre un ejemplo de manual.
+const CONCEPTOS_APRENDE = [
+  { k: "honeypot", icono: "\ud83c\udf6f" },
+  { k: "escaneo", icono: "\ud83d\udd0d" },
+  { k: "fuerzabruta", icono: "\ud83d\udd11", ej: "fuerzabruta" },
+  { k: "credenciales", icono: "\ud83d\udeaa" },
+  { k: "botnet", icono: "\ud83e\udd16", ej: "botnet" },
+  { k: "dropper", icono: "\u2b07\ufe0f", ej: "dropper" },
+  { k: "c2", icono: "\ud83d\udce1" },
+];
+
+function casoRealAprende(ej, datos) {
+  if (ej === "fuerzabruta" && datos.fuerzabruta) {
+    return () => { $("dialogo-aprende").close(); abrirIP(datos.fuerzabruta); };
+  }
+  if (ej === "dropper" && datos.dropper) {
+    return () => { $("dialogo-aprende").close(); abrirArtefacto(datos.dropper); };
+  }
+  if (ej === "botnet" && datos.campana) {
+    const c = campanasCargadas.find((x) => x.huella === datos.campana.huella);
+    if (c) return () => { $("dialogo-aprende").close(); abrirCampana(c); };
+  }
+  return null;
+}
+
+async function abrirAprende() {
+  const cont = $("aprende-lista");
+  cont.replaceChildren(nodo("p", "sub", t("cargando")));
+  $("dialogo-aprende").showModal();
+  let datos = {};
+  try {
+    datos = await pedirJSON("/api/aprende");
+  } catch (e) {
+    // Sin ejemplos vivos igual se muestra el temario; el fallo no rompe nada.
+  }
+  cont.replaceChildren();
+  for (const c of CONCEPTOS_APRENDE) {
+    const tarjeta = nodo("div", "apr-tarjeta");
+    const cab = nodo("div", "apr-cab");
+    cab.appendChild(nodo("span", "apr-icono", c.icono));
+    cab.appendChild(nodo("strong", "apr-titulo", t("apr." + c.k + ".t")));
+    tarjeta.appendChild(cab);
+    tarjeta.appendChild(nodo("p", "apr-texto", t("apr." + c.k + ".d")));
+    const abrir = c.ej ? casoRealAprende(c.ej, datos) : null;
+    if (abrir) {
+      const enlace = nodo("button", "apr-caso", t("apr.vercaso"));
+      enlace.addEventListener("click", abrir);
+      tarjeta.appendChild(enlace);
+    }
+    cont.appendChild(tarjeta);
+  }
+}
+$("abrir-aprende").addEventListener("click", () => abrirAprende().catch(() => {}));
+$("cerrar-aprende").addEventListener("click", () => $("dialogo-aprende").close());
 $("explicar-ataque").addEventListener("click", explicarAtaque);
 $("cerrar-ip").addEventListener("click", () => $("dialogo-ip").close());
 $("cerrar-campana").addEventListener("click", () => $("dialogo-campana").close());

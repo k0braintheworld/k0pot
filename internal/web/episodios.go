@@ -579,3 +579,33 @@ func (s *Servidor) tendencias(w http.ResponseWriter, r *http.Request) {
 		"serie":       serie,
 	})
 }
+
+
+// aprende localiza, entre lo capturado, un caso REAL para cada concepto del
+// modo aprende: la campana de comandos mas grande (Mirai), un fichero
+// capturado (dropper) y una IP de fuerza bruta. Asi cada leccion enlaza con
+// algo que le paso a ESTA maquina, no con un ejemplo de manual.
+func (s *Servidor) aprende(w http.ResponseWriter, r *http.Request) {
+	desde := time.Now().AddDate(0, 0, -30)
+	out := map[string]any{}
+	eps, _ := s.Almacen.Episodios(store.FiltroEpisodios{Desde: desde, Limite: 500})
+	for _, c := range campana.Detectar(eps) {
+		if c.Tipo == campana.PorComandos {
+			out["campana"] = map[string]string{"tipo": string(c.Tipo), "huella": c.Huella}
+			break
+		}
+	}
+	for _, f := range s.ficherosCapturados() {
+		if f.Bytes > 10 { // saltamos el fichero de 1 byte de "prueba de conexion"
+			out["dropper"] = f.Fichero
+			break
+		}
+	}
+	for _, e := range eps {
+		if e.LoginsFallidos >= 5 && !e.LoginExitoso {
+			out["fuerzabruta"] = e.IP
+			break
+		}
+	}
+	responderJSON(w, out)
+}
