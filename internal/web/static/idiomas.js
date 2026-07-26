@@ -780,3 +780,5 @@ Object.assign(IDIOMAS.en, {
   "ioc.csv": "Download CSV",
   "ioc.stix": "Download STIX 2.1"
 });
+Object.assign(IDIOMAS.es, { "hdr.menu": "Acciones" });
+Object.assign(IDIOMAS.en, { "hdr.menu": "Actions" });

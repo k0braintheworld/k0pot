@@ -1840,6 +1840,29 @@ $("abrir-iocs").addEventListener("click", () => $("dialogo-iocs").showModal());
 $("cerrar-iocs").addEventListener("click", () => $("dialogo-iocs").close());
 $("ioc-csv").addEventListener("click", () => descargarIOCs("csv"));
 $("ioc-stix").addEventListener("click", () => descargarIOCs("stix"));
+
+// ── Menu de acciones: agrupa los botones para no saturar la cabecera ────
+const menuBoton = $("menu-boton");
+const menuLista = $("menu-lista");
+function cerrarMenu() {
+  menuLista.hidden = true;
+  menuBoton.setAttribute("aria-expanded", "false");
+}
+menuBoton.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const abrir = menuLista.hidden;
+  menuLista.hidden = !abrir;
+  menuBoton.setAttribute("aria-expanded", String(abrir));
+});
+// Al elegir una accion, el menu se cierra (la accion ya tiene su listener).
+menuLista.addEventListener("click", () => cerrarMenu());
+// Pulsar fuera o Escape lo cierra.
+document.addEventListener("click", (e) => {
+  if (!$("menu-acciones").contains(e.target)) cerrarMenu();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !menuLista.hidden) cerrarMenu();
+});
 $("explicar-ataque").addEventListener("click", explicarAtaque);
 $("cerrar-ip").addEventListener("click", () => $("dialogo-ip").close());
 $("cerrar-campana").addEventListener("click", () => $("dialogo-campana").close());

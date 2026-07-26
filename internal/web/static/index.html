@@ -25,11 +25,16 @@
       <option value="30" data-i18n="rango.30d">30 dias</option>
       <option value="90" data-i18n="rango.90d">90 dias</option>
     </select>
-    <button id="abrir-asistente" type="button" class="boton-texto" data-i18n="hdr.asistente" hidden>💬 Preguntar</button>
-    <button id="generar-informe" type="button" class="boton-texto" data-i18n="hdr.informe" data-i18n-title="hdr.informe.t" title="Abrir un informe completo del periodo seleccionado, listo para imprimir o guardar como PDF">Generar informe</button>
-    <button id="abrir-aprende" type="button" class="boton-texto" data-i18n="hdr.aprende" data-i18n-title="hdr.aprende.t" title="Aprende que es cada ataque con lo que le ha pasado a esta maquina, no con ejemplos de manual">Aprende</button>
-    <button id="descargar-blocklist" type="button" class="boton-texto" data-i18n="hdr.blocklist" data-i18n-title="hdr.blocklist.t" title="Descargar las IPs que han atacado (acceso o intrusion) para bloquearlas en tus servidores reales">Blocklist</button>
-    <button id="abrir-iocs" type="button" class="boton-texto" data-i18n="hdr.iocs" data-i18n-title="hdr.iocs.t" title="Exportar los indicadores capturados (IPs, hashes, URLs) para importarlos en tu firewall, SIEM o MISP">IOCs</button>
+    <div id="menu-acciones" class="menu-acciones">
+      <button id="menu-boton" type="button" class="boton-texto boton-menu" data-i18n-title="hdr.menu" data-i18n-aria="hdr.menu" title="Acciones" aria-label="Acciones" aria-haspopup="true" aria-expanded="false"><span data-i18n="hdr.menu">Acciones</span> ▾</button>
+      <div id="menu-lista" class="menu-lista" role="menu" hidden>
+        <button id="abrir-asistente" type="button" class="menu-item" role="menuitem" data-i18n="hdr.asistente" hidden>💬 Preguntar</button>
+        <button id="generar-informe" type="button" class="menu-item" role="menuitem" data-i18n="hdr.informe" data-i18n-title="hdr.informe.t" title="Abrir un informe completo del periodo, listo para imprimir o guardar como PDF">Generar informe</button>
+        <button id="abrir-aprende" type="button" class="menu-item" role="menuitem" data-i18n="hdr.aprende" data-i18n-title="hdr.aprende.t" title="Aprende que es cada ataque con lo que le ha pasado a esta maquina">Aprende</button>
+        <button id="descargar-blocklist" type="button" class="menu-item" role="menuitem" data-i18n="hdr.blocklist" data-i18n-title="hdr.blocklist.t" title="Descargar las IPs que han atacado para bloquearlas en tus servidores reales">Blocklist</button>
+        <button id="abrir-iocs" type="button" class="menu-item" role="menuitem" data-i18n="hdr.iocs" data-i18n-title="hdr.iocs.t" title="Exportar los indicadores capturados para tu firewall, SIEM o MISP">IOCs</button>
+      </div>
+    </div>
     <select id="idioma" class="sel-idioma" aria-label="Idioma" data-i18n-aria="hdr.idioma"><option value="es">ES</option><option value="en">EN</option></select>
     <button id="tema" class="boton-icono" data-i18n-title="hdr.tema" data-i18n-aria="hdr.tema" title="Cambiar tema" aria-label="Cambiar tema">◐</button>
     <button id="abrir-ajustes" class="boton-icono" data-i18n-title="hdr.ajustes" data-i18n-aria="hdr.ajustes" title="Ajustes" aria-label="Ajustes">⚙</button>
