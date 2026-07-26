@@ -782,3 +782,31 @@ Object.assign(IDIOMAS.en, {
 });
 Object.assign(IDIOMAS.es, { "hdr.menu": "Acciones" });
 Object.assign(IDIOMAS.en, { "hdr.menu": "Actions" });
+Object.assign(IDIOMAS.es, {
+  "apr.servicios.t": "Servicios abiertos sin contraseña",
+  "apr.servicios.d": "No todo se ataca por SSH. Bases de datos y paneles como Redis, Docker o Elasticsearch a veces quedan expuestos a internet SIN contraseña, por un despiste de configuración. El atacante no adivina nada: se conecta y ya está dentro del servicio. Desde ahí puede leer datos, escribir ficheros o, en el peor caso, ejecutar comandos en la máquina.",
+  "apr.exploit.t": "Explotar una vulnerabilidad conocida (CVE)",
+  "apr.exploit.d": "Cuando se descubre un fallo en un software popular se le pone nombre y número (un CVE, como Log4Shell) y se publica. A las horas, miles de bots recorren internet probando ese mismo fallo en todo lo que encuentran, porque muchos servidores tardan meses en actualizar. No prueban contraseñas: mandan una petición trucada que aprovecha el agujero para ejecutar su código directamente.",
+  "apr.cripto.t": "Minar criptomonedas con tu servidor",
+  "apr.cripto.d": "Uno de los objetivos más comunes tras entrar: instalar un minero (xmrig y similares) que pone la CPU al 100% a generar criptomoneda para el atacante. A ti se te nota en la factura de la luz y en un servidor lento y caliente; a él le sale gratis porque la máquina es tuya. Por eso muchos droppers descargan justo esto.",
+  "apr.proxy.t": "Usar tu servidor como pasarela",
+  "apr.proxy.d": "A veces no quieren tu máquina para minar ni por los datos: la quieren como escondite. Reenvían su tráfico a través de tu servidor (un túnel o proxy) para atacar a otros dando la cara con TU dirección IP, no con la suya. Si lo consiguen, los ataques a terceros parecen salir de ti, con el problema legal que eso supone.",
+  "apr.persistencia.t": "Dejarse una puerta para volver",
+  "apr.persistencia.d": "Entrar una vez no basta: el atacante quiere poder volver aunque cambies la contraseña. Para eso se deja una «puerta trasera»: añade su propia llave SSH, crea un usuario nuevo o instala un servicio que le llama a casa. A esto se le llama persistencia, y es lo que convierte un susto puntual en un problema que vuelve una y otra vez.",
+  "apr.huellas.t": "Borrar el rastro",
+  "apr.huellas.d": "Antes de irse, un atacante cuidadoso limpia: borra el historial de comandos, vacía los registros del sistema (/var/log) y a veces destruye ficheros para que no puedas reconstruir qué hizo. Si en tus datos ves comandos como «history -c» o «rm -rf /var/log», no es limpieza inocente: es alguien tapando lo que acaba de hacer."
+});
+Object.assign(IDIOMAS.en, {
+  "apr.servicios.t": "Open services with no password",
+  "apr.servicios.d": "Not everything is attacked over SSH. Databases and panels like Redis, Docker or Elasticsearch are sometimes exposed to the internet WITH no password, through a config slip. The attacker guesses nothing: they connect and they're already inside the service. From there they can read data, write files or, worst case, run commands on the machine.",
+  "apr.exploit.t": "Exploiting a known vulnerability (CVE)",
+  "apr.exploit.d": "When a flaw is found in popular software it gets a name and number (a CVE, like Log4Shell) and is published. Within hours, thousands of bots sweep the internet trying that same flaw on everything they find, because many servers take months to patch. They don't try passwords: they send a rigged request that abuses the hole to run their code directly.",
+  "apr.cripto.t": "Mining cryptocurrency with your server",
+  "apr.cripto.d": "One of the most common goals after getting in: install a miner (xmrig and the like) that pins the CPU at 100% generating cryptocurrency for the attacker. You notice it in the power bill and in a slow, hot server; it's free for them because the machine is yours. That's why many droppers download exactly this.",
+  "apr.proxy.t": "Using your server as a relay",
+  "apr.proxy.d": "Sometimes they don't want your machine to mine or for the data: they want it as a hideout. They forward their traffic through your server (a tunnel or proxy) to attack others showing YOUR IP address, not theirs. If they pull it off, attacks on third parties look like they come from you, with the legal trouble that brings.",
+  "apr.persistencia.t": "Leaving a door to come back",
+  "apr.persistencia.d": "Getting in once isn't enough: the attacker wants to return even if you change the password. So they leave a 'back door': they add their own SSH key, create a new user or install a service that phones home. This is called persistence, and it's what turns a one-off scare into a problem that keeps coming back.",
+  "apr.huellas.t": "Covering their tracks",
+  "apr.huellas.d": "Before leaving, a careful attacker cleans up: wipes the command history, empties the system logs (/var/log) and sometimes shreds files so you can't reconstruct what they did. If you see commands like 'history -c' or 'rm -rf /var/log' in your data, it's not innocent tidying: it's someone hiding what they just did."
+});

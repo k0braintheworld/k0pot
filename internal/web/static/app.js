@@ -1783,23 +1783,29 @@ const CONCEPTOS_APRENDE = [
   { k: "escaneo", icono: "\ud83d\udd0d" },
   { k: "fuerzabruta", icono: "\ud83d\udd11", ej: "fuerzabruta" },
   { k: "credenciales", icono: "\ud83d\udeaa" },
+  { k: "servicios", icono: "\ud83d\udd13", ej: "servicios" },
+  { k: "exploit", icono: "\ud83d\udca5", ej: "exploit" },
   { k: "botnet", icono: "\ud83e\udd16", ej: "botnet" },
   { k: "dropper", icono: "\u2b07\ufe0f", ej: "dropper" },
+  { k: "cripto", icono: "\u26cf\ufe0f", ej: "cripto" },
+  { k: "proxy", icono: "\ud83d\udd00", ej: "proxy" },
+  { k: "persistencia", icono: "\ud83d\udd73\ufe0f", ej: "persistencia" },
+  { k: "huellas", icono: "\ud83e\uddf9", ej: "huellas" },
   { k: "c2", icono: "\ud83d\udce1" },
-];
+]
 
 function casoRealAprende(ej, datos) {
-  if (ej === "fuerzabruta" && datos.fuerzabruta) {
-    return () => { $("dialogo-aprende").close(); abrirIP(datos.fuerzabruta); };
+  const v = datos[ej];
+  if (!v) return null;
+  if (ej === "botnet") {
+    const c = campanasCargadas.find((x) => x.huella === v.huella);
+    return c ? () => { $("dialogo-aprende").close(); abrirCampana(c); } : null;
   }
-  if (ej === "dropper" && datos.dropper) {
-    return () => { $("dialogo-aprende").close(); abrirArtefacto(datos.dropper); };
+  if (ej === "dropper") {
+    return () => { $("dialogo-aprende").close(); abrirArtefacto(v); };
   }
-  if (ej === "botnet" && datos.campana) {
-    const c = campanasCargadas.find((x) => x.huella === datos.campana.huella);
-    if (c) return () => { $("dialogo-aprende").close(); abrirCampana(c); };
-  }
-  return null;
+  // El resto de conceptos ejemplifican con una IP: se abre su ficha.
+  return () => { $("dialogo-aprende").close(); abrirIP(v); };
 }
 
 async function abrirAprende() {

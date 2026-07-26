@@ -589,16 +589,20 @@ func (s *Servidor) tendencias(w http.ResponseWriter, r *http.Request) {
 }
 
 // aprende localiza, entre lo capturado, un caso REAL para cada concepto del
-// modo aprende: la campana de comandos mas grande (Mirai), un fichero
-// capturado (dropper) y una IP de fuerza bruta. Asi cada leccion enlaza con
-// algo que le paso a ESTA maquina, no con un ejemplo de manual.
+// modo aprende, para que cada leccion enlace con algo que le paso a ESTA
+// maquina y no con un ejemplo de manual. La deteccion es un solo barrido en
+// memoria de los episodios que ya se cargan: nada de consultas extra. La
+// clave de cada entrada coincide con la del concepto en el cliente; el valor
+// es una IP (se abre su ficha) salvo la botnet (una campana) y el dropper
+// (un fichero).
 func (s *Servidor) aprende(w http.ResponseWriter, r *http.Request) {
 	desde := time.Now().AddDate(0, 0, -30)
 	out := map[string]any{}
 	eps, _ := s.Almacen.Episodios(store.FiltroEpisodios{Desde: desde, Limite: 500})
+
 	for _, c := range campana.Detectar(eps) {
 		if c.Tipo == campana.PorComandos {
-			out["campana"] = map[string]string{"tipo": string(c.Tipo), "huella": c.Huella}
+			out["botnet"] = map[string]string{"tipo": string(c.Tipo), "huella": c.Huella}
 			break
 		}
 	}
@@ -608,11 +612,45 @@ func (s *Servidor) aprende(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+
+	// Un unico recorrido busca el primer episodio que ejemplifica cada
+	// concepto. falta evita re-machacar una IP ya encontrada.
+	falta := func(clave string) bool { _, ya := out[clave]; return !ya }
 	for _, e := range eps {
-		if e.LoginsFallidos >= 5 && !e.LoginExitoso {
+		cmds := strings.ToLower(strings.Join(e.Comandos, "\n"))
+		rutas := strings.ToLower(strings.Join(e.Rutas, "\n"))
+		if falta("fuerzabruta") && e.LoginsFallidos >= 5 && !e.LoginExitoso {
 			out["fuerzabruta"] = e.IP
-			break
+		}
+		if falta("cripto") && contieneAlguna(cmds, "xmrig", "minerd", "stratum", "cpuminer", "minero") {
+			out["cripto"] = e.IP
+		}
+		if falta("persistencia") && contieneAlguna(cmds, "authorized_keys", "ssh-rsa", "ssh-ed25519", "useradd", "adduser") {
+			out["persistencia"] = e.IP
+		}
+		if falta("huellas") && contieneAlguna(cmds, "history -c", "rm -rf /var/log", "shred", "unset histfile") {
+			out["huellas"] = e.IP
+		}
+		if falta("exploit") && contieneAlguna(rutas, "${jndi:", "/struts", "/solr/", "cgi-bin", "/actuator") {
+			out["exploit"] = e.IP
+		}
+		if falta("proxy") && len(e.Tuneles) > 0 {
+			out["proxy"] = e.IP
+		}
+		if falta("servicios") && saber.SinShell(e.Protocolo) && len(e.Comandos) > 0 {
+			out["servicios"] = e.IP
 		}
 	}
 	responderJSON(w, out)
+}
+
+// contieneAlguna dice si el texto (ya en minusculas) contiene alguna de las
+// claves. Se usa para reconocer intenciones en los comandos y rutas.
+func contieneAlguna(texto string, claves ...string) bool {
+	for _, c := range claves {
+		if strings.Contains(texto, c) {
+			return true
+		}
+	}
+	return false
 }
