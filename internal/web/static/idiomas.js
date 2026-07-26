@@ -762,3 +762,21 @@ Object.assign(IDIOMAS.en, {
   "apr.c2.t": "Command and control (C2)",
   "apr.c2.d": "Once infected, the device needs to receive orders: who to attack, what to download. The server giving those orders is the C2 (command and control). The captured commands usually contain the addresses the bot 'phones home' to. Pinning down those destinations is half the investigation: it's what defenders share to cut the legs off the whole botnet."
 });
+Object.assign(IDIOMAS.es, {
+  "hdr.iocs": "IOCs",
+  "hdr.iocs.t": "Exportar los indicadores capturados (IPs, hashes, URLs) para tu firewall, SIEM o MISP",
+  "ioc.titulo": "Exportar indicadores (IOCs)",
+  "ioc.sub": "Lo que ha capturado tu honeypot, listo para defender tus máquinas reales",
+  "ioc.explica": "Un IOC es un dato que delata un ataque: una IP, el hash de un fichero, una URL de malware. Impórtalo en tu firewall, tu SIEM o en MISP para bloquear o cazar lo mismo en tu red.",
+  "ioc.csv": "Descargar CSV",
+  "ioc.stix": "Descargar STIX 2.1"
+});
+Object.assign(IDIOMAS.en, {
+  "hdr.iocs": "IOCs",
+  "hdr.iocs.t": "Export the captured indicators (IPs, hashes, URLs) for your firewall, SIEM or MISP",
+  "ioc.titulo": "Export indicators (IOCs)",
+  "ioc.sub": "What your honeypot captured, ready to defend your real machines",
+  "ioc.explica": "An IOC is a piece of data that gives an attack away: an IP, a file hash, a malware URL. Import it into your firewall, your SIEM or MISP to block or hunt the same thing on your network.",
+  "ioc.csv": "Download CSV",
+  "ioc.stix": "Download STIX 2.1"
+});

@@ -29,6 +29,7 @@
     <button id="generar-informe" type="button" class="boton-texto" data-i18n="hdr.informe" data-i18n-title="hdr.informe.t" title="Abrir un informe completo del periodo seleccionado, listo para imprimir o guardar como PDF">Generar informe</button>
     <button id="abrir-aprende" type="button" class="boton-texto" data-i18n="hdr.aprende" data-i18n-title="hdr.aprende.t" title="Aprende que es cada ataque con lo que le ha pasado a esta maquina, no con ejemplos de manual">Aprende</button>
     <button id="descargar-blocklist" type="button" class="boton-texto" data-i18n="hdr.blocklist" data-i18n-title="hdr.blocklist.t" title="Descargar las IPs que han atacado (acceso o intrusion) para bloquearlas en tus servidores reales">Blocklist</button>
+    <button id="abrir-iocs" type="button" class="boton-texto" data-i18n="hdr.iocs" data-i18n-title="hdr.iocs.t" title="Exportar los indicadores capturados (IPs, hashes, URLs) para importarlos en tu firewall, SIEM o MISP">IOCs</button>
     <select id="idioma" class="sel-idioma" aria-label="Idioma" data-i18n-aria="hdr.idioma"><option value="es">ES</option><option value="en">EN</option></select>
     <button id="tema" class="boton-icono" data-i18n-title="hdr.tema" data-i18n-aria="hdr.tema" title="Cambiar tema" aria-label="Cambiar tema">◐</button>
     <button id="abrir-ajustes" class="boton-icono" data-i18n-title="hdr.ajustes" data-i18n-aria="hdr.ajustes" title="Ajustes" aria-label="Ajustes">⚙</button>
@@ -412,6 +413,21 @@
     <button id="cerrar-aprende" type="button" class="boton-menor" data-i18n="dlg.cerrar">Cerrar</button>
   </header>
   <div id="aprende-lista" class="aprende-lista"></div>
+</dialog>
+
+<dialog id="dialogo-iocs" class="dialogo dialogo-estrecho">
+  <header class="cabecera-dialogo">
+    <div>
+      <h2 data-i18n="ioc.titulo">Exportar indicadores (IOCs)</h2>
+      <p class="sub" data-i18n="ioc.sub">Lo que ha capturado tu honeypot, listo para defender tus máquinas reales</p>
+    </div>
+    <button id="cerrar-iocs" type="button" class="boton-menor" data-i18n="dlg.cerrar">Cerrar</button>
+  </header>
+  <p class="ioc-explica" data-i18n="ioc.explica">Un IOC es un dato que delata un ataque: una IP, el hash de un fichero, una URL de malware. Impórtalo en tu firewall, tu SIEM o en MISP para bloquear o cazar lo mismo en tu red.</p>
+  <div class="ioc-botones">
+    <button id="ioc-csv" type="button" class="boton-principal" data-i18n="ioc.csv">Descargar CSV</button>
+    <button id="ioc-stix" type="button" class="boton-secundario" data-i18n="ioc.stix">Descargar STIX 2.1</button>
+  </div>
 </dialog>
 
 <main class="rejilla-panel">

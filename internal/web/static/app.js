@@ -1831,6 +1831,15 @@ async function abrirAprende() {
 }
 $("abrir-aprende").addEventListener("click", () => abrirAprende().catch(() => {}));
 $("cerrar-aprende").addEventListener("click", () => $("dialogo-aprende").close());
+
+// ── Exportar IOCs: convertir lo capturado en algo defendible fuera ──────
+function descargarIOCs(formato) {
+  window.open(`/api/iocs?formato=${formato}&dias=${encodeURIComponent(rango())}`, "_blank", "noopener");
+}
+$("abrir-iocs").addEventListener("click", () => $("dialogo-iocs").showModal());
+$("cerrar-iocs").addEventListener("click", () => $("dialogo-iocs").close());
+$("ioc-csv").addEventListener("click", () => descargarIOCs("csv"));
+$("ioc-stix").addEventListener("click", () => descargarIOCs("stix"));
 $("explicar-ataque").addEventListener("click", explicarAtaque);
 $("cerrar-ip").addEventListener("click", () => $("dialogo-ip").close());
 $("cerrar-campana").addEventListener("click", () => $("dialogo-campana").close());

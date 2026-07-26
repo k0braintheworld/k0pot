@@ -981,3 +981,8 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .apr-texto { margin: 0; color: var(--texto); font-size: 0.92rem; line-height: 1.5; }
 .apr-caso { margin-top: 0.6rem; padding: 0; border: 0; background: none; color: var(--acento); font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
 .apr-caso:hover { text-decoration: underline; }
+
+/* ── Exportar IOCs ─────────────────────────────────────────────────── */
+.dialogo-estrecho { max-width: 460px; }
+.ioc-explica { color: var(--sub); font-size: 0.92rem; line-height: 1.5; margin: 0 0 1rem; }
+.ioc-botones { display: flex; gap: 0.6rem; flex-wrap: wrap; }
