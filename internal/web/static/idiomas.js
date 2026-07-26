@@ -692,3 +692,19 @@ Object.assign(IDIOMAS.en, {
   "cfg.resumen.semanal": "Weekly", "cfg.resumen.diario": "Daily",
   "cfg.resumen.ayuda": "A digest of the period through the same alert channel: figures, origins and new malware."
 });
+Object.assign(IDIOMAS.es, {
+  "hdr.asistente": "💬 Preguntar",
+  "asis.titulo": "Pregúntale a k0Pot", "asis.sub": "Sobre lo que ha visto tu honeypot esta semana",
+  "asis.placeholder": "¿Qué ha sido lo más raro esta semana?", "asis.enviar": "Preguntar",
+  "asis.pensando": "Pensando…", "asis.error": "No pude responder: {msg}",
+  "cfg.asistente": "Activar el asistente (preguntar con IA)",
+  "cfg.asistente.ayuda": "Añade un botón \"Preguntar\" para chatear con la IA sobre lo que ve el honeypot. Gasta cuota como los informes."
+});
+Object.assign(IDIOMAS.en, {
+  "hdr.asistente": "💬 Ask",
+  "asis.titulo": "Ask k0Pot", "asis.sub": "About what your honeypot has seen this week",
+  "asis.placeholder": "What's been the strangest thing this week?", "asis.enviar": "Ask",
+  "asis.pensando": "Thinking…", "asis.error": "Couldn't answer: {msg}",
+  "cfg.asistente": "Enable the assistant (ask with AI)",
+  "cfg.asistente.ayuda": "Adds an \"Ask\" button to chat with the AI about what the honeypot sees. Uses quota like the reports."
+});

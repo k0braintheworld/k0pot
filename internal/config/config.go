@@ -104,6 +104,8 @@ type Config struct {
 	// Resumen periodico: un digest por la misma via de los avisos.
 	ResumenActivo   bool   `json:"resumen_activo"`
 	ResumenCadencia string `json:"resumen_cadencia"`
+	// AsistenteActivo habilita el chat con la IA sobre los datos del honeypot.
+	AsistenteActivo bool `json:"asistente_activo"`
 	// AvisoEnlace es la direccion del panel que se incluye en el aviso.
 	AvisoEnlace string `json:"aviso_enlace"`
 

@@ -942,3 +942,12 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .replay-linea { display: block; }
 .replay-linea.clave { color: var(--acento); font-weight: 600; }
 .replay-fin { display: block; color: var(--sub); }
+
+/* Asistente conversacional: burbujas de chat. */
+.asistente-hilo { display: flex; flex-direction: column; gap: .55rem; max-height: 55vh; overflow-y: auto; padding: .3rem 0 .6rem; }
+.asis-msg { padding: .55rem .8rem; border-radius: .7rem; max-width: 85%; white-space: pre-wrap; line-height: 1.5; font-size: .9rem; }
+.asis-tu { align-self: flex-end; background: rgba(242,168,61,.16); color: var(--texto); }
+.asis-k0pot { align-self: flex-start; background: rgba(127,140,160,.12); color: var(--texto); }
+.asis-msg.pensando { color: var(--sub); font-style: italic; }
+.asistente-form { display: flex; gap: .5rem; margin-top: .4rem; }
+.asistente-form input { flex: 1; }

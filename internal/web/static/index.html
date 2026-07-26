@@ -25,6 +25,7 @@
       <option value="30" data-i18n="rango.30d">30 dias</option>
       <option value="90" data-i18n="rango.90d">90 dias</option>
     </select>
+    <button id="abrir-asistente" type="button" class="boton-texto" data-i18n="hdr.asistente" hidden>💬 Preguntar</button>
     <button id="generar-informe" type="button" class="boton-texto" data-i18n="hdr.informe" data-i18n-title="hdr.informe.t" title="Abrir un informe completo del periodo seleccionado, listo para imprimir o guardar como PDF">Generar informe</button>
     <button id="descargar-blocklist" type="button" class="boton-texto" data-i18n="hdr.blocklist" data-i18n-title="hdr.blocklist.t" title="Descargar las IPs que han atacado (acceso o intrusion) para bloquearlas en tus servidores reales">Blocklist</button>
     <select id="idioma" class="sel-idioma" aria-label="Idioma" data-i18n-aria="hdr.idioma"><option value="es">ES</option><option value="en">EN</option></select>
@@ -129,6 +130,8 @@
     <div class="grupo" data-pestana="informes">
       <h3 data-i18n="cfg.inf.h3">Informes</h3>
       <label class="fila" data-i18n-first="cfg.inf.llm"><input type="checkbox" id="c-usar-llm"> Redactar con LLM</label>
+      <label class="fila" data-i18n-first="cfg.asistente"><input type="checkbox" id="c-asistente-activo"> Activar el asistente (preguntar con IA)</label>
+      <p class="ayuda" data-i18n="cfg.asistente.ayuda">Añade un botón "Preguntar" para chatear con la IA sobre lo que ve el honeypot. Gasta cuota como los informes.</p>
       <label data-i18n-first="cfg.inf.proveedor">Proveedor
         <select id="c-proveedor">
           <option value="compatible" data-i18n="cfg.inf.compat">Compatible con OpenAI (Groq, OpenRouter, Mistral, Ollama…)</option>
@@ -381,6 +384,21 @@
   </header>
   <div id="ataque-explicacion" class="explicacion" hidden></div>
   <div id="ataque-cuerpo" class="cuerpo-dialogo"></div>
+</dialog>
+
+<dialog id="dialogo-asistente" class="dialogo">
+  <header class="cabecera-dialogo">
+    <div>
+      <h2 data-i18n="asis.titulo">Pregúntale a k0Pot</h2>
+      <p class="sub" data-i18n="asis.sub">Sobre lo que ha visto tu honeypot esta semana</p>
+    </div>
+    <button id="cerrar-asistente" type="button" class="boton-menor" data-i18n="dlg.cerrar">Cerrar</button>
+  </header>
+  <div id="asistente-hilo" class="asistente-hilo"></div>
+  <form id="asistente-form" class="asistente-form">
+    <input type="text" id="asistente-pregunta" autocomplete="off" data-i18n-placeholder="asis.placeholder" placeholder="¿Qué ha sido lo más raro esta semana?">
+    <button type="submit" id="asistente-enviar" class="boton-principal" data-i18n="asis.enviar">Preguntar</button>
+  </form>
 </dialog>
 
 <main class="rejilla-panel">

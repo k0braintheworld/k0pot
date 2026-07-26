@@ -1662,6 +1662,53 @@ $("generar-informe").addEventListener("click", () => {
 });
 $("reproducir-ataque").addEventListener("click", () => reproducirSesion().catch(() => {}));
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
+
+// ── Asistente: preguntar a la IA sobre el honeypot ──────────────────────
+const historialAsistente = [];
+function mensajeAsistente(rol, texto) {
+  const hilo = $("asistente-hilo");
+  const msg = nodo("div", `asis-msg asis-${rol}`);
+  msg.textContent = texto;
+  hilo.appendChild(msg);
+  hilo.scrollTop = hilo.scrollHeight;
+  return msg;
+}
+async function preguntarAsistente(ev) {
+  ev.preventDefault();
+  const input = $("asistente-pregunta");
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = "";
+  mensajeAsistente("tu", q);
+  const resp = mensajeAsistente("k0pot", t("asis.pensando"));
+  resp.classList.add("pensando");
+  $("asistente-enviar").disabled = true;
+  try {
+    // Se manda un poco de hilo para que las repreguntas tengan contexto.
+    const hist = historialAsistente.slice(-3)
+      .map((h) => `P: ${h.p}\nR: ${h.r}`).join("\n\n");
+    const r = await pedirJSON("/api/asistente", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pregunta: q, historial: hist }),
+    });
+    resp.classList.remove("pensando");
+    resp.textContent = r.respuesta;
+    historialAsistente.push({ p: q, r: r.respuesta });
+  } catch (e) {
+    resp.classList.remove("pensando");
+    resp.textContent = t("asis.error", { msg: e.message });
+  } finally {
+    $("asistente-enviar").disabled = false;
+    input.focus();
+  }
+}
+$("abrir-asistente").addEventListener("click", () => {
+  $("dialogo-asistente").showModal();
+  $("asistente-pregunta").focus();
+});
+$("cerrar-asistente").addEventListener("click", () => $("dialogo-asistente").close());
+$("asistente-form").addEventListener("submit", preguntarAsistente);
 $("explicar-ataque").addEventListener("click", explicarAtaque);
 $("cerrar-ip").addEventListener("click", () => $("dialogo-ip").close());
 $("cerrar-campana").addEventListener("click", () => $("dialogo-campana").close());
@@ -1764,6 +1811,7 @@ const INTERRUPTORES = {
   "c-avisos-activos": "avisos_activos",
   "c-panel-https": "panel_https",
   "c-resumen-activo": "resumen_activo",
+  "c-asistente-activo": "asistente_activo",
 };
 
 function volcarAjustes(c) {
@@ -1781,6 +1829,7 @@ function volcarAjustes(c) {
     ? `clave guardada: ${c.clave_compatible}`
     : "sin clave: los informes los redactaran las reglas";
   mostrarCamposDelProveedor();
+  $("abrir-asistente").hidden = !c.asistente_activo;
 }
 
 // Solo se ensenan los campos del proveedor elegido: URL base no significa
@@ -2233,6 +2282,7 @@ async function iniciar() {
     $("quien").textContent = q.usuario;
     const c = await pedirJSON("/api/ajustes");
     aplicarRefresco(c.refresco_segundos);
+    $("abrir-asistente").hidden = !c.asistente_activo;
   } catch (err) {
     return;
   }
