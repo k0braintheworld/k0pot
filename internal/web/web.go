@@ -82,6 +82,7 @@ func (s *Servidor) Rutas() http.Handler {
 	// Todo lo demas exige sesion.
 	mux.HandleFunc("/api/estado", s.protegido(s.estado))
 	mux.HandleFunc("/api/serie", s.protegido(s.serie))
+	mux.HandleFunc("/api/tendencias", s.protegido(s.tendencias))
 	mux.HandleFunc("/api/recientes", s.protegido(s.recientes))
 	mux.HandleFunc("/api/destacados", s.protegido(s.destacados))
 	mux.HandleFunc("/api/informe", s.protegido(s.informe))

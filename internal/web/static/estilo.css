@@ -918,7 +918,7 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 
 /* Novedades: el bloque de "mira esto". Resalta con el acento porque es lo
    contrario del ruido -aparece solo cuando hay algo que de verdad importa-. */
-.bloque-novedades { grid-column: span 12; border-color: var(--acento); }
+.bloque-radar { grid-column: span 12; border-color: var(--acento); }
 .novedades { display: flex; flex-direction: column; gap: .4rem; }
 .novedades-titulo { margin: .5rem 0 .1rem; font-size: .78rem; color: var(--acento); font-weight: 600; }
 .novedad {
@@ -951,3 +951,13 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .asis-msg.pensando { color: var(--sub); font-style: italic; }
 .asistente-form { display: flex; gap: .5rem; margin-top: .4rem; }
 .asistente-form input { flex: 1; }
+
+/* Tendencias: cuanto sube o baja cada cifra respecto al periodo anterior. */
+.bloque-tendencias { grid-column: span 12; }
+.tendencias-fila { display: flex; gap: 2rem; flex-wrap: wrap; }
+.tendencia { display: flex; flex-direction: column; }
+.tend-cifra { font-size: 1.9rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tend-etiqueta { font-size: .78rem; color: var(--sub); }
+.tend-delta { font-size: .82rem; margin-top: .25rem; font-weight: 600; }
+.tend-delta.sube { color: var(--acento); }
+.tend-delta.baja { color: var(--sub); }

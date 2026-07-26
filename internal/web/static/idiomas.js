@@ -708,3 +708,13 @@ Object.assign(IDIOMAS.en, {
   "cfg.asistente": "Enable the assistant (ask with AI)",
   "cfg.asistente.ayuda": "Adds an \"Ask\" button to chat with the AI about what the honeypot sees. Uses quota like the reports."
 });
+Object.assign(IDIOMAS.es, {
+  "sec.tendencias": "Tendencias", "sec.tendencias.sub": "Comparado con el periodo anterior",
+  "tend.ataques": "ataques", "tend.intrusiones": "intrusiones", "tend.malware": "malware nuevo",
+  "tend.nuevo": "nuevo", "tend.igual": "igual", "tend.previo": "Periodo anterior: {n}"
+});
+Object.assign(IDIOMAS.en, {
+  "sec.tendencias": "Trends", "sec.tendencias.sub": "Compared with the previous period",
+  "tend.ataques": "attacks", "tend.intrusiones": "intrusions", "tend.malware": "new malware",
+  "tend.nuevo": "new", "tend.igual": "same", "tend.previo": "Previous period: {n}"
+});

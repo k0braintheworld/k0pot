@@ -1266,13 +1266,39 @@ function tamano(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-// cargarNovedades pinta el radar: ficheros nunca vistos y sesiones a revisar.
-// Es el bloque que corta el ruido -si esta vacio, no molesta-.
-async function cargarNovedades() {
-  const r = await traer("/api/radar");
-  const cont = $("novedades");
+function deltaTendencia(actual, previo) {
+  if (previo === 0) return actual > 0 ? { texto: t("tend.nuevo"), clase: "sube" } : { texto: "—", clase: "" };
+  const pct = Math.round(((actual - previo) / previo) * 100);
+  if (pct > 0) return { texto: `▲ ${pct}%`, clase: "sube" };
+  if (pct < 0) return { texto: `▼ ${Math.abs(pct)}%`, clase: "baja" };
+  return { texto: t("tend.igual"), clase: "" };
+}
+function pintarTendencia(id, etiqueta, m) {
+  const cont = $(id);
   cont.replaceChildren();
-  const seccion = document.querySelector(".bloque-novedades");
+  cont.appendChild(nodo("span", "tend-cifra", (m.actual || 0).toLocaleString(IDIOMA)));
+  cont.appendChild(nodo("span", "tend-etiqueta", etiqueta));
+  const d = deltaTendencia(m.actual || 0, m.previo || 0);
+  const delta = nodo("span", `tend-delta ${d.clase}`, d.texto);
+  delta.title = t("tend.previo", { n: (m.previo || 0).toLocaleString(IDIOMA) });
+  cont.appendChild(delta);
+}
+async function cargarTendencias() {
+  const d = await traer("/api/tendencias");
+  const seccion = document.querySelector(".bloque-tendencias");
+  if (seccion) seccion.hidden = false;
+  pintarTendencia("tend-ataques", t("tend.ataques"), d.ataques || {});
+  pintarTendencia("tend-intrusiones", t("tend.intrusiones"), d.intrusiones || {});
+  pintarTendencia("tend-malware", t("tend.malware"), d.malware || {});
+}
+
+// cargarRadar pinta el radar: ficheros nunca vistos y sesiones a revisar.
+// Es el bloque que corta el ruido -si esta vacio, no molesta-.
+async function cargarRadar() {
+  const r = await traer("/api/radar");
+  const cont = $("radar");
+  cont.replaceChildren();
+  const seccion = document.querySelector(".bloque-radar");
   const malware = r.malware || [], manual = r.manual || [];
   if (!malware.length && !manual.length) {
     if (seccion) seccion.hidden = true;
@@ -1624,7 +1650,8 @@ async function refrescar() {
       cargarAtaques(),
       cargarCampanas(),
       cargarArtefactos(),
-      cargarNovedades(),
+      cargarRadar(),
+      cargarTendencias(),
       traer("/api/serie").then(pintarSerie),
     ]);
     latido.className = "punto conectado";

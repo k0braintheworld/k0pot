@@ -536,3 +536,46 @@ func (s *Servidor) radar(w http.ResponseWriter, r *http.Request) {
 	}
 	responderJSON(w, map[string]any{"malware": nuevos, "manual": manual})
 }
+
+
+// tendencias compara el periodo con el anterior: si la cosa va a mas o a
+// menos, y que ha aparecido de nuevo. Es el eje del tiempo, que al panel le
+// faltaba -da la pelicula, no solo la foto-.
+func (s *Servidor) tendencias(w http.ResponseWriter, r *http.Request) {
+	d := dias(r)
+	ahora := time.Now()
+	sevN, _ := s.Almacen.EpisodiosDesde(ahora.AddDate(0, 0, -d))
+	sev2N, _ := s.Almacen.EpisodiosDesde(ahora.AddDate(0, 0, -2*d))
+	suma := func(m map[string]int) int {
+		t := 0
+		for _, v := range m {
+			t += v
+		}
+		return t
+	}
+	// El periodo anterior sale de restar: lo de 2N dias menos lo de N.
+	ataquesA, ataquesP := suma(sevN), suma(sev2N)-suma(sevN)
+	intrA, intrP := sevN["intrusion"], sev2N["intrusion"]-sevN["intrusion"]
+	malN, mal2N := 0, 0
+	if x, err := s.Almacen.ArtefactosNuevos(ahora.AddDate(0, 0, -d)); err == nil {
+		malN = len(x)
+	}
+	if x, err := s.Almacen.ArtefactosNuevos(ahora.AddDate(0, 0, -2*d)); err == nil {
+		mal2N = len(x)
+	}
+	g := store.PorHora
+	if d > 2 {
+		g = store.PorDia
+	}
+	serie, _ := s.Almacen.SerieTemporal(ahora.AddDate(0, 0, -d), g)
+	if serie == nil {
+		serie = []store.PuntoSerie{}
+	}
+	responderJSON(w, map[string]any{
+		"dias":        d,
+		"ataques":     map[string]int{"actual": ataquesA, "previo": max(ataquesP, 0)},
+		"intrusiones": map[string]int{"actual": intrA, "previo": max(intrP, 0)},
+		"malware":     map[string]int{"actual": malN, "previo": max(mal2N-malN, 0)},
+		"serie":       serie,
+	})
+}
