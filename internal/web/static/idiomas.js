@@ -848,3 +848,11 @@ Object.assign(IDIOMAS.en, {
 });
 Object.assign(IDIOMAS.es, { "expl.generando": "Generando explicación con IA…" });
 Object.assign(IDIOMAS.en, { "expl.generando": "Generating AI explanation…" });
+Object.assign(IDIOMAS.es, {
+  "expl.pendiente": "Explicación pendiente de generación… (se está preparando en segundo plano)",
+  "apr.chip.pausa": "En pausa hasta mañana · presupuesto de hoy agotado ({hoy}/{tope})"
+});
+Object.assign(IDIOMAS.en, {
+  "expl.pendiente": "Explanation pending… (being prepared in the background)",
+  "apr.chip.pausa": "Paused until tomorrow · today's budget spent ({hoy}/{tope})"
+});

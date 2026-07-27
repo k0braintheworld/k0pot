@@ -107,7 +107,7 @@ type DetalleEpisodio struct {
 	// Explicacion es lo que redacto el modelo sobre ESTE ataque, si
 	// alguien lo pidio. Se guarda con el episodio: reabrir el dialogo no
 	// vuelve a gastar cuota.
-	Generando   bool   `json:"generando,omitempty"`
+	Pendiente   bool   `json:"pendiente,omitempty"`
 	Explicacion string `json:"explicacion,omitempty"`
 }
 
@@ -193,10 +193,13 @@ func (s *Servidor) episodio(w http.ResponseWriter, r *http.Request) {
 	ep.Resumen = episodio.Redactar(ep.Episodio, idioma)
 	det := DetalleEpisodio{EpisodioFila: ep, Pasos: pasos}
 	det.Explicacion, _ = s.Almacen.Explicacion(clave)
-	// Si es un ataque que importa y aun no tiene explicacion, se genera sola
-	// en segundo plano: al reabrirlo ya estara, sin pedirla.
-	if det.Explicacion == "" {
-		det.Generando = s.generarExplicacionEnFondo(clave, idioma, ep)
+	// Abrir NO llama al modelo. Si falta la narrativa y es un ataque que
+	// importa, se marca "pendiente" y se pone en cabeza de la cola del
+	// barredor, que la genera en segundo plano.
+	if det.Explicacion == "" && s.puedeExplicar() &&
+		episodio.Rango(ep.Severidad) >= episodio.Rango(episodio.Acceso) {
+		det.Pendiente = true
+		s.pedirExplicacion("ataque|" + clave)
 	}
 	if n, hay := saber.DeProveedor(ep.ISP); hay {
 		nn := n.En(idioma)

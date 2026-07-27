@@ -623,3 +623,26 @@ func (s *Store) CasosAprende(desde time.Time) (map[string]string, error) {
 	}
 	return out, nil
 }
+
+// EpisodiosNotablesSinExplicacion devuelve los ataques de acceso o intrusion
+// que aun no tienen narrativa, los mas recientes primero. Es la cola del
+// barredor que las genera solo en segundo plano.
+func (s *Store) EpisodiosNotablesSinExplicacion(desde time.Time, limite int) ([]EpisodioFila, error) {
+	q := selectEpisodio + " WHERE e.fin >= ? AND e.explicacion = ''" +
+		" AND " + fmt.Sprintf(rangoSeveridad, "e.severidad") + " >= " + fmt.Sprintf(rangoSeveridad, "?") +
+		" ORDER BY e.fin DESC LIMIT ?"
+	filas, err := s.db.Query(q, desde.UTC().Format(time.RFC3339Nano), "acceso", limite)
+	if err != nil {
+		return nil, fmt.Errorf("episodios sin explicacion: %w", err)
+	}
+	defer filas.Close()
+	out := []EpisodioFila{}
+	for filas.Next() {
+		f, err := escanearEpisodio(filas)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, f)
+	}
+	return out, filas.Err()
+}

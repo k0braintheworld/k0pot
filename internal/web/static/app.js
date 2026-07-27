@@ -666,7 +666,7 @@ let claveAbierta = null;
 // haya que reabrir. Se detiene si cierras el dialogo o si tarda demasiado.
 function esperarExplicacion(idCaja, tipo, clave, idDialogo) {
   const dlg = $(idDialogo);
-  pintarExplicacion(idCaja, t("expl.generando"));
+  pintarExplicacion(idCaja, t("expl.pendiente"));
   let intentos = 0;
   const iv = setInterval(async () => {
     if (!dlg.open || intentos++ > 40) {
@@ -707,7 +707,7 @@ async function abrirAtaque(clave) {
   // Si ya se explico una vez, se ensena sin volver a preguntar: la
   // explicacion de un ataque terminado no cambia por reabrir el dialogo.
   pintarExplicacion("ataque-explicacion", d.explicacion);
-  if (!d.explicacion && d.generando) esperarExplicacion("ataque-explicacion", "ataque", clave, "dialogo-ataque");
+  if (!d.explicacion && d.pendiente) esperarExplicacion("ataque-explicacion", "ataque", clave, "dialogo-ataque");
 
   const titulo = $("ataque-titulo");
   titulo.replaceChildren();
@@ -1244,7 +1244,7 @@ async function abrirCampana(c) {
     return;
   }
   pintarExplicacion("campana-explicacion", resp.explicacion);
-  if (!resp.explicacion && resp.generando) esperarExplicacion("campana-explicacion", "campana", `${c.tipo}|${c.huella}`, "dialogo-campana");
+  if (!resp.explicacion && resp.pendiente) esperarExplicacion("campana-explicacion", "campana", `${c.tipo}|${c.huella}`, "dialogo-campana");
   // La muestra recortada se sustituye por la secuencia COMPLETA compartida.
   pintarSecuenciaCampana($("campana-muestra"), c.tipo, (resp.episodios || [])[0] || {}, resp.fichero);
 
@@ -1407,7 +1407,7 @@ async function abrirArtefactoURL(a) {
     // Dispara la explicacion en segundo plano y la espera en el sitio.
     pedirJSON(`/api/artefacto/url-fondo?url=${encodeURIComponent(a.url)}&ips=${(a.ips || []).length}&idioma=${IDIOMA}`,
       { method: "POST" })
-      .then((r) => { if (r && r.generando) esperarExplicacion("artefacto-explicacion", "url", a.url, "dialogo-artefacto"); })
+      .then((r) => { if (r && r.pendiente) esperarExplicacion("artefacto-explicacion", "url", a.url, "dialogo-artefacto"); })
       .catch(() => {});
   }
 
@@ -1508,7 +1508,7 @@ t("artef.aviso")));
   }
 
   pintarExplicacion("artefacto-explicacion", d.explicacion);
-  if (!d.explicacion && d.generando) esperarExplicacion("artefacto-explicacion", "artefacto", hash, "dialogo-artefacto");
+  if (!d.explicacion && d.pendiente) esperarExplicacion("artefacto-explicacion", "artefacto", hash, "dialogo-artefacto");
 }
 
 // Explica con IA que es y que hace la muestra. Igual que en ataques: POST,
@@ -1599,10 +1599,12 @@ async function cargarAprendizaje() {
     if (!a.activo && !a.total) { chip.hidden = true; return; }
     chip.hidden = false;
     chip.textContent = t("apr.chip", { n: a.total });
-    chip.title = a.activo
-      ? t("apr.chip.activo", { hoy: a.hoy, tope: a.tope })
-      : t("apr.chip.inactivo");
-    chip.classList.toggle("en-pausa", !a.activo);
+    chip.title = !a.activo
+      ? t("apr.chip.inactivo")
+      : a.pausado
+        ? t("apr.chip.pausa", { hoy: a.hoy, tope: a.tope })
+        : t("apr.chip.activo", { hoy: a.hoy, tope: a.tope });
+    chip.classList.toggle("en-pausa", !a.activo || a.pausado);
     // Pulso cuando aprende algo nuevo, para que se vea vivo.
     if (aprendidasPrevias !== null && a.total > aprendidasPrevias) {
       chip.classList.remove("recien");
