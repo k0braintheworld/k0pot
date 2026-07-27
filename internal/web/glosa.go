@@ -86,12 +86,22 @@ func (s *Servidor) glosarEpisodio(w http.ResponseWriter, r *http.Request) {
 		// Tope por peticion: si un ataque trae MUCHOS comandos distintos, se
 		// aprende a tandas (una por clic) para no mandar un prompt gigante que
 		// el modelo trunca. Lo que sobra queda pendiente y se coge al reabrir.
-		const maxPorTanda = 25
-		pendientesFormas := formas
-		if len(formas) > maxPorTanda {
-			pendientes += len(formas) - maxPorTanda
-			pendientesFormas = formas[:maxPorTanda]
+		// Lote por presupuesto: cuenta Y tamano. Un comando largo (un
+		// reconocimiento de miles de bytes) casi va solo, para que quepa
+		// entero y no se trunque; el resto queda pendiente para otra tanda.
+		const maxCount = 25
+		const maxChars = 6000
+		var pendientesFormas []string
+		chars := 0
+		for _, n := range formas {
+			if len(pendientesFormas) >= maxCount ||
+				(len(pendientesFormas) > 0 && chars+len(repr[n]) > maxChars) {
+				break
+			}
+			pendientesFormas = append(pendientesFormas, n)
+			chars += len(repr[n])
 		}
+		pendientes += len(formas) - len(pendientesFormas)
 
 		explicador, ok := s.Generador.(report.Explicador)
 		if !ok {

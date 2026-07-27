@@ -674,24 +674,6 @@ function pintarExplicacion(idCaja, texto) {
   }
 }
 
-// Va por POST y con su propio boton: es el momento en que alguien quiere
-// entender algo, y por eso es donde mejor se gasta una llamada.
-async function explicarAtaque() {
-  if (!claveAbierta) return;
-  const boton = $("explicar-ataque");
-  boton.disabled = true;
-  boton.textContent = t("dlg.explicando");
-  try {
-    const r = await pedirJSON(
-      `/api/episodio/explicar?clave=${encodeURIComponent(claveAbierta)}&idioma=${IDIOMA}`, { method: "POST" });
-    pintarExplicacion("ataque-explicacion", r.explicacion);
-  } catch (e) {
-    pintarExplicacion("ataque-explicacion", t("dlg.noexplicar", { msg: e.message }));
-  } finally {
-    boton.disabled = false;
-    boton.textContent = t("dlg.explicar");
-  }
-}
 
 let ataqueAbierto = null;
 async function abrirAtaque(clave) {
@@ -701,7 +683,6 @@ async function abrirAtaque(clave) {
   // Si ya se explico una vez, se ensena sin volver a preguntar: la
   // explicacion de un ataque terminado no cambia por reabrir el dialogo.
   pintarExplicacion("ataque-explicacion", d.explicacion);
-  $("explicar-ataque").textContent = d.explicacion ? t("dlg.reexplicar") : t("dlg.explicar");
 
   const titulo = $("ataque-titulo");
   titulo.replaceChildren();
@@ -720,7 +701,6 @@ async function abrirAtaque(clave) {
   ataqueAbierto = d;
   const cuerpo = $("ataque-cuerpo");
   pintarPasos(cuerpo, d);
-  $("glosar-ataque").hidden = !(d.pasos || []).some((p) => p.tipo === "comando_ejecutado");
   dlg.showModal();
 }
 
@@ -1637,6 +1617,22 @@ function pintarGravedad(severidades) {
   cont.appendChild(embudo);
 }
 
+// cargarAprendizaje pinta el pulso del conocimiento en la cabecera: cuantos
+// comandos lleva k0pot aprendidos y, en el titulo, como va la cuota de hoy.
+async function cargarAprendizaje() {
+  try {
+    const a = await pedirJSON("/api/aprendizaje");
+    const chip = $("aprendizaje-chip");
+    if (!a.activo && !a.total) { chip.hidden = true; return; }
+    chip.hidden = false;
+    chip.textContent = t("apr.chip", { n: a.total });
+    chip.title = a.activo
+      ? t("apr.chip.activo", { hoy: a.hoy, tope: a.tope })
+      : t("apr.chip.inactivo");
+    chip.classList.toggle("en-pausa", !a.activo);
+  } catch (e) { /* silencioso: el indicador no debe romper el refresco */ }
+}
+
 async function refrescar() {
   const latido = $("latido");
   latido.className = "punto cargando";
@@ -1654,6 +1650,7 @@ async function refrescar() {
       cargarArtefactos(),
       cargarRadar(),
       cargarTendencias(),
+      cargarAprendizaje(),
       traer("/api/serie").then(pintarSerie),
     ]);
     latido.className = "punto conectado";
@@ -1689,42 +1686,6 @@ $("descargar-blocklist").addEventListener("click", () => {
 $("generar-informe").addEventListener("click", () => {
   window.open(`/api/reporte?dias=${encodeURIComponent(rango())}&idioma=${IDIOMA}`, "_blank", "noopener");
 });
-// ── Explicar paso a paso con IA: una glosa por comando, cacheada ────────
-let glosando = false;
-async function glosarAtaque() {
-  const d = ataqueAbierto;
-  if (!d || !claveAbierta || glosando) return;
-  glosando = true;
-  const btn = $("glosar-ataque");
-  btn.disabled = true;
-  btn.textContent = t("dlg.glosando");
-  try {
-    const r = await pedirJSON(
-      `/api/episodio/glosa?clave=${encodeURIComponent(claveAbierta)}&idioma=${IDIOMA}`,
-      { method: "POST" });
-    const g = r.glosas || [];
-    (d.pasos || []).forEach((p, i) => { if (g[i]) p.glosa = g[i]; });
-    pintarPasos($("ataque-cuerpo"), d); // se ve al momento en la vista
-    // Feedback del aprendizaje: lo aprendido de nuevo, o lo que quedo sin
-    // explicar por falta de modelo o de cuota.
-    let aviso = t("dlg.glosar");
-    if (r.aprendidas > 0) aviso = t("glosa.aprendidas", { n: r.aprendidas });
-    else if (r.pendientes > 0) aviso = t("glosa.pendientes", { n: r.pendientes });
-    else aviso = t("glosa.nada");
-    btn.textContent = aviso;
-    if (aviso !== t("dlg.glosar")) setTimeout(() => { btn.textContent = t("dlg.glosar"); }, 4000);
-    if (typeof r.total === "number") {
-      $("glosar-ataque").title = t("glosa.base", { n: r.total });
-    }
-  } catch (e) {
-    btn.textContent = t("glosa.error", { msg: e.message });
-    setTimeout(() => { btn.textContent = t("dlg.glosar"); }, 4000);
-  } finally {
-    btn.disabled = false;
-    glosando = false;
-  }
-}
-$("glosar-ataque").addEventListener("click", () => glosarAtaque().catch(() => {}));
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
 
 // ── Asistente: preguntar a la IA sobre el honeypot ──────────────────────
@@ -1873,7 +1834,6 @@ document.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !menuLista.hidden) cerrarMenu();
 });
-$("explicar-ataque").addEventListener("click", explicarAtaque);
 $("cerrar-ip").addEventListener("click", () => $("dialogo-ip").close());
 $("cerrar-campana").addEventListener("click", () => $("dialogo-campana").close());
 $("cerrar-artefacto").addEventListener("click", () => $("dialogo-artefacto").close());

@@ -480,19 +480,28 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 	// Primero lo mas repetido: es lo que mas probablemente vera el usuario.
 	sort.Slice(orden, func(i, j int) bool { return orden[i].veces > orden[j].veces })
 
-	const porTanda = 12
-	const maxTandas = 2
+	const maxPorTanda = 12
+	const maxCharsTanda = 6000
+	const maxTandas = 1
 	aprendidas := 0
 	for t := 0; t < maxTandas && len(orden) > 0; t++ {
+		// Lote por presupuesto de tamano: un comando largo -un reconocimiento
+		// de miles de bytes- va casi solo, para que quepa entero en el prompt
+		// y el modelo no lo trunque.
+		var lote []*forma
+		chars := 0
+		for len(orden) > 0 && len(lote) < maxPorTanda {
+			f := orden[0]
+			if len(lote) > 0 && chars+len(f.repr) > maxCharsTanda {
+				break
+			}
+			lote = append(lote, f)
+			chars += len(f.repr) + 8
+			orden = orden[1:]
+		}
 		if ok, _ := almacen.ConsumirCuotaLLM(dia, topeFondo); !ok {
 			break // agotado el presupuesto de fondo de hoy
 		}
-		n := porTanda
-		if n > len(orden) {
-			n = len(orden)
-		}
-		lote := orden[:n]
-		orden = orden[n:]
 		lineas := make([]string, len(lote))
 		for i, f := range lote {
 			lineas[i] = f.repr

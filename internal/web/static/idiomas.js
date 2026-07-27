@@ -836,3 +836,13 @@ Object.assign(IDIOMAS.en, {
   "cfg.aprendizaje": "Learn commands in the background",
   "cfg.aprendizaje.ayuda": "k0Pot glosses new commands on its own, using spare quota. So when you open an attack the explanations are already there. It keeps a quota margin for what you ask directly."
 });
+Object.assign(IDIOMAS.es, {
+  "apr.chip": "🧠 {n} comandos aprendidos",
+  "apr.chip.activo": "Aprendiendo en segundo plano · hoy {hoy}/{tope} llamadas a la IA",
+  "apr.chip.inactivo": "Aprendizaje en pausa · actívalo en Ajustes"
+});
+Object.assign(IDIOMAS.en, {
+  "apr.chip": "🧠 {n} commands learned",
+  "apr.chip.activo": "Learning in the background · today {hoy}/{tope} AI calls",
+  "apr.chip.inactivo": "Learning paused · enable it in Settings"
+});

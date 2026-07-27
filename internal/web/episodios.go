@@ -192,6 +192,11 @@ func (s *Servidor) episodio(w http.ResponseWriter, r *http.Request) {
 	ep.Resumen = episodio.Redactar(ep.Episodio, idioma)
 	det := DetalleEpisodio{EpisodioFila: ep, Pasos: pasos}
 	det.Explicacion, _ = s.Almacen.Explicacion(clave)
+	// Si es un ataque que importa y aun no tiene explicacion, se genera sola
+	// en segundo plano: al reabrirlo ya estara, sin pedirla.
+	if det.Explicacion == "" {
+		s.generarExplicacionEnFondo(clave, idioma, ep)
+	}
 	if n, hay := saber.DeProveedor(ep.ISP); hay {
 		nn := n.En(idioma)
 		det.NotaProveedor = &nn
@@ -289,6 +294,11 @@ func notaDe(ev model.Evento, idioma string) *saber.Nota {
 				nota := v.Nota.En(idioma)
 				return &nota
 			}
+			return nil
+		}
+		if saber.ComandoComplejo(d["comando"]) {
+			// Demasiado para una nota; la glosa aprendida lo explicara. Mejor
+			// nada que una etiqueta enganosa de una palabra suelta.
 			return nil
 		}
 		n, hay = saber.DeComando(d["comando"])

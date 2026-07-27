@@ -18,6 +18,7 @@
   </div>
   <div class="controles">
     <button id="novedades" type="button" class="chip-novedades" hidden></button>
+    <span id="aprendizaje-chip" class="chip-aprendizaje" hidden></span>
     <div class="pulso"><span id="latido" class="punto"></span><span id="actualizado" data-i18n="hdr.conectando">conectando…</span></div>
     <select id="rango" aria-label="Periodo">
       <option value="1" selected data-i18n="rango.24h">24 horas</option>
@@ -387,8 +388,6 @@
       <p id="ataque-sub" class="sub"></p>
     </div>
     <div class="acciones-dialogo">
-      <button id="glosar-ataque" type="button" class="boton-menor" data-i18n="dlg.glosar" data-i18n-title="dlg.glosar.t" title="Explicar con IA, paso a paso, que hace cada comando. Consume cuota; se guarda para la proxima vez." hidden>Explicar paso a paso</button>
-      <button id="explicar-ataque" type="button" class="boton-menor" data-i18n="dlg.explicar" data-i18n-title="dlg.explicar.t" title="Pedir al modelo que explique este ataque. Consume cuota.">Explicar con IA</button>
       <button id="cerrar-ataque" type="button" class="boton-menor" data-i18n="dlg.cerrar">Cerrar</button>
     </div>
   </header>
