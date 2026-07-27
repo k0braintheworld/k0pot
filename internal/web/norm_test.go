@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/k0braintheworld/k0pot/internal/model"
+	"github.com/k0braintheworld/k0pot/internal/saber"
 	"github.com/k0braintheworld/k0pot/internal/store"
 )
 
@@ -16,12 +17,12 @@ func TestNormalizarComando(t *testing.T) {
 		"connect 1.2.3.4 4444":          "connect <ip> <n>",
 	}
 	for in, want := range casos {
-		if got := normalizarComando(in); got != want {
+		if got := saber.NormalizarComando(in); got != want {
 			t.Errorf("normalizar(%q) = %q, quiero %q", in, got, want)
 		}
 	}
 	// Dos descargas distintas colapsan a la MISMA clave: se comparte glosa.
-	if normalizarComando("wget http://1.1.1.1/a") != normalizarComando("wget http://9.9.9.9/b") {
+	if saber.NormalizarComando("wget http://1.1.1.1/a") != saber.NormalizarComando("wget http://9.9.9.9/b") {
 		t.Fatal("dos descargas equivalentes deberian normalizar igual")
 	}
 }

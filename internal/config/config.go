@@ -106,6 +106,11 @@ type Config struct {
 	ResumenCadencia string `json:"resumen_cadencia"`
 	// AsistenteActivo habilita el chat con la IA sobre los datos del honeypot.
 	AsistenteActivo bool `json:"asistente_activo"`
+
+	// AprendizajeAutomatico deja que k0pot glose solo, en segundo plano y con
+	// la cuota que sobre, los comandos nuevos que va viendo. Asi al abrir un
+	// ataque las explicaciones ya estan hechas, sin pedirlas.
+	AprendizajeAutomatico bool `json:"aprendizaje_automatico"`
 	// AvisoEnlace es la direccion del panel que se incluye en el aviso.
 	AvisoEnlace string `json:"aviso_enlace"`
 
@@ -143,15 +148,16 @@ const (
 // PorDefecto son los valores de partida.
 func PorDefecto() Config {
 	return Config{
-		ReputacionAlta:   75,
-		DenunciasAltas:   100,
-		EnriquecerActivo: true,
-		CaducidadIPDias:  7,
-		ReservaCuota:     25,
-		UsarLLM:          true,
-		Proveedor:        ProveedorCompatible,
-		Modelo:           "openai/gpt-oss-120b",
-		URLBase:          "https://api.groq.com/openai/v1",
+		ReputacionAlta:        75,
+		DenunciasAltas:        100,
+		EnriquecerActivo:      true,
+		CaducidadIPDias:       7,
+		ReservaCuota:          25,
+		UsarLLM:               true,
+		AprendizajeAutomatico: true,
+		Proveedor:             ProveedorCompatible,
+		Modelo:                "openai/gpt-oss-120b",
+		URLBase:               "https://api.groq.com/openai/v1",
 		// 40 al dia caben de sobra en cualquier plan gratuito, y son
 		// muchos mas de los que nadie va a pedir a mano.
 		InformeTopeDiario: 40,

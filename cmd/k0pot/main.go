@@ -14,6 +14,7 @@ import (
 	nethttp "net/http"
 	"os"
 	"os/signal"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -32,6 +33,7 @@ import (
 	"github.com/k0braintheworld/k0pot/internal/model"
 	"github.com/k0braintheworld/k0pot/internal/report"
 	"github.com/k0braintheworld/k0pot/internal/retencion"
+	"github.com/k0braintheworld/k0pot/internal/saber"
 	"github.com/k0braintheworld/k0pot/internal/store"
 	"github.com/k0braintheworld/k0pot/internal/trampa"
 	"github.com/k0braintheworld/k0pot/internal/web"
@@ -144,7 +146,7 @@ func main() {
 		return
 	}
 
-	if err := ejecutar(almacen, ajustes, *rutaLog, *sinEnriquecer); err != nil {
+	if err := ejecutar(almacen, ajustes, *rutaLog, *sinEnriquecer, *sinLLM); err != nil {
 		log.Fatalf("%v", err)
 	}
 }
@@ -176,7 +178,7 @@ func cargarEnv(ruta string) {
 }
 
 // ejecutar lanza la ingesta y, en paralelo, el enriquecimiento.
-func ejecutar(almacen *store.Store, ajustes *config.Gestor, rutaLog string, sinEnriquecer bool) error {
+func ejecutar(almacen *store.Store, ajustes *config.Gestor, rutaLog string, sinEnriquecer, sinLLM bool) error {
 	ctx, parar := signal.NotifyContext(context.Background(),
 		os.Interrupt, syscall.SIGTERM)
 	defer parar()
@@ -216,7 +218,7 @@ func ejecutar(almacen *store.Store, ajustes *config.Gestor, rutaLog string, sinE
 	grupo.Add(1)
 	go func() {
 		defer grupo.Done()
-		mantenimiento(ctx, almacen, ajustes, sup)
+		mantenimiento(ctx, almacen, ajustes, sup, sinLLM)
 	}()
 
 	err = ingerir(ctx, almacen, ajustes, rutaLog)
@@ -292,9 +294,10 @@ func ingerir(ctx context.Context, almacen *store.Store, ajustes *config.Gestor, 
 }
 
 // mantenimiento relee la configuracion y aplica la retencion.
-func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Gestor, sup *trampa.Supervisor) {
+func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Gestor, sup *trampa.Supervisor, sinLLM bool) {
 	const intervalo = 30 * time.Second
 	ultimaPurga := time.Time{}
+	ultimoAprendizaje := time.Time{}
 	// ultimoEvento marca hasta donde se han convertido eventos en
 	// episodios. Arranca a cero a proposito: al iniciar se reconstruye todo
 	// una vez, que es lo que hace falta tras actualizar o restaurar.
@@ -316,6 +319,18 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 		}
 		if err := enviarResumen(ctx, almacen, ajustes.Actual()); err != nil {
 			log.Printf("resumen: %v", err)
+		}
+
+		// Aprendizaje en segundo plano: cada par de minutos, glosar unos
+		// comandos nuevos con la cuota que sobre. Espaciado para no cargar el
+		// bucle ni quemar la cuota de golpe.
+		if time.Since(ultimoAprendizaje) > 2*time.Minute {
+			ultimoAprendizaje = time.Now()
+			if n, err := aprenderComandos(ctx, almacen, ajustes.Actual(), sinLLM); err != nil {
+				log.Printf("aprendizaje: %v", err)
+			} else if n > 0 {
+				log.Printf("aprendizaje: %d comandos nuevos glosados", n)
+			}
 		}
 
 		// Activar o desactivar un servicio desde el panel surte efecto
@@ -347,7 +362,6 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 		}
 	}
 }
-
 
 // enviarResumen manda por el canal de avisos un digest del periodo, si toca.
 // Se autolimita leyendo cuando se envio el ultimo, para no repetirlo en cada
@@ -401,6 +415,103 @@ func enviarResumen(ctx context.Context, almacen *store.Store, c config.Config) e
 		return err
 	}
 	return almacen.GuardarEstado("ultimo_resumen", time.Now().Format(time.RFC3339))
+}
+
+// aprenderComandos glosa en segundo plano, con la cuota que sobre, los
+// comandos nuevos que k0pot va viendo, para que al abrir un ataque las
+// explicaciones ya esten hechas sin tener que pedirlas. Reserva parte de la
+// cuota diaria para lo que pida el usuario en directo y avanza despacio: unas
+// pocas formas por vuelta, empezando por las mas repetidas.
+func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config, sinLLM bool) (int, error) {
+	if sinLLM || !c.UsarLLM || !c.AprendizajeAutomatico {
+		return 0, nil
+	}
+	ex, ok := generadorDe(c, sinLLM).(report.Explicador)
+	if !ok {
+		return 0, nil
+	}
+	idioma := c.Idioma
+	if idioma == "" {
+		idioma = "es"
+	}
+	topeFondo := c.InformeTopeDiario * 70 / 100 // deja un 30% para el usuario
+	if topeFondo < 1 {
+		return 0, nil
+	}
+	dia := time.Now().Format("2006-01-02")
+	if usadas, _ := almacen.CuotaLLMUsada(dia); usadas >= topeFondo {
+		return 0, nil // hoy ya se gasto el presupuesto de fondo
+	}
+
+	grupos, err := almacen.ComandosRecientesAgrupados(time.Now().AddDate(0, 0, -30))
+	if err != nil {
+		return 0, err
+	}
+	type forma struct {
+		norm, repr string
+		veces      int
+	}
+	porNorm := map[string]*forma{}
+	for _, g := range grupos {
+		if g.Comando == "" || saber.ComandoConocido(g.Protocolo, g.Comando) {
+			continue // el catalogo fijo ya lo explica
+		}
+		n := saber.NormalizarComando(g.Comando)
+		if n == "" {
+			continue
+		}
+		if _, ya := almacen.GlosaAprendida(n, idioma); ya {
+			continue
+		}
+		f := porNorm[n]
+		if f == nil {
+			f = &forma{norm: n, repr: g.Comando}
+			porNorm[n] = f
+		}
+		f.veces += g.Veces
+	}
+	if len(porNorm) == 0 {
+		return 0, nil
+	}
+	orden := make([]*forma, 0, len(porNorm))
+	for _, f := range porNorm {
+		orden = append(orden, f)
+	}
+	// Primero lo mas repetido: es lo que mas probablemente vera el usuario.
+	sort.Slice(orden, func(i, j int) bool { return orden[i].veces > orden[j].veces })
+
+	const porTanda = 12
+	const maxTandas = 2
+	aprendidas := 0
+	for t := 0; t < maxTandas && len(orden) > 0; t++ {
+		if ok, _ := almacen.ConsumirCuotaLLM(dia, topeFondo); !ok {
+			break // agotado el presupuesto de fondo de hoy
+		}
+		n := porTanda
+		if n > len(orden) {
+			n = len(orden)
+		}
+		lote := orden[:n]
+		orden = orden[n:]
+		lineas := make([]string, len(lote))
+		for i, f := range lote {
+			lineas[i] = f.repr
+		}
+		cctx, cancelar := context.WithTimeout(ctx, 90*time.Second)
+		glosas, err := report.GlosarComandos(cctx, ex, lineas, idioma, 3000)
+		cancelar()
+		if err != nil {
+			almacen.DevolverCuotaLLM(dia)
+			return aprendidas, err
+		}
+		for i, f := range lote {
+			if g := strings.TrimSpace(glosas[i]); g != "" {
+				_ = almacen.GuardarGlosaAprendida(f.norm, idioma, g)
+				aprendidas++
+			}
+		}
+	}
+	return aprendidas, nil
 }
 
 // avisarDeLoGrave saca del panel lo que no puede esperar a que alguien

@@ -1,6 +1,10 @@
 package store
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
 
 // glosas_aprendidas es el catalogo que k0pot APRENDE solo. Cuando la vista
 // -explicar paso a paso- se topa con un comando que ni el catalogo fijo ni
@@ -49,4 +53,69 @@ func (s *Store) ContarGlosasAprendidas() (int, error) {
 	var n int
 	err := s.db.QueryRow(`SELECT COUNT(*) FROM glosas_aprendidas`).Scan(&n)
 	return n, err
+}
+
+// ComandoAgrupado es un comando distinto y cuantas veces se ha visto.
+type ComandoAgrupado struct {
+	Protocolo string
+	Comando   string
+	Veces     int
+}
+
+// ComandosRecientesAgrupados devuelve los comandos ejecutados desde una fecha,
+// SIN repetir el texto exacto y con su recuento. Agrupar en SQL por el detalle
+// evita traer a Go miles de copias identicas (un bot repite el mismo comando
+// cientos de veces): asi el aprendiz en segundo plano procesa poco.
+func (s *Store) ComandosRecientesAgrupados(desde time.Time) ([]ComandoAgrupado, error) {
+	filas, err := s.db.Query(
+		`SELECT protocolo, json_extract(detalle,'$.comando') AS cmd, COUNT(*)
+		   FROM eventos
+		  WHERE tipo = 'comando_ejecutado' AND timestamp >= ? AND cmd IS NOT NULL
+		  GROUP BY protocolo, cmd`,
+		desde.UTC().Format(time.RFC3339Nano))
+	if err != nil {
+		return nil, fmt.Errorf("comandos agrupados: %w", err)
+	}
+	defer filas.Close()
+	var out []ComandoAgrupado
+	for filas.Next() {
+		var c ComandoAgrupado
+		if err := filas.Scan(&c.Protocolo, &c.Comando, &c.Veces); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, filas.Err()
+}
+
+// GlosasAprendidasDe busca de golpe las glosas de varias formas normalizadas.
+// Es para pintar el detalle de un ataque: una sola consulta en vez de una por
+// comando, que con cientos de pasos ahogaria la unica conexion de la BD.
+func (s *Store) GlosasAprendidasDe(normas []string, idioma string) (map[string]string, error) {
+	out := map[string]string{}
+	if len(normas) == 0 {
+		return out, nil
+	}
+	marcadores := make([]string, len(normas))
+	args := make([]any, 0, len(normas)+1)
+	for i, n := range normas {
+		marcadores[i] = "?"
+		args = append(args, n)
+	}
+	args = append(args, idioma)
+	q := "SELECT norm, glosa FROM glosas_aprendidas WHERE norm IN (" +
+		strings.Join(marcadores, ",") + ") AND idioma = ?"
+	filas, err := s.db.Query(q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("glosas aprendidas de: %w", err)
+	}
+	defer filas.Close()
+	for filas.Next() {
+		var norm, glosa string
+		if err := filas.Scan(&norm, &glosa); err != nil {
+			return nil, err
+		}
+		out[norm] = glosa
+	}
+	return out, filas.Err()
 }

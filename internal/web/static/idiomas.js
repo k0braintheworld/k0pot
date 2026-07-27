@@ -828,3 +828,11 @@ Object.assign(IDIOMAS.en, {
 });
 Object.assign(IDIOMAS.es, { "glosa.nada": "Todo ya explicado ✓" });
 Object.assign(IDIOMAS.en, { "glosa.nada": "All already explained ✓" });
+Object.assign(IDIOMAS.es, {
+  "cfg.aprendizaje": "Aprender comandos en segundo plano",
+  "cfg.aprendizaje.ayuda": "k0Pot glosa solo, con la cuota que sobre, los comandos nuevos que ve. Así, al abrir un ataque, las explicaciones ya están hechas. Reserva un margen de cuota para lo que pidas tú."
+});
+Object.assign(IDIOMAS.en, {
+  "cfg.aprendizaje": "Learn commands in the background",
+  "cfg.aprendizaje.ayuda": "k0Pot glosses new commands on its own, using spare quota. So when you open an attack the explanations are already there. It keeps a quota margin for what you ask directly."
+});

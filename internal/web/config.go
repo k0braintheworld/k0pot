@@ -60,15 +60,16 @@ type entradaAjustes struct {
 
 	InformeTopeDiario *int `json:"informe_tope_diario"`
 
-	AvisosActivos *bool   `json:"avisos_activos"`
-	AvisoCanal    *string `json:"aviso_canal"`
-	AvisoDestino  *string `json:"aviso_destino"`
-	AvisoServidor *string `json:"aviso_servidor"`
-	AvisoMinima   *string `json:"aviso_minima"`
-	ResumenActivo   *bool   `json:"resumen_activo"`
-	ResumenCadencia *string `json:"resumen_cadencia"`
-	AsistenteActivo *bool   `json:"asistente_activo"`
-	AvisoEnlace   *string `json:"aviso_enlace"`
+	AvisosActivos         *bool   `json:"avisos_activos"`
+	AvisoCanal            *string `json:"aviso_canal"`
+	AvisoDestino          *string `json:"aviso_destino"`
+	AvisoServidor         *string `json:"aviso_servidor"`
+	AvisoMinima           *string `json:"aviso_minima"`
+	ResumenActivo         *bool   `json:"resumen_activo"`
+	ResumenCadencia       *string `json:"resumen_cadencia"`
+	AsistenteActivo       *bool   `json:"asistente_activo"`
+	AprendizajeAutomatico *bool   `json:"aprendizaje_automatico"`
+	AvisoEnlace           *string `json:"aviso_enlace"`
 
 	// Claves: cadena vacia o ausente = dejar la que hay. Para borrar una
 	// clave existe el campo explicito de abajo.
@@ -125,6 +126,9 @@ func (s *Servidor) guardarAjustes(w http.ResponseWriter, r *http.Request) {
 	}
 	if e.AsistenteActivo != nil {
 		c.AsistenteActivo = *e.AsistenteActivo
+	}
+	if e.AprendizajeAutomatico != nil {
+		c.AprendizajeAutomatico = *e.AprendizajeAutomatico
 	}
 	aplicarTexto(&c.ResumenCadencia, e.ResumenCadencia)
 

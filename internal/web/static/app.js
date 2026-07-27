@@ -1976,6 +1976,7 @@ const INTERRUPTORES = {
   "c-panel-https": "panel_https",
   "c-resumen-activo": "resumen_activo",
   "c-asistente-activo": "asistente_activo",
+  "c-aprendizaje-auto": "aprendizaje_automatico",
 };
 
 function volcarAjustes(c) {

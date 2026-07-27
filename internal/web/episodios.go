@@ -90,6 +90,10 @@ type PasoNarrado struct {
 	// SSH que en realidad manda un saludo RDP, un comando con rutas
 	// concretas, un user-agent con la version del bot.
 	Crudo string `json:"crudo,omitempty"`
+	// Glosa es la explicacion en una frase que k0pot APRENDIO de este
+	// comando (en segundo plano o a peticion). Cuando esta, aparece sola:
+	// el cliente la prefiere a la Nota del catalogo.
+	Glosa string `json:"glosa,omitempty"`
 }
 
 // DetalleEpisodio es un ataque con su narracion completa.
@@ -161,6 +165,30 @@ func (s *Servidor) episodio(w http.ResponseWriter, r *http.Request) {
 			Crudo: crudoDe(ev),
 		})
 	}
+	// Glosas ya aprendidas: aparecen solas, sin pulsar nada. Una sola
+	// consulta para todas las formas distintas, no una por paso.
+	var normas []string
+	idxPorNorma := map[string][]int{}
+	for i, p := range pasos {
+		if p.Tipo != string(model.ComandoEjecutado) || p.Crudo == "" {
+			continue
+		}
+		n := saber.NormalizarComando(p.Crudo)
+		if _, visto := idxPorNorma[n]; !visto {
+			normas = append(normas, n)
+		}
+		idxPorNorma[n] = append(idxPorNorma[n], i)
+	}
+	if len(normas) > 0 {
+		if m, err := s.Almacen.GlosasAprendidasDe(normas, idioma); err == nil {
+			for n, g := range m {
+				for _, i := range idxPorNorma[n] {
+					pasos[i].Glosa = g
+				}
+			}
+		}
+	}
+
 	ep.Resumen = episodio.Redactar(ep.Episodio, idioma)
 	det := DetalleEpisodio{EpisodioFila: ep, Pasos: pasos}
 	det.Explicacion, _ = s.Almacen.Explicacion(clave)

@@ -2,12 +2,12 @@ package web
 
 import (
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/k0braintheworld/k0pot/internal/model"
 	"github.com/k0braintheworld/k0pot/internal/report"
+	"github.com/k0braintheworld/k0pot/internal/saber"
 	"github.com/k0braintheworld/k0pot/internal/store"
 )
 
@@ -66,7 +66,7 @@ func (s *Servidor) glosarEpisodio(w http.ResponseWriter, r *http.Request) {
 		if p.conocido || !p.comando {
 			continue // el catalogo ya lo explica, o no es un comando
 		}
-		norm := normalizarComando(p.linea)
+		norm := saber.NormalizarComando(p.linea)
 		if norm == "" {
 			continue
 		}
@@ -176,29 +176,4 @@ func pasosGlosables(ep store.EpisodioFila, eventos []model.Evento, idioma string
 		})
 	}
 	return pasos
-}
-
-var (
-	reGlosaURL = regexp.MustCompile(`[a-z]+://[^\s'"]+`)
-	reGlosaIP  = regexp.MustCompile(`\b\d{1,3}(\.\d{1,3}){3}\b`)
-	reGlosaHex = regexp.MustCompile(`\b[0-9a-f]{8,}\b`)
-	reGlosaNum = regexp.MustCompile(`\b\d{4,}\b`)
-	reGlosaEsp = regexp.MustCompile(`\s+`)
-)
-
-// normalizarComando reduce un comando a su ESQUELETO: minusculas, sin las
-// partes que cambian de una victima a otra (IPs, URLs, hashes, numeros
-// largos) y con los espacios colapsados. Asi dos ordenes iguales salvo el
-// servidor de descarga comparten una sola glosa aprendida.
-func normalizarComando(s string) string {
-	s = strings.ToLower(strings.TrimSpace(s))
-	s = reGlosaURL.ReplaceAllString(s, "<url>")
-	s = reGlosaIP.ReplaceAllString(s, "<ip>")
-	s = reGlosaHex.ReplaceAllString(s, "<hex>")
-	s = reGlosaNum.ReplaceAllString(s, "<n>")
-	s = reGlosaEsp.ReplaceAllString(s, " ")
-	if len(s) > 400 {
-		s = s[:400]
-	}
-	return s
 }
