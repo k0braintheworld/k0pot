@@ -819,8 +819,7 @@ async function reproducirSesion() {
   const pasos = d.pasos;
   const t0 = new Date(pasos[0].momento).getTime();
 
-  // Pinta un paso: su linea de comando y, si el catalogo tiene algo que
-  // decir, el bocadillo con el que y el para que.
+  // Pinta un paso: su linea de comando y el bocadillo (glosa de IA o nota).
   function pintarPasoReplay(p) {
     const seg = Math.round((new Date(p.momento).getTime() - t0) / 1000);
     const fila = nodo("div", "replay-paso");
@@ -831,64 +830,26 @@ async function reproducirSesion() {
     return fila;
   }
 
-  function esperarClic(etiqueta) {
-    return new Promise((resolve) => {
-      replayCancelar = resolve;
-      barra.replaceChildren();
-      const b = nodo("button", "boton-secundario", etiqueta);
-      b.addEventListener("click", () => resolve(), { once: true });
-      barra.appendChild(b);
-    });
+  // Un solo cuadro alto que va creciendo y haciendo scroll al ritmo del
+  // ataque. El auto-scroll SOLO empuja si el lector esta ya al final: si ha
+  // subido a releer algo, se respeta y no se le arrastra. Al terminar no se
+  // borra ni se reinicia; queda el ataque entero para recorrerlo a mano.
+  let anterior = t0;
+  for (const p of pasos) {
+    const real = new Date(p.momento).getTime() - anterior;
+    anterior = new Date(p.momento).getTime();
+    const espera = real <= 0 ? 200 : Math.min(1500, Math.max(200, real / 8));
+    await new Promise((r) => setTimeout(r, espera));
+    if (yo !== replayToken) return; // se cerro el dialogo o se abrio otro ataque
+    const pegado = term.scrollHeight - term.scrollTop - term.clientHeight < 48;
+    term.appendChild(pintarPasoReplay(p));
+    if (pegado) term.scrollTop = term.scrollHeight;
   }
-
-  // Avanza por paginas: revela con ritmo hasta que el cuadro se llena, y
-  // entonces se detiene para que de tiempo a LEER -sobre todo los bocadillos-
-  // antes de seguir. Nada se pierde de vista por un scroll automatico.
-  let i = 0;
-  while (i < pasos.length) {
-    term.replaceChildren();
-    barra.replaceChildren();
-    let anterior = new Date(pasos[i].momento).getTime();
-    let hayEnPagina = false;
-    while (i < pasos.length) {
-      const p = pasos[i];
-      const real = new Date(p.momento).getTime() - anterior;
-      anterior = new Date(p.momento).getTime();
-      // El primer paso de la pagina entra ya; los siguientes, con el ritmo
-      // real escalado (rafagas rapidas, pausas acotadas).
-      if (hayEnPagina) {
-        const espera = real <= 0 ? 200 : Math.min(1200, Math.max(200, real / 8));
-        await new Promise((r) => setTimeout(r, espera));
-        if (yo !== replayToken) return; // cancelado mientras esperaba
-      }
-      const fila = pintarPasoReplay(p);
-      term.appendChild(fila);
-      i++;
-      if (term.scrollHeight > term.clientHeight + 4) {
-        // No cabe entero: si la pagina ya tenia algo, este paso pasa a la
-        // siguiente para no dejarlo a medias. Si era el unico (un paso
-        // enorme), se queda y se corta igual.
-        if (hayEnPagina) {
-          term.removeChild(fila);
-          i--;
-        }
-        hayEnPagina = true;
-        break;
-      }
-      hayEnPagina = true;
-    }
-    term.scrollTop = 0;
-    if (i < pasos.length) {
-      await esperarClic(t("replay.continuar", { n: pasos.length - i }));
-      replayCancelar = null;
-      if (yo !== replayToken) return; // se cerro el dialogo durante la pausa
-    }
-  }
-
-  // Fin: se queda en pantalla. Ni auto-reset ni bucle; se vuelve al resumen
-  // cuando el lector quiere.
-  barra.replaceChildren();
+  const pegadoFin = term.scrollHeight - term.scrollTop - term.clientHeight < 48;
   term.appendChild(nodo("div", "replay-fin", `— ${t("replay.fin")} —`));
+  if (pegadoFin) term.scrollTop = term.scrollHeight;
+
+  barra.replaceChildren();
   const volver = nodo("button", "boton-secundario", t("replay.resumen"));
   volver.addEventListener("click", () => pintarPasos(cuerpo, d), { once: true });
   barra.appendChild(volver);
