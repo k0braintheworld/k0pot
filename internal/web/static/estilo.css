@@ -1013,3 +1013,7 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .menu-item:hover { background: var(--fondo-2); color: var(--acento); }
 .apr-sinvisto { display: inline-block; margin-top: .55rem; font-size: .82rem; font-style: italic; color: var(--sub); }
 .replay-barra { display: flex; gap: .5rem; margin-top: .6rem; }
+.paso-glosa { display: flex; gap: .4rem; align-items: flex-start; margin-top: .3rem; padding: .4rem .6rem;
+  background: var(--panel-alto); border-left: 3px solid var(--acento); border-radius: .35rem;
+  font-size: .85rem; line-height: 1.45; color: var(--texto); }
+.paso-glosa-icono { flex: none; }
