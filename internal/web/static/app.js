@@ -695,7 +695,6 @@ async function explicarAtaque() {
 
 let ataqueAbierto = null;
 async function abrirAtaque(clave) {
-  cancelarReplay(); // por si habia un replay a medias de otro ataque
   const d = await pedirJSON(`/api/episodio?clave=${encodeURIComponent(clave)}&idioma=${IDIOMA}`);
   const dlg = $("dialogo-ataque");
   claveAbierta = clave;
@@ -721,7 +720,6 @@ async function abrirAtaque(clave) {
   ataqueAbierto = d;
   const cuerpo = $("ataque-cuerpo");
   pintarPasos(cuerpo, d);
-  $("reproducir-ataque").hidden = !(d.pasos || []).length;
   $("glosar-ataque").hidden = !(d.pasos || []).length;
   dlg.showModal();
 }
@@ -764,99 +762,6 @@ function pintarPasos(cuerpo, d) {
   }
 }
 
-let reproduciendoSesion = false;
-let replayToken = 0;      // identifica la ejecucion en curso
-let replayCancelar = null; // resolve() de la espera "Continuar" pendiente
-
-// cancelarReplay corta en seco una reproduccion a medias (cerrar el dialogo,
-// abrir otro ataque). Sin esto, si no se pulsa "Continuar" hasta el final la
-// funcion queda colgada en el await, el flag no se limpia y NINGUN replay
-// vuelve a arrancar: el boton se queda en "reproduciendo" para siempre.
-function cancelarReplay() {
-  replayToken++;
-  reproduciendoSesion = false;
-  if (replayCancelar) { const f = replayCancelar; replayCancelar = null; f(); }
-  const btn = $("reproducir-ataque");
-  if (btn) { btn.disabled = false; btn.textContent = t("dlg.reproducir"); }
-}
-
-// reproducirSesion "toca" el ataque con su ritmo REAL: revela cada paso al
-// tiempo (escalado) en que ocurrio, para VER como se desarrollo -las rafagas
-// de un bot, las pausas de una persona-. Es lo mas parecido a estar delante.
-// bocadilloDePaso arma el globo explicativo de un paso: la glosa de IA si se
-// ha pedido, y si no la nota del catalogo. Devuelve null si no hay nada.
-function bocadilloDePaso(p) {
-  const b = nodo("div", "replay-bocadillo");
-  b.appendChild(nodo("span", "replay-globo-icono", "\ud83d\udca1"));
-  const txt = nodo("span", "replay-globo-txt");
-  if (p.glosa) {
-    txt.appendChild(nodo("span", null, p.glosa));
-  } else if (p.nota) {
-    txt.appendChild(nodo("strong", null, p.nota.que));
-    if (p.nota.por) txt.appendChild(nodo("span", "replay-globo-por", ` — ${p.nota.por}`));
-  } else {
-    return null;
-  }
-  b.appendChild(txt);
-  return b;
-}
-
-async function reproducirSesion() {
-  const d = ataqueAbierto;
-  if (!d || !(d.pasos || []).length || reproduciendoSesion) return;
-  reproduciendoSesion = true;
-  const yo = ++replayToken;
-  const btn = $("reproducir-ataque");
-  btn.disabled = true;
-  btn.textContent = t("dlg.reproduciendo");
-  const cuerpo = $("ataque-cuerpo");
-  cuerpo.replaceChildren();
-  const term = nodo("div", "replay-term");
-  cuerpo.appendChild(term);
-  const barra = nodo("div", "replay-barra");
-  cuerpo.appendChild(barra);
-
-  const pasos = d.pasos;
-  const t0 = new Date(pasos[0].momento).getTime();
-
-  // Pinta un paso: su linea de comando y el bocadillo (glosa de IA o nota).
-  function pintarPasoReplay(p) {
-    const seg = Math.round((new Date(p.momento).getTime() - t0) / 1000);
-    const fila = nodo("div", "replay-paso");
-    fila.appendChild(nodo("code", p.destacado ? "replay-linea clave" : "replay-linea",
-      `[+${seg}s] ${p.crudo || p.texto}`));
-    const b = bocadilloDePaso(p);
-    if (b) fila.appendChild(b);
-    return fila;
-  }
-
-  // Un solo cuadro alto que va creciendo y haciendo scroll al ritmo del
-  // ataque. El auto-scroll SOLO empuja si el lector esta ya al final: si ha
-  // subido a releer algo, se respeta y no se le arrastra. Al terminar no se
-  // borra ni se reinicia; queda el ataque entero para recorrerlo a mano.
-  let anterior = t0;
-  for (const p of pasos) {
-    const real = new Date(p.momento).getTime() - anterior;
-    anterior = new Date(p.momento).getTime();
-    const espera = real <= 0 ? 200 : Math.min(1500, Math.max(200, real / 8));
-    await new Promise((r) => setTimeout(r, espera));
-    if (yo !== replayToken) return; // se cerro el dialogo o se abrio otro ataque
-    const pegado = term.scrollHeight - term.scrollTop - term.clientHeight < 48;
-    term.appendChild(pintarPasoReplay(p));
-    if (pegado) term.scrollTop = term.scrollHeight;
-  }
-  const pegadoFin = term.scrollHeight - term.scrollTop - term.clientHeight < 48;
-  term.appendChild(nodo("div", "replay-fin", `— ${t("replay.fin")} —`));
-  if (pegadoFin) term.scrollTop = term.scrollHeight;
-
-  barra.replaceChildren();
-  const volver = nodo("button", "boton-secundario", t("replay.resumen"));
-  volver.addEventListener("click", () => pintarPasos(cuerpo, d), { once: true });
-  barra.appendChild(volver);
-  btn.disabled = false;
-  btn.textContent = t("dlg.reproducir");
-  reproduciendoSesion = false;
-}
 
 // ── Subir la base GeoIP ─────────────────────────────────────────────────
 
@@ -1799,7 +1704,7 @@ async function glosarAtaque() {
       { method: "POST" });
     const g = r.glosas || [];
     (d.pasos || []).forEach((p, i) => { if (g[i]) p.glosa = g[i]; });
-    pintarPasos($("ataque-cuerpo"), d); // se ve al momento; el replay ya la usara
+    pintarPasos($("ataque-cuerpo"), d); // se ve al momento en la vista
     btn.textContent = t("dlg.glosar");
   } catch (e) {
     btn.textContent = t("glosa.error", { msg: e.message });
@@ -1810,9 +1715,7 @@ async function glosarAtaque() {
   }
 }
 $("glosar-ataque").addEventListener("click", () => glosarAtaque().catch(() => {}));
-$("reproducir-ataque").addEventListener("click", () => reproducirSesion().catch(() => {}));
 $("cerrar-ataque").addEventListener("click", () => $("dialogo-ataque").close());
-$("dialogo-ataque").addEventListener("close", cancelarReplay);
 
 // ── Asistente: preguntar a la IA sobre el honeypot ──────────────────────
 const historialAsistente = [];

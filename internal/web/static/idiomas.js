@@ -649,14 +649,6 @@ Object.assign(IDIOMAS.en, {
   "novedades.manual": "Sessions to review ({n})"
 });
 Object.assign(IDIOMAS.es, {
-  "dlg.reproducir": "▶ Reproducir", "dlg.reproduciendo": "Reproduciendo…",
-  "replay.fin": "fin de la reproducción"
-});
-Object.assign(IDIOMAS.en, {
-  "dlg.reproducir": "▶ Play", "dlg.reproduciendo": "Playing…",
-  "replay.fin": "end of replay"
-});
-Object.assign(IDIOMAS.es, {
   "hdr.blocklist": "Blocklist",
   "hdr.blocklist.t": "Descargar las IPs que han atacado (acceso o intrusión) para bloquearlas en tus servidores reales"
 });
@@ -812,8 +804,6 @@ Object.assign(IDIOMAS.en, {
 });
 Object.assign(IDIOMAS.es, { "apr.sinvisto": "Aún no visto en tu honeypot" });
 Object.assign(IDIOMAS.en, { "apr.sinvisto": "Not seen in your honeypot yet" });
-Object.assign(IDIOMAS.es, { "replay.continuar": "Continuar ▼ ({n} restantes)", "replay.resumen": "Volver al resumen" });
-Object.assign(IDIOMAS.en, { "replay.continuar": "Continue ▼ ({n} left)", "replay.resumen": "Back to summary" });
 Object.assign(IDIOMAS.es, {
   "dlg.glosar": "Explicar paso a paso",
   "dlg.glosar.t": "Explicar con IA, comando a comando, qué hace cada paso. Consume cuota; se guarda para la próxima vez.",

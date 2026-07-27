@@ -179,6 +179,80 @@ var comandos = []patron{
 	{"/ip cloud print", Nota{"comando de RouterOS de MikroTik",
 		"comprueban si han caido en un router MikroTik"}},
 	{"free ", Nota{"memoria disponible", "dimensionan la maquina"}},
+
+	// ── Reconocimiento del sistema (que maquina es) ──────────────────
+	{"os-release", Nota{"identifican la distribucion de Linux",
+		"eligen el binario o el metodo que funciona en ese sistema concreto"}},
+	{"lscpu", Nota{"detalles del procesador",
+		"miden la maquina, tipico paso previo al minado"}},
+	{"whoami", Nota{"con que usuario estan dentro",
+		"quieren saber si ya tienen permisos de administrador"}},
+	{"hostname", Nota{"nombre de la maquina",
+		"reconocimiento basico del equipo en el que han caido"}},
+	{"/proc/mounts", Nota{"discos y puntos de montaje",
+		"buscan donde pueden escribir y ejecutar"}},
+	{"df ", Nota{"espacio libre en disco",
+		"dimensionan la maquina antes de dejar su carga"}},
+	{"ps aux", Nota{"lista de procesos en marcha",
+		"buscan defensas, o mineros rivales que matar"}},
+	{"ps -ef", Nota{"lista de procesos en marcha",
+		"buscan defensas, o mineros rivales que matar"}},
+
+	// ── Moverse a donde se puede escribir ────────────────────────────
+	{"cd /tmp", Nota{"se mueven a una carpeta escribible",
+		"/tmp casi siempre permite crear y ejecutar ficheros"}},
+	{"/dev/shm", Nota{"carpeta en memoria escribible",
+		"escriben ahi para dejar menos rastro en disco"}},
+	{"ftpget", Nota{"descarga por FTP",
+		"alternativa a wget en equipos minimos"}},
+
+	// ── Ejecutar y ocultar lo que ejecutan ───────────────────────────
+	{"sh -c", Nota{"lanzan una orden a traves del interprete",
+		"forma habitual de encadenar comandos o de disimular lo que ejecutan"}},
+	{"base64 -d", Nota{"descodifican texto oculto",
+		"esconden el comando o el fichero real detras de base64"}},
+	{"base64 --decode", Nota{"descodifican texto oculto",
+		"esconden el comando o el fichero real detras de base64"}},
+	{"echo -e", Nota{"escriben bytes crudos en un fichero",
+		"montan a mano un binario o un script desde la propia shell"}},
+	{"perl", Nota{"ejecutan un interprete Perl",
+		"algunos bots traen su carga o su shell inversa en Perl"}},
+	{"python -c", Nota{"ejecutan Python en una linea",
+		"carga rapida o shell inversa sin dejar fichero"}},
+
+	// ── Llamar de vuelta a casa (shell inversa) ──────────────────────
+	{"/dev/tcp/", Nota{"abren una conexion de red desde bash",
+		"shell inversa: la maquina llama de vuelta a su servidor"}},
+	{"ncat", Nota{"netcat",
+		"abren o reciben una conexion, tipico de shell inversa"}},
+	{"nc -e", Nota{"netcat con shell",
+		"les entregan una consola de tu maquina por la red"}},
+
+	// ── Minado de criptomonedas ──────────────────────────────────────
+	{"xmrig", Nota{"minero de Monero (XMRig)",
+		"ponen tu CPU al 100% a generar criptomoneda para ellos"}},
+	{"stratum", Nota{"protocolo de pool de minado",
+		"el minero se conecta al pool donde cobran"}},
+	{"minerd", Nota{"minero de criptomonedas", "aprovechan tu CPU para minar"}},
+	{"cpuminer", Nota{"minero de criptomonedas", "aprovechan tu CPU para minar"}},
+
+	// ── Quedarse y apagar defensas ───────────────────────────────────
+	{"systemctl", Nota{"gestionan servicios del sistema",
+		"crean un servicio para volver, o paran defensas y rivales"}},
+	{"rc.local", Nota{"script de arranque del sistema",
+		"persistencia: lo que metan ahi se ejecuta en cada reinicio"}},
+	{"/etc/cron", Nota{"tarea programada del sistema",
+		"persistencia: se relanza sola cada cierto tiempo"}},
+	{"nohup", Nota{"dejan un proceso corriendo tras cerrar sesion",
+		"su carga sigue viva aunque se desconecten"}},
+	{"pkill", Nota{"matan procesos por nombre",
+		"suelen cargarse mineros rivales o defensas"}},
+	{"unset histfile", Nota{"desactivan el historial",
+		"para no dejar rastro de lo que teclean"}},
+	{"shred", Nota{"destruccion segura de ficheros",
+		"borran pruebas para que no se puedan recuperar"}},
+	{"/tool fetch", Nota{"descarga en RouterOS de MikroTik",
+		"traen su carga aprovechando un router MikroTik"}},
 }
 
 var proveedores = []patron{

