@@ -720,7 +720,7 @@ async function abrirAtaque(clave) {
   ataqueAbierto = d;
   const cuerpo = $("ataque-cuerpo");
   pintarPasos(cuerpo, d);
-  $("glosar-ataque").hidden = !(d.pasos || []).length;
+  $("glosar-ataque").hidden = !(d.pasos || []).some((p) => p.tipo === "comando_ejecutado");
   dlg.showModal();
 }
 
@@ -1710,6 +1710,7 @@ async function glosarAtaque() {
     let aviso = t("dlg.glosar");
     if (r.aprendidas > 0) aviso = t("glosa.aprendidas", { n: r.aprendidas });
     else if (r.pendientes > 0) aviso = t("glosa.pendientes", { n: r.pendientes });
+    else aviso = t("glosa.nada");
     btn.textContent = aviso;
     if (aviso !== t("dlg.glosar")) setTimeout(() => { btn.textContent = t("dlg.glosar"); }, 4000);
     if (typeof r.total === "number") {

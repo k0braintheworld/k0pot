@@ -55,13 +55,16 @@ func (s *Servidor) glosarEpisodio(w http.ResponseWriter, r *http.Request) {
 	}
 
 	glosas := make([]string, len(pasos))
-	var pedirIdx []int
-	var pedirLineas []string
+	// Se agrupan los comandos desconocidos por su forma NORMALIZADA: los bots
+	// repiten el mismo guion decenas de veces, asi que un ataque de cientos de
+	// pasos suele tener un punado de comandos distintos. Se pregunta a la IA
+	// una vez por cada forma, no por cada aparicion.
+	porForma := map[string][]int{} // forma -> indices de pasos que la comparten
+	repr := map[string]string{}    // forma -> una linea representativa
+	var formas []string            // orden estable de formas por preguntar
 	for i, p := range pasos {
-		// Conocido por el catalogo fijo: el cliente ya muestra su nota.
-		// Y solo se glosan (y aprenden) COMANDOS: lo demas ya lo narra el paso.
 		if p.conocido || !p.comando {
-			continue
+			continue // el catalogo ya lo explica, o no es un comando
 		}
 		norm := normalizarComando(p.linea)
 		if norm == "" {
@@ -71,15 +74,28 @@ func (s *Servidor) glosarEpisodio(w http.ResponseWriter, r *http.Request) {
 			glosas[i] = g
 			continue
 		}
-		pedirIdx = append(pedirIdx, i)
-		pedirLineas = append(pedirLineas, p.linea)
+		if _, visto := porForma[norm]; !visto {
+			formas = append(formas, norm)
+			repr[norm] = p.linea
+		}
+		porForma[norm] = append(porForma[norm], i)
 	}
 
 	aprendidas, pendientes := 0, 0
-	if len(pedirLineas) > 0 {
+	if len(formas) > 0 {
+		// Tope por peticion: si un ataque trae MUCHOS comandos distintos, se
+		// aprende a tandas (una por clic) para no mandar un prompt gigante que
+		// el modelo trunca. Lo que sobra queda pendiente y se coge al reabrir.
+		const maxPorTanda = 25
+		pendientesFormas := formas
+		if len(formas) > maxPorTanda {
+			pendientes += len(formas) - maxPorTanda
+			pendientesFormas = formas[:maxPorTanda]
+		}
+
 		explicador, ok := s.Generador.(report.Explicador)
 		if !ok {
-			pendientes = len(pedirLineas)
+			pendientes += len(pendientesFormas)
 		} else {
 			dia := time.Now().Format("2006-01-02")
 			permitido, err := s.Almacen.ConsumirCuotaLLM(dia, s.Config.Actual().InformeTopeDiario)
@@ -88,23 +104,28 @@ func (s *Servidor) glosarEpisodio(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if !permitido {
-				pendientes = len(pedirLineas)
-			} else if nuevas, e := report.GlosarComandos(r.Context(), explicador, pedirLineas, idioma, 2500); e != nil {
-				s.Almacen.DevolverCuotaLLM(dia)
-				// No se rompe: se devuelve lo que ya se tenia de catalogo y
-				// aprendido; lo nuevo queda pendiente.
-				pendientes = len(pedirLineas)
+				pendientes += len(pendientesFormas)
 			} else {
-				for k, idx := range pedirIdx {
-					g := strings.TrimSpace(nuevas[k])
-					if g == "" {
-						pendientes++
-						continue
-					}
-					glosas[idx] = g
-					if err := s.Almacen.GuardarGlosaAprendida(
-						normalizarComando(pedirLineas[k]), idioma, g); err == nil {
+				lineas := make([]string, len(pendientesFormas))
+				for k, n := range pendientesFormas {
+					lineas[k] = repr[n]
+				}
+				nuevas, e := report.GlosarComandos(r.Context(), explicador, lineas, idioma, 3000)
+				if e != nil {
+					s.Almacen.DevolverCuotaLLM(dia)
+					pendientes += len(pendientesFormas)
+				} else {
+					for k, n := range pendientesFormas {
+						g := strings.TrimSpace(nuevas[k])
+						if g == "" {
+							pendientes++
+							continue
+						}
 						aprendidas++
+						_ = s.Almacen.GuardarGlosaAprendida(n, idioma, g)
+						for _, idx := range porForma[n] {
+							glosas[idx] = g // se aplica a TODAS sus apariciones
+						}
 					}
 				}
 			}
@@ -144,8 +165,13 @@ func pasosGlosables(ep store.EpisodioFila, eventos []model.Evento, idioma string
 			linea, _ = narrar(ev, idioma)
 		}
 		pasos = append(pasos, pasoGlosable{
-			linea:    linea,
-			comando:  crudo != "",
+			linea: linea,
+			// Solo se glosan COMANDOS de shell. Un login (usuario:clave), una
+			// huella de cliente o una ruta HTTP tienen crudo, pero no son algo
+			// que -ejecute- nada: ya los explica su nota o la narracion. Sin
+			// esto, una fuerza bruta con cientos de intentos contaria cada
+			// -ENTRA con user:pass- como un comando por explicar.
+			comando:  ev.Tipo == model.ComandoEjecutado,
 			conocido: notaDe(ev, idioma) != nil,
 		})
 	}

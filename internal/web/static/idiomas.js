@@ -826,3 +826,5 @@ Object.assign(IDIOMAS.en, {
   "glosa.pendientes": "{n} left unexplained: check AI/quota in Settings",
   "glosa.base": "Knowledge base: {n} commands learned"
 });
+Object.assign(IDIOMAS.es, { "glosa.nada": "Todo ya explicado ✓" });
+Object.assign(IDIOMAS.en, { "glosa.nada": "All already explained ✓" });
