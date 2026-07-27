@@ -846,3 +846,5 @@ Object.assign(IDIOMAS.en, {
   "apr.chip.activo": "Learning in the background · today {hoy}/{tope} AI calls",
   "apr.chip.inactivo": "Learning paused · enable it in Settings"
 });
+Object.assign(IDIOMAS.es, { "expl.generando": "Generando explicación con IA…" });
+Object.assign(IDIOMAS.en, { "expl.generando": "Generating AI explanation…" });

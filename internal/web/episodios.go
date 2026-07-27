@@ -107,6 +107,7 @@ type DetalleEpisodio struct {
 	// Explicacion es lo que redacto el modelo sobre ESTE ataque, si
 	// alguien lo pidio. Se guarda con el episodio: reabrir el dialogo no
 	// vuelve a gastar cuota.
+	Generando   bool   `json:"generando,omitempty"`
 	Explicacion string `json:"explicacion,omitempty"`
 }
 
@@ -195,7 +196,7 @@ func (s *Servidor) episodio(w http.ResponseWriter, r *http.Request) {
 	// Si es un ataque que importa y aun no tiene explicacion, se genera sola
 	// en segundo plano: al reabrirlo ya estara, sin pedirla.
 	if det.Explicacion == "" {
-		s.generarExplicacionEnFondo(clave, idioma, ep)
+		det.Generando = s.generarExplicacionEnFondo(clave, idioma, ep)
 	}
 	if n, hay := saber.DeProveedor(ep.ISP); hay {
 		nn := n.En(idioma)

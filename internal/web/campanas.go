@@ -60,6 +60,7 @@ func (s *Servidor) campana(w http.ResponseWriter, r *http.Request) {
 	respuesta := struct {
 		Episodios   []store.EpisodioFila `json:"episodios"`
 		Explicacion string               `json:"explicacion,omitempty"`
+		Generando   bool                 `json:"generando,omitempty"`
 		// Fichero enlaza una campana de descarga con el binario capturado,
 		// para saltar de "se traen esto" a poder abrir y ver que era.
 		Fichero string `json:"fichero,omitempty"`
@@ -84,7 +85,7 @@ func (s *Servidor) campana(w http.ResponseWriter, r *http.Request) {
 	respuesta.Explicacion, _ = s.Almacen.ExplicacionDe("campana", string(tipo)+"|"+huella)
 	if respuesta.Explicacion == "" {
 		clave := string(tipo) + "|" + huella
-		s.generarExplicacionDeEnFondo("campana", clave, func(ctx context.Context, ex report.Explicador) (string, error) {
+		respuesta.Generando = s.generarExplicacionDeEnFondo("campana", clave, func(ctx context.Context, ex report.Explicador) (string, error) {
 			for _, c := range campana.Detectar(eps) {
 				if c.Tipo == tipo && c.Huella == huella {
 					return report.ExplicarCampana(ctx, ex, queComparten(tipo), c.Muestra,
@@ -355,6 +356,7 @@ type DetalleArtefacto struct {
 	URLs        []string  `json:"urls,omitempty"`
 	Primera     time.Time `json:"primera,omitempty"`
 	Ultima      time.Time `json:"ultima,omitempty"`
+	Generando   bool      `json:"generando,omitempty"`
 	Explicacion string    `json:"explicacion,omitempty"`
 	// VT es el veredicto de VirusTotal por el hash, si hay clave configurada.
 	VT *enrich.VeredictoVT `json:"vt,omitempty"`
@@ -431,7 +433,7 @@ func (s *Servidor) artefacto(w http.ResponseWriter, r *http.Request) {
 	det.Explicacion, _ = s.Almacen.ExplicacionDe("artefacto", det.SHA256)
 	if det.Explicacion == "" {
 		d, idioma := det, idiomaDe(r)
-		s.generarExplicacionDeEnFondo("artefacto", det.SHA256, func(ctx context.Context, ex report.Explicador) (string, error) {
+		det.Generando = s.generarExplicacionDeEnFondo("artefacto", det.SHA256, func(ctx context.Context, ex report.Explicador) (string, error) {
 			return report.ExplicarArtefacto(ctx, ex, d.Tipo, d.Bytes, d.Cadenas, d.URLs, idioma, 2000)
 		})
 	}
@@ -621,8 +623,8 @@ func (s *Servidor) tocarURL(w http.ResponseWriter, r *http.Request) {
 	}
 	ips, _ := strconv.Atoi(r.URL.Query().Get("ips"))
 	idioma := idiomaDe(r)
-	s.generarExplicacionDeEnFondo("url", url, func(ctx context.Context, ex report.Explicador) (string, error) {
+	generando := s.generarExplicacionDeEnFondo("url", url, func(ctx context.Context, ex report.Explicador) (string, error) {
 		return report.ExplicarURL(ctx, ex, url, ips, idioma, 2000)
 	})
-	w.WriteHeader(http.StatusNoContent)
+	responderJSON(w, map[string]any{"generando": generando})
 }

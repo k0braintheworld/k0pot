@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -47,22 +48,22 @@ func (s *Servidor) redactarExplicacionAtaque(ctx context.Context, ex report.Expl
 // Que alguien lo abra es la mejor senal de que merece gastar cuota en el; y al
 // hacerlo en segundo plano, la proxima vez -o al recargar- ya aparece hecha,
 // sin boton ni espera.
-func (s *Servidor) generarExplicacionEnFondo(clave, idioma string, ep store.EpisodioFila) {
+func (s *Servidor) generarExplicacionEnFondo(clave, idioma string, ep store.EpisodioFila) bool {
 	c := s.Config.Actual()
 	if !c.AprendizajeAutomatico {
-		return
+		return false
 	}
 	ex, ok := s.Generador.(report.Explicador)
 	if !ok {
-		return
+		return false
 	}
 	// Solo lo que de verdad importa: donde entraron o actuaron. El ruido no
 	// merece una llamada al modelo.
 	if episodio.Rango(ep.Severidad) < episodio.Rango(episodio.Acceso) {
-		return
+		return false
 	}
 	if _, yaVa := generandoExplicacion.LoadOrStore("ataque|"+clave, struct{}{}); yaVa {
-		return
+		return true // ya se esta generando; el cliente puede esperarla igual
 	}
 	go func() {
 		defer generandoExplicacion.Delete("ataque|" + clave)
@@ -79,6 +80,7 @@ func (s *Servidor) generarExplicacionEnFondo(clave, idioma string, ep store.Epis
 		}
 		_ = s.Almacen.GuardarExplicacion(clave, texto)
 	}()
+	return true
 }
 
 // aprendizaje devuelve el pulso del conocimiento acumulado, para el indicador
@@ -101,18 +103,18 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 // (tipo,clave) -campanas, artefactos, URLs-. Igual que la del ataque: al abrir
 // algo que aun no esta explicado, se redacta solo en segundo plano y queda
 // guardado para la proxima vez. Sin boton ni espera.
-func (s *Servidor) generarExplicacionDeEnFondo(tipo, clave string, redactar func(context.Context, report.Explicador) (string, error)) {
+func (s *Servidor) generarExplicacionDeEnFondo(tipo, clave string, redactar func(context.Context, report.Explicador) (string, error)) bool {
 	c := s.Config.Actual()
 	if !c.AprendizajeAutomatico {
-		return
+		return false
 	}
 	ex, ok := s.Generador.(report.Explicador)
 	if !ok {
-		return
+		return false
 	}
 	llave := tipo + "|" + clave
 	if _, yaVa := generandoExplicacion.LoadOrStore(llave, struct{}{}); yaVa {
-		return
+		return true
 	}
 	go func() {
 		defer generandoExplicacion.Delete(llave)
@@ -129,4 +131,23 @@ func (s *Servidor) generarExplicacionDeEnFondo(tipo, clave string, redactar func
 		}
 		_ = s.Almacen.GuardarExplicacionDe(tipo, clave, texto)
 	}()
+	return true
+}
+
+// explicacionEstado deja al cliente sondear si la explicacion que se generaba
+// en segundo plano ya esta lista, para pintarla en el sitio sin reabrir.
+func (s *Servidor) explicacionEstado(w http.ResponseWriter, r *http.Request) {
+	tipo := strings.TrimSpace(r.URL.Query().Get("tipo"))
+	clave := strings.TrimSpace(r.URL.Query().Get("clave"))
+	if tipo == "" || clave == "" {
+		responderError(w, http.StatusBadRequest, "faltan tipo y clave")
+		return
+	}
+	var texto string
+	if tipo == "ataque" {
+		texto, _ = s.Almacen.Explicacion(clave)
+	} else {
+		texto, _ = s.Almacen.ExplicacionDe(tipo, clave)
+	}
+	responderJSON(w, map[string]any{"explicacion": texto})
 }

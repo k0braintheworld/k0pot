@@ -661,6 +661,30 @@ async function cargarAtaques() {
 // explicar sepa sobre cual preguntar.
 let claveAbierta = null;
 
+// esperarExplicacion muestra "generando..." y sondea hasta que la explicacion
+// que se cocina en segundo plano esta lista, para pintarla en el sitio sin que
+// haya que reabrir. Se detiene si cierras el dialogo o si tarda demasiado.
+function esperarExplicacion(idCaja, tipo, clave, idDialogo) {
+  const dlg = $(idDialogo);
+  pintarExplicacion(idCaja, t("expl.generando"));
+  let intentos = 0;
+  const iv = setInterval(async () => {
+    if (!dlg.open || intentos++ > 40) {
+      clearInterval(iv);
+      if (dlg.open) pintarExplicacion(idCaja, ""); // se rinde sin dejar el "generando"
+      return;
+    }
+    try {
+      const r = await pedirJSON(
+        `/api/explicacion?tipo=${encodeURIComponent(tipo)}&clave=${encodeURIComponent(clave)}&idioma=${IDIOMA}`);
+      if (r.explicacion) {
+        clearInterval(iv);
+        pintarExplicacion(idCaja, r.explicacion);
+      }
+    } catch (e) { /* reintenta en el siguiente tick */ }
+  }, 3000);
+}
+
 function pintarExplicacion(idCaja, texto) {
   const caja = $(idCaja);
   caja.replaceChildren();
@@ -683,6 +707,7 @@ async function abrirAtaque(clave) {
   // Si ya se explico una vez, se ensena sin volver a preguntar: la
   // explicacion de un ataque terminado no cambia por reabrir el dialogo.
   pintarExplicacion("ataque-explicacion", d.explicacion);
+  if (!d.explicacion && d.generando) esperarExplicacion("ataque-explicacion", "ataque", clave, "dialogo-ataque");
 
   const titulo = $("ataque-titulo");
   titulo.replaceChildren();
@@ -1219,6 +1244,7 @@ async function abrirCampana(c) {
     return;
   }
   pintarExplicacion("campana-explicacion", resp.explicacion);
+  if (!resp.explicacion && resp.generando) esperarExplicacion("campana-explicacion", "campana", `${c.tipo}|${c.huella}`, "dialogo-campana");
   // La muestra recortada se sustituye por la secuencia COMPLETA compartida.
   pintarSecuenciaCampana($("campana-muestra"), c.tipo, (resp.episodios || [])[0] || {}, resp.fichero);
 
@@ -1378,9 +1404,11 @@ async function abrirArtefactoURL(a) {
   $("artefacto-aviso").replaceChildren(nodo("p", null, t("artef.url.aviso")));
   $("descargar-artefacto").hidden = true;
   if (!a.explicacion) {
-    // Dispara la explicacion en segundo plano; aparece al reabrir la URL.
+    // Dispara la explicacion en segundo plano y la espera en el sitio.
     pedirJSON(`/api/artefacto/url-fondo?url=${encodeURIComponent(a.url)}&ips=${(a.ips || []).length}&idioma=${IDIOMA}`,
-      { method: "POST" }).catch(() => {});
+      { method: "POST" })
+      .then((r) => { if (r && r.generando) esperarExplicacion("artefacto-explicacion", "url", a.url, "dialogo-artefacto"); })
+      .catch(() => {});
   }
 
   const datos = $("artefacto-datos");
@@ -1480,6 +1508,7 @@ t("artef.aviso")));
   }
 
   pintarExplicacion("artefacto-explicacion", d.explicacion);
+  if (!d.explicacion && d.generando) esperarExplicacion("artefacto-explicacion", "artefacto", hash, "dialogo-artefacto");
 }
 
 // Explica con IA que es y que hace la muestra. Igual que en ataques: POST,
