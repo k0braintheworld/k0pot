@@ -1705,7 +1705,16 @@ async function glosarAtaque() {
     const g = r.glosas || [];
     (d.pasos || []).forEach((p, i) => { if (g[i]) p.glosa = g[i]; });
     pintarPasos($("ataque-cuerpo"), d); // se ve al momento en la vista
-    btn.textContent = t("dlg.glosar");
+    // Feedback del aprendizaje: lo aprendido de nuevo, o lo que quedo sin
+    // explicar por falta de modelo o de cuota.
+    let aviso = t("dlg.glosar");
+    if (r.aprendidas > 0) aviso = t("glosa.aprendidas", { n: r.aprendidas });
+    else if (r.pendientes > 0) aviso = t("glosa.pendientes", { n: r.pendientes });
+    btn.textContent = aviso;
+    if (aviso !== t("dlg.glosar")) setTimeout(() => { btn.textContent = t("dlg.glosar"); }, 4000);
+    if (typeof r.total === "number") {
+      $("glosar-ataque").title = t("glosa.base", { n: r.total });
+    }
   } catch (e) {
     btn.textContent = t("glosa.error", { msg: e.message });
     setTimeout(() => { btn.textContent = t("dlg.glosar"); }, 4000);

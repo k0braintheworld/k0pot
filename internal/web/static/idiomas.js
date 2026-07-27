@@ -816,3 +816,13 @@ Object.assign(IDIOMAS.en, {
   "dlg.glosando": "Explaining…",
   "glosa.error": "Couldn't explain: {msg}"
 });
+Object.assign(IDIOMAS.es, {
+  "glosa.aprendidas": "Aprendí {n} comando(s) nuevo(s) ✓",
+  "glosa.pendientes": "{n} sin explicar: revisa IA/cuota en Ajustes",
+  "glosa.base": "Base de conocimiento: {n} comandos aprendidos"
+});
+Object.assign(IDIOMAS.en, {
+  "glosa.aprendidas": "Learned {n} new command(s) ✓",
+  "glosa.pendientes": "{n} left unexplained: check AI/quota in Settings",
+  "glosa.base": "Knowledge base: {n} commands learned"
+});
