@@ -1183,7 +1183,6 @@ let campanaAbierta = null;
 async function abrirCampana(c) {
   campanaAbierta = { tipo: c.tipo, huella: c.huella };
   pintarExplicacion("campana-explicacion", "");
-  $("explicar-campana").textContent = t("dlg.explicar");
   const paises = (c.paises || []).length ? ` · ${c.paises.join(" ")}` : "";
   $("campana-titulo").textContent = queCompartenTxt(c.tipo);
   $("campana-sub").textContent = t("camp.sub", { ips: c.ips.length, paises, eps: c.episodios });
@@ -1220,7 +1219,6 @@ async function abrirCampana(c) {
     return;
   }
   pintarExplicacion("campana-explicacion", resp.explicacion);
-  $("explicar-campana").textContent = resp.explicacion ? t("dlg.reexplicar") : t("dlg.explicar");
   // La muestra recortada se sustituye por la secuencia COMPLETA compartida.
   pintarSecuenciaCampana($("campana-muestra"), c.tipo, (resp.episodios || [])[0] || {}, resp.fichero);
 
@@ -1364,27 +1362,6 @@ async function cargarArtefactos() {
   }
 }
 
-// Va por POST y con su boton: gasta cuota, asi que solo cuando alguien lo
-// pide. La explicacion se guarda por la huella de la campana; reabrirla no
-// vuelve a gastar.
-async function explicarCampana() {
-  if (!campanaAbierta) return;
-  const boton = $("explicar-campana");
-  boton.disabled = true;
-  boton.textContent = t("dlg.explicando");
-  try {
-    const r = await pedirJSON(
-      `/api/campana/explicar?tipo=${encodeURIComponent(campanaAbierta.tipo)}` +
-      `&huella=${encodeURIComponent(campanaAbierta.huella)}&dias=${encodeURIComponent(rango())}&idioma=${IDIOMA}`,
-      { method: "POST" });
-    pintarExplicacion("campana-explicacion", r.explicacion);
-  } catch (e) {
-    pintarExplicacion("campana-explicacion", t("dlg.noexplicar", { msg: e.message }));
-  } finally {
-    boton.disabled = false;
-    boton.textContent = t("dlg.reexplicar");
-  }
-}
 
 const RE_HASH_ARTEFACTO = /^[a-f0-9]{64}$/;
 let hashArtefactoAbierto = null;
@@ -1400,7 +1377,11 @@ async function abrirArtefactoURL(a) {
   $("artefacto-sub").textContent = a.url;
   $("artefacto-aviso").replaceChildren(nodo("p", null, t("artef.url.aviso")));
   $("descargar-artefacto").hidden = true;
-  $("explicar-artefacto").textContent = a.explicacion ? t("dlg.reexplicar") : t("dlg.explicar");
+  if (!a.explicacion) {
+    // Dispara la explicacion en segundo plano; aparece al reabrir la URL.
+    pedirJSON(`/api/artefacto/url-fondo?url=${encodeURIComponent(a.url)}&ips=${(a.ips || []).length}&idioma=${IDIOMA}`,
+      { method: "POST" }).catch(() => {});
+  }
 
   const datos = $("artefacto-datos");
   datos.replaceChildren();
@@ -1432,7 +1413,6 @@ t("artef.aviso")));
 
   hashArtefactoAbierto = hash;
   pintarExplicacion("artefacto-explicacion", "");
-  $("explicar-artefacto").textContent = t("dlg.explicar");
 
   const datos = $("artefacto-datos");
   datos.replaceChildren(nodo("p", "sub", t("cargando")));
@@ -1500,47 +1480,10 @@ t("artef.aviso")));
   }
 
   pintarExplicacion("artefacto-explicacion", d.explicacion);
-  $("explicar-artefacto").textContent = d.explicacion ? t("dlg.reexplicar") : t("dlg.explicar");
 }
 
 // Explica con IA que es y que hace la muestra. Igual que en ataques: POST,
 // gasta cuota, y el resultado se guarda por el hash.
-async function explicarURLActual() {
-  const boton = $("explicar-artefacto");
-  boton.disabled = true;
-  boton.textContent = t("dlg.explicando");
-  try {
-    const u = urlArtefactoAbierta;
-    const r = await pedirJSON(
-      `/api/url/explicar?url=${encodeURIComponent(u.url)}&ips=${u.ips}&idioma=${IDIOMA}`,
-      { method: "POST" });
-    pintarExplicacion("artefacto-explicacion", r.explicacion);
-  } catch (e) {
-    pintarExplicacion("artefacto-explicacion", t("dlg.noexplicar", { msg: e.message }));
-  } finally {
-    boton.disabled = false;
-    boton.textContent = t("dlg.reexplicar");
-  }
-}
-
-async function explicarArtefacto() {
-  if (urlArtefactoAbierta) return explicarURLActual();
-  if (!hashArtefactoAbierto) return;
-  const boton = $("explicar-artefacto");
-  boton.disabled = true;
-  boton.textContent = t("dlg.explicando");
-  try {
-    const r = await pedirJSON(
-      `/api/artefacto/explicar?hash=${encodeURIComponent(hashArtefactoAbierto)}&idioma=${IDIOMA}`,
-      { method: "POST" });
-    pintarExplicacion("artefacto-explicacion", r.explicacion);
-  } catch (e) {
-    pintarExplicacion("artefacto-explicacion", t("dlg.noexplicar", { msg: e.message }));
-  } finally {
-    boton.disabled = false;
-    boton.textContent = t("dlg.reexplicar");
-  }
-}
 
 // pintarGravedad dibuja las barras de ataques por gravedad. Es el reparto
 // que resume el negocio de k0Pot: mucho ruido, y estrechandose hasta la
@@ -1619,6 +1562,7 @@ function pintarGravedad(severidades) {
 
 // cargarAprendizaje pinta el pulso del conocimiento en la cabecera: cuantos
 // comandos lleva k0pot aprendidos y, en el titulo, como va la cuota de hoy.
+let aprendidasPrevias = null;
 async function cargarAprendizaje() {
   try {
     const a = await pedirJSON("/api/aprendizaje");
@@ -1630,6 +1574,13 @@ async function cargarAprendizaje() {
       ? t("apr.chip.activo", { hoy: a.hoy, tope: a.tope })
       : t("apr.chip.inactivo");
     chip.classList.toggle("en-pausa", !a.activo);
+    // Pulso cuando aprende algo nuevo, para que se vea vivo.
+    if (aprendidasPrevias !== null && a.total > aprendidasPrevias) {
+      chip.classList.remove("recien");
+      void chip.offsetWidth; // reinicia la animacion
+      chip.classList.add("recien");
+    }
+    aprendidasPrevias = a.total;
   } catch (e) { /* silencioso: el indicador no debe romper el refresco */ }
 }
 
@@ -1837,8 +1788,6 @@ document.addEventListener("keydown", (e) => {
 $("cerrar-ip").addEventListener("click", () => $("dialogo-ip").close());
 $("cerrar-campana").addEventListener("click", () => $("dialogo-campana").close());
 $("cerrar-artefacto").addEventListener("click", () => $("dialogo-artefacto").close());
-$("explicar-campana").addEventListener("click", explicarCampana);
-$("explicar-artefacto").addEventListener("click", explicarArtefacto);
 
 // El desplegable de servicios se llena desde el mismo mapa que usa el resto
 // del panel: asi una trampa nueva aparece en el filtro sola, sin que haya que
@@ -2371,9 +2320,12 @@ async function cambiarContrasena() {
 }
 
 let temporizador = null;
+let temporizadorAprendizaje = null;
 function aplicarRefresco(segundos) {
   if (temporizador) clearInterval(temporizador);
   temporizador = setInterval(refrescar, Math.max(5, segundos || 20) * 1000);
+  clearInterval(temporizadorAprendizaje);
+  temporizadorAprendizaje = setInterval(() => cargarAprendizaje().catch(() => {}), 15000);
 }
 
 $("c-proveedor").addEventListener("change", mostrarCamposDelProveedor);

@@ -61,11 +61,11 @@ func (s *Servidor) generarExplicacionEnFondo(clave, idioma string, ep store.Epis
 	if episodio.Rango(ep.Severidad) < episodio.Rango(episodio.Acceso) {
 		return
 	}
-	if _, yaVa := generandoExplicacion.LoadOrStore(clave, struct{}{}); yaVa {
+	if _, yaVa := generandoExplicacion.LoadOrStore("ataque|"+clave, struct{}{}); yaVa {
 		return
 	}
 	go func() {
-		defer generandoExplicacion.Delete(clave)
+		defer generandoExplicacion.Delete("ataque|" + clave)
 		dia := time.Now().Format("2006-01-02")
 		if ok, _ := s.Almacen.ConsumirCuotaLLM(dia, c.InformeTopeDiario); !ok {
 			return
@@ -95,4 +95,38 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 		"tope":   c.InformeTopeDiario,
 		"activo": c.AprendizajeAutomatico && c.UsarLLM && hayModelo,
 	})
+}
+
+// generarExplicacionDeEnFondo es la version generica para el cache por
+// (tipo,clave) -campanas, artefactos, URLs-. Igual que la del ataque: al abrir
+// algo que aun no esta explicado, se redacta solo en segundo plano y queda
+// guardado para la proxima vez. Sin boton ni espera.
+func (s *Servidor) generarExplicacionDeEnFondo(tipo, clave string, redactar func(context.Context, report.Explicador) (string, error)) {
+	c := s.Config.Actual()
+	if !c.AprendizajeAutomatico {
+		return
+	}
+	ex, ok := s.Generador.(report.Explicador)
+	if !ok {
+		return
+	}
+	llave := tipo + "|" + clave
+	if _, yaVa := generandoExplicacion.LoadOrStore(llave, struct{}{}); yaVa {
+		return
+	}
+	go func() {
+		defer generandoExplicacion.Delete(llave)
+		dia := time.Now().Format("2006-01-02")
+		if ok, _ := s.Almacen.ConsumirCuotaLLM(dia, c.InformeTopeDiario); !ok {
+			return
+		}
+		ctx, cancelar := context.WithTimeout(context.Background(), 120*time.Second)
+		defer cancelar()
+		texto, err := redactar(ctx, ex)
+		if err != nil || texto == "" {
+			s.Almacen.DevolverCuotaLLM(dia)
+			return
+		}
+		_ = s.Almacen.GuardarExplicacionDe(tipo, clave, texto)
+	}()
 }

@@ -82,6 +82,18 @@ func (s *Servidor) campana(w http.ResponseWriter, r *http.Request) {
 		respuesta.Episodios[i].Resumen = episodio.Redactar(respuesta.Episodios[i].Episodio, idioma)
 	}
 	respuesta.Explicacion, _ = s.Almacen.ExplicacionDe("campana", string(tipo)+"|"+huella)
+	if respuesta.Explicacion == "" {
+		clave := string(tipo) + "|" + huella
+		s.generarExplicacionDeEnFondo("campana", clave, func(ctx context.Context, ex report.Explicador) (string, error) {
+			for _, c := range campana.Detectar(eps) {
+				if c.Tipo == tipo && c.Huella == huella {
+					return report.ExplicarCampana(ctx, ex, queComparten(tipo), c.Muestra,
+						len(c.IPs), c.Paises, string(c.Severidad), idioma, 2000)
+				}
+			}
+			return "", fmt.Errorf("campana no hallada")
+		})
+	}
 	responderJSON(w, respuesta)
 }
 
@@ -332,10 +344,10 @@ var reHashArtefacto = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
 // DetalleArtefacto describe un fichero capturado para revisarlo SIN ejecutarlo.
 type DetalleArtefacto struct {
-	SHA256      string    `json:"sha256"`
-	Bytes       int64     `json:"bytes"`
-	Tipo        string    `json:"tipo"`
-	Cadenas     []string  `json:"cadenas"`
+	SHA256  string   `json:"sha256"`
+	Bytes   int64    `json:"bytes"`
+	Tipo    string   `json:"tipo"`
+	Cadenas []string `json:"cadenas"`
 	// Vista es el contenido tal cual cuando es texto (un script .sh se lee
 	// entero); vacio si es binario, donde el volcado no dice nada.
 	Vista       string    `json:"vista,omitempty"`
@@ -417,6 +429,12 @@ func (s *Servidor) artefacto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	det.Explicacion, _ = s.Almacen.ExplicacionDe("artefacto", det.SHA256)
+	if det.Explicacion == "" {
+		d, idioma := det, idiomaDe(r)
+		s.generarExplicacionDeEnFondo("artefacto", det.SHA256, func(ctx context.Context, ex report.Explicador) (string, error) {
+			return report.ExplicarArtefacto(ctx, ex, d.Tipo, d.Bytes, d.Cadenas, d.URLs, idioma, 2000)
+		})
+	}
 	responderJSON(w, det)
 }
 
@@ -491,7 +509,6 @@ func (s *Servidor) artefactoContenido(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, f)
 }
 
-
 // explicarURL explica una direccion de descarga sin fichero capturado: lo unico
 // que se puede contar de un intento sin muestra. Gasta cuota y guarda por URL.
 func (s *Servidor) explicarURL(w http.ResponseWriter, r *http.Request) {
@@ -537,7 +554,6 @@ func (s *Servidor) explicarURL(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, map[string]string{"explicacion": texto})
 }
 
-
 // reportarAbuse denuncia a AbuseIPDB las intrusiones recientes, para devolver
 // al feed comunitario lo que el senuelo ha visto. Es una PUBLICACION externa:
 // solo por POST y a peticion expresa del usuario, nunca automatica.
@@ -581,4 +597,32 @@ func (s *Servidor) reportarAbuse(w http.ResponseWriter, r *http.Request) {
 		reportadas++
 	}
 	responderJSON(w, map[string]any{"reportadas": reportadas, "total": len(ips), "error": ultimoErr})
+}
+
+// tocarURL dispara, en segundo plano, la explicacion de una URL de descarga
+// sin fichero capturado cuando alguien la abre. No devuelve nada util: la
+// explicacion aparece al reabrir, igual que en ataques y campanas.
+func (s *Servidor) tocarURL(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		responderError(w, http.StatusMethodNotAllowed, "usa POST")
+		return
+	}
+	url := strings.TrimSpace(r.URL.Query().Get("url"))
+	if url == "" {
+		responderError(w, http.StatusBadRequest, "falta la url")
+		return
+	}
+	if len(url) > 2048 {
+		url = url[:2048]
+	}
+	if ex, _ := s.Almacen.ExplicacionDe("url", url); ex != "" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	ips, _ := strconv.Atoi(r.URL.Query().Get("ips"))
+	idioma := idiomaDe(r)
+	s.generarExplicacionDeEnFondo("url", url, func(ctx context.Context, ex report.Explicador) (string, error) {
+		return report.ExplicarURL(ctx, ex, url, ips, idioma, 2000)
+	})
+	w.WriteHeader(http.StatusNoContent)
 }

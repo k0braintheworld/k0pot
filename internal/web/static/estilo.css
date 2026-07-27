@@ -1000,3 +1000,9 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   cursor: default; white-space: nowrap;
 }
 .chip-aprendizaje.en-pausa { opacity: .55; }
+.chip-aprendizaje.recien { animation: chip-pulso 1.3s ease; }
+@keyframes chip-pulso {
+  0% { color: var(--acento); border-color: var(--acento); transform: scale(1); }
+  30% { transform: scale(1.09); }
+  100% { color: var(--sub); border-color: var(--borde); transform: scale(1); }
+}
