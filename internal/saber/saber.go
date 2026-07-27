@@ -128,6 +128,18 @@ var rutas = []patron{
 }
 
 var comandos = []patron{
+	// ── Escape de contenedor (ataque a Docker expuesto) ──────────────
+	// Va primero: si un comando trae chroot, ESO es lo importante, por
+	// encima de que ademas use busybox o sh -c.
+	{"chroot /host", Nota{"escape del contenedor al anfitrion",
+		"se salen del contenedor hacia la maquina real: es el objetivo de atacar un Docker abierto"}},
+	{"chroot /mnt", Nota{"escape del contenedor al anfitrion",
+		"montan el disco del anfitrion y saltan a el desde el contenedor"}},
+	{"chroot", Nota{"cambian la raiz del sistema de ficheros",
+		"tipico de un escape de contenedor: pasan a operar como la maquina anfitriona"}},
+	{"nsenter", Nota{"entran en los espacios de nombres del anfitrion",
+		"otra via de escape de contenedor: se colocan en el contexto de la maquina real"}},
+
 	// ── Traerse el programa ──────────────────────────────────────────
 	{"wget ", Nota{"descarga de un programa desde fuera",
 		"el paso con el que una intrusion se convierte en infeccion"}},

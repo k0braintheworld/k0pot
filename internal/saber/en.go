@@ -22,6 +22,9 @@ func (n Nota) En(idioma string) Nota {
 // es el Que espanol tal cual aparece en el catalogo; si alli cambia, hay
 // que cambiarlo aqui (o se sirve el espanol como respaldo).
 var traduccionesEn = map[string]Nota{
+	"escape del contenedor al anfitrion":              {"container escape to the host", "they break out of the container onto the real machine: the whole point of attacking an open Docker"},
+	"cambian la raiz del sistema de ficheros":         {"they change the filesystem root", "typical of a container escape: they start operating as the host machine"},
+	"entran en los espacios de nombres del anfitrion": {"they enter the host namespaces", "another container-escape route: they place themselves in the real machine context"},
 	// ── Comandos de shell (reconocimiento y ejecucion) ───────────────
 	"identifican la distribucion de Linux":                    {"identify the Linux distribution", "they pick the binary or method that works on that specific system"},
 	"detalles del procesador":                                 {"processor details", "they size the machine, a typical prelude to mining"},
