@@ -15,7 +15,7 @@ type Proveedor struct {
 // Proveedores es el catalogo integrado. El orden es el de la lista desplegable.
 var Proveedores = []Proveedor{
 	{"groq", "Groq", ProveedorCompatible, "https://api.groq.com/openai/v1", "openai/gpt-oss-120b"},
-	{"gemini", "Google Gemini", ProveedorCompatible, "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.5-flash"},
+	{"gemini", "Google Gemini", ProveedorCompatible, "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-flash-latest"},
 	{"openai", "OpenAI", ProveedorCompatible, "https://api.openai.com/v1", "gpt-4o-mini"},
 	{"anthropic", "Anthropic", ProveedorAnthropic, "", "claude-3-5-haiku-latest"},
 	{"openrouter", "OpenRouter", ProveedorCompatible, "https://openrouter.ai/api/v1", "meta-llama/llama-3.3-70b-instruct"},

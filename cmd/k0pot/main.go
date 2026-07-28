@@ -1215,7 +1215,15 @@ func disponibleProv(almacen *store.Store, id string) bool {
 // marcarAgotadoProv apunta que un proveedor se quedo sin tokens: pausa 5 min y,
 // si el 429 revela el tope diario, lo guarda.
 func marcarAgotadoProv(almacen *store.Store, id string, err error) {
-	_ = almacen.GuardarEstado("ia_pausa:"+id, time.Now().Add(5*time.Minute).UTC().Format(time.RFC3339))
+	// Un limite por minuto (lo normal en tiers free como Gemini) se recupera
+	// enseguida: pausa corta. Un limite POR DIA (Groq TPD) no vale la pena
+	// reintentarlo tan seguido: pausa larga.
+	espera := 60 * time.Second
+	m := strings.ToLower(err.Error())
+	if strings.Contains(m, "per day") || strings.Contains(m, "tpd") || strings.Contains(m, "daily") {
+		espera = 15 * time.Minute
+	}
+	_ = almacen.GuardarEstado("ia_pausa:"+id, time.Now().Add(espera).UTC().Format(time.RFC3339))
 	if lim := report.LimiteDiarioDeTokens(err); lim > 0 {
 		_ = almacen.GuardarEstado("tokens_limite:"+id, strconv.Itoa(lim))
 	}
