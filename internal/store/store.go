@@ -85,7 +85,12 @@ func Abrir(ruta string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
-	return &Store{db: db}, nil
+	s := &Store{db: db}
+	if err := s.sembrarGlosas(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	return s, nil
 }
 
 // migrar deja el esquema al dia sin tirar lo ya capturado.
