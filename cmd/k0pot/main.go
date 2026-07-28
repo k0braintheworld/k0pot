@@ -14,6 +14,7 @@ import (
 	nethttp "net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -426,6 +427,8 @@ func enviarResumen(ctx context.Context, almacen *store.Store, c config.Config) e
 // tokens diaria agotada), para no insistir cada vuelta del bucle.
 var aprendizajeEnEspera time.Time
 
+var reLimiteDiaCol = regexp.MustCompile(`(?i)tokens per day.*?limit\s+(\d+)`)
+
 func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config, sinLLM bool) (int, error) {
 	if sinLLM || !c.UsarLLM || !c.AprendizajeAutomatico {
 		return 0, nil
@@ -433,7 +436,7 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 	if time.Now().Before(aprendizajeEnEspera) {
 		return 0, nil
 	}
-	ex, ok := generadorDe(c, sinLLM).(report.Explicador)
+	ex, ok := generadorDe(c, sinLLM, hookTokens(almacen)).(report.Explicador)
 	if !ok {
 		return 0, nil
 	}
@@ -522,6 +525,9 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 			if m := strings.ToLower(err.Error()); strings.Contains(m, "429") || strings.Contains(m, "rate limit") {
 				aprendizajeEnEspera = time.Now().Add(5 * time.Minute)
 				_ = almacen.GuardarEstado("ia_pausa_hasta", aprendizajeEnEspera.UTC().Format(time.RFC3339))
+				if mm := reLimiteDiaCol.FindStringSubmatch(err.Error()); len(mm) == 2 {
+					_ = almacen.GuardarEstado("tokens_limite", mm[1])
+				}
 			}
 			return aprendidas, err
 		}
@@ -1057,7 +1063,7 @@ func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion, rutaBD
 		Almacen:   almacen,
 		Config:    ajustes,
 		Version:   version,
-		Generador: generadorDe(ajustes.Actual(), sinLLM),
+		Generador: generadorDe(ajustes.Actual(), sinLLM, hookTokens(almacen)),
 		Trampas:   trampa.Disponibles(),
 		// Donde Cowrie deja lo que consigue capturar. Que el directorio no
 		// exista es lo normal hasta que alguien descargue algo.
@@ -1068,7 +1074,7 @@ func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion, rutaBD
 	// Al guardar ajustes se rehace el generador, para que cambiar de modelo
 	// o de clave surta efecto sin reiniciar el servicio.
 	srv.AlCambiarConfig = func(c config.Config) {
-		srv.Generador = generadorDe(c, sinLLM)
+		srv.Generador = generadorDe(c, sinLLM, hookTokens(almacen))
 	}
 
 	http := &nethttp.Server{
@@ -1156,7 +1162,15 @@ func tieneDireccion(ip string) bool {
 // generadorDe elige quien redacta el informe segun la configuracion. Sin
 // clave, con el LLM desactivado o con -sin-llm, honey sigue informando:
 // solo con textos mas escuetos.
-func generadorDe(c config.Config, sinLLM bool) report.Generador {
+// hookTokens devuelve una funcion que acumula los tokens de cada llamada al
+// modelo en la cuota del dia, para el contador en vivo de la cabecera.
+func hookTokens(almacen *store.Store) func(int) {
+	return func(n int) {
+		_ = almacen.SumarTokensLLM(time.Now().Format("2006-01-02"), n)
+	}
+}
+
+func generadorDe(c config.Config, sinLLM bool, alUsar func(int)) report.Generador {
 	if sinLLM || !c.UsarLLM {
 		return report.PorReglas{}
 	}
@@ -1165,12 +1179,16 @@ func generadorDe(c config.Config, sinLLM bool) report.Generador {
 		if c.ClaveAnthropic == "" {
 			return report.PorReglas{}
 		}
-		return report.NuevoConLLM(c.ClaveAnthropic, c.Modelo)
+		g := report.NuevoConLLM(c.ClaveAnthropic, c.Modelo)
+		g.AlUsar = alUsar
+		return g
 	case config.ProveedorCompatible:
 		if c.ClaveCompatible == "" {
 			return report.PorReglas{}
 		}
-		return report.NuevoCompatible(c.URLBase, c.ClaveCompatible, c.Modelo)
+		g := report.NuevoCompatible(c.URLBase, c.ClaveCompatible, c.Modelo)
+		g.AlUsar = alUsar
+		return g
 	}
 	return report.PorReglas{}
 }
@@ -1203,7 +1221,7 @@ func mostrarInforme(almacen *store.Store, ajustes *config.Gestor, dias int, sinL
 		return err
 	}
 
-	res, err := generadorDe(ajustes.Actual(), sinLLM).Generar(context.Background(), datos)
+	res, err := generadorDe(ajustes.Actual(), sinLLM, hookTokens(almacen)).Generar(context.Background(), datos)
 	if err != nil {
 		return err
 	}

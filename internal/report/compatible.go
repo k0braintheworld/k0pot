@@ -27,6 +27,9 @@ type ConCompatible struct {
 	Modelo   string
 	Respaldo Generador
 	Plazo    time.Duration
+	// AlUsar, si esta puesto, recibe los tokens que consumio cada llamada
+	// (del campo usage de la respuesta). Sirve para el contador en vivo.
+	AlUsar func(tokens int)
 }
 
 // URLBaseGroq es el proveedor gratuito de referencia.
@@ -83,6 +86,9 @@ type respuestaChat struct {
 		Mensaje string `json:"message"`
 		Tipo    string `json:"type"`
 	} `json:"error"`
+	Uso *struct {
+		Total int `json:"total_tokens"`
+	} `json:"usage"`
 }
 
 func (c *ConCompatible) Generar(ctx context.Context, d Datos) (Resultado, error) {
@@ -146,6 +152,9 @@ func (c *ConCompatible) Preguntar(ctx context.Context, sistema, usuario string, 
 		return "", fmt.Errorf("el proveedor no devolvio ninguna respuesta")
 	}
 
+	if c.AlUsar != nil && r.Uso != nil && r.Uso.Total > 0 {
+		c.AlUsar(r.Uso.Total)
+	}
 	texto := limpiarRazonamiento(r.Opciones[0].Mensaje.Contenido)
 	if texto == "" {
 		return "", fmt.Errorf("el modelo devolvio un informe vacio")

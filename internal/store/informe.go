@@ -128,3 +128,26 @@ func (s *Store) DevolverCuotaLLM(dia string) error {
 	}
 	return nil
 }
+
+// SumarTokensLLM acumula los tokens que consumio una llamada, para el
+// contador en vivo del panel. Se apunta en la fila del dia.
+func (s *Store) SumarTokensLLM(dia string, n int) error {
+	if n <= 0 {
+		return nil
+	}
+	_, err := s.db.Exec(
+		`INSERT INTO cuota_llm (dia, llamadas, tokens) VALUES (?, 0, ?)
+		 ON CONFLICT(dia) DO UPDATE SET tokens = tokens + ?`,
+		dia, n, n)
+	return err
+}
+
+// TokensLLMUsados devuelve los tokens gastados en un dia.
+func (s *Store) TokensLLMUsados(dia string) (int, error) {
+	var n int
+	err := s.db.QueryRow(`SELECT tokens FROM cuota_llm WHERE dia = ?`, dia).Scan(&n)
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	return n, err
+}

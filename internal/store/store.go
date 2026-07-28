@@ -121,6 +121,10 @@ func migrar(db *sql.DB) error {
 	if err := anadirColumna(db, "episodios", "motivos", "TEXT NOT NULL DEFAULT '[]'"); err != nil {
 		return err
 	}
+	// Bases creadas antes del contador de tokens.
+	if err := anadirColumna(db, "cuota_llm", "tokens", "INTEGER NOT NULL DEFAULT 0"); err != nil {
+		return err
+	}
 	if err := anadirColumna(db, "episodios", "puerto", "TEXT NOT NULL DEFAULT ''"); err != nil {
 		return err
 	}

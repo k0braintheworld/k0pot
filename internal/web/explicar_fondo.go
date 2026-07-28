@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -200,6 +202,9 @@ func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
 			if esLimiteDeRitmo(err) {
 				narrativaEnEspera = time.Now().Add(5 * time.Minute)
 				_ = s.Almacen.GuardarEstado("ia_pausa_hasta", narrativaEnEspera.UTC().Format(time.RFC3339))
+				if lim := limiteDiarioDeTokens(err); lim > 0 {
+					_ = s.Almacen.GuardarEstado("tokens_limite", strconv.Itoa(lim))
+				}
 				log.Printf("narrativa: limite del modelo alcanzado, pausa 5 min")
 			} else {
 				log.Printf("narrativa %s: %v", partes[0], err)
@@ -253,19 +258,39 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 			generando = true
 		}
 	}
+	tokensHoy, _ := s.Almacen.TokensLLMUsados(dia)
+	tokensLimite := 0
+	if v, _ := s.Almacen.LeerEstado("tokens_limite"); v != "" {
+		tokensLimite, _ = strconv.Atoi(v)
+	}
 	responderJSON(w, map[string]any{
-		"total":      total,
-		"hoy":        usadas,
-		"tope":       c.InformeTopeDiario,
-		"activo":     activo,
-		"pausado":    activo && usadas >= topeFondo,
-		"sin_tokens": activo && sinTokens,
-		"generando":  activo && generando && !sinTokens,
+		"total":         total,
+		"hoy":           usadas,
+		"tope":          c.InformeTopeDiario,
+		"activo":        activo,
+		"pausado":       activo && usadas >= topeFondo,
+		"sin_tokens":    activo && sinTokens,
+		"generando":     activo && generando && !sinTokens,
+		"tokens_hoy":    tokensHoy,
+		"tokens_limite": tokensLimite,
 	})
 }
 
 // esLimiteDeRitmo reconoce el 429 de -has gastado tu cuota de tokens- del
 // proveedor, para pausar en vez de insistir.
+// reLimiteDia extrae el tope de tokens POR DIA del mensaje 429 del proveedor
+// ("... tokens per day (TPD): Limit 200000 ..."). El por-minuto se ignora: lo
+// que interesa es el presupuesto del dia.
+var reLimiteDia = regexp.MustCompile(`(?i)tokens per day.*?limit\s+(\d+)`)
+
+func limiteDiarioDeTokens(err error) int {
+	if m := reLimiteDia.FindStringSubmatch(err.Error()); len(m) == 2 {
+		n, _ := strconv.Atoi(m[1])
+		return n
+	}
+	return 0
+}
+
 func esLimiteDeRitmo(err error) bool {
 	m := strings.ToLower(err.Error())
 	return strings.Contains(m, "429") || strings.Contains(m, "rate limit") || strings.Contains(m, "too many requests")

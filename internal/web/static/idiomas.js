@@ -878,3 +878,11 @@ Object.assign(IDIOMAS.en, {
   "apr.estado.pausa": "paused",
   "apr.estado.inactivo": "off"
 });
+Object.assign(IDIOMAS.es, {
+  "apr.tokens": "Tokens hoy: {usados} / {limite}",
+  "apr.tokens.solo": "Tokens usados hoy: {usados}"
+});
+Object.assign(IDIOMAS.en, {
+  "apr.tokens": "Tokens today: {usados} / {limite}",
+  "apr.tokens.solo": "Tokens used today: {usados}"
+});

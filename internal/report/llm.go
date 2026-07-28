@@ -37,6 +37,8 @@ type ConLLM struct {
 	Modelo   anthropic.Model
 	Respaldo Generador
 	Plazo    time.Duration
+	// AlUsar recibe los tokens (entrada+salida) de cada llamada, si esta puesto.
+	AlUsar func(tokens int)
 }
 
 // NuevoConLLM crea el generador. Clave y modelo salen de la configuracion.
@@ -150,6 +152,11 @@ func (c *ConLLM) Preguntar(ctx context.Context, sistema, usuario string, tope in
 		return "", fmt.Errorf("%s", explicar(err))
 	}
 
+	if c.AlUsar != nil {
+		if n := int(resp.Usage.InputTokens + resp.Usage.OutputTokens); n > 0 {
+			c.AlUsar(n)
+		}
+	}
 	var b strings.Builder
 	for _, bloque := range resp.Content {
 		if t, ok := bloque.AsAny().(anthropic.TextBlock); ok {

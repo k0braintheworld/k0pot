@@ -1619,6 +1619,14 @@ async function cargarAprendizaje() {
     if (estadoTxt) {
       chip.appendChild(nodo("span", "apr-estado " + estadoCls, estadoTxt));
     }
+    // Tokens del dia en el tooltip (se refresca en cada sondeo). El limite
+    // solo se conoce cuando el proveedor lo revela en un 429.
+    if (a.tokens_hoy) {
+      const fmt = (n) => (n || 0).toLocaleString(IDIOMA);
+      titulo += "\n" + (a.tokens_limite
+        ? t("apr.tokens", { usados: fmt(a.tokens_hoy), limite: fmt(a.tokens_limite) })
+        : t("apr.tokens.solo", { usados: fmt(a.tokens_hoy) }));
+    }
     chip.title = titulo;
     // Pulso cuando aprende algo nuevo, para que se vea vivo.
     if (aprendidasPrevias !== null && a.total > aprendidasPrevias) {
