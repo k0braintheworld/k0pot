@@ -667,13 +667,10 @@ let claveAbierta = null;
 function esperarExplicacion(idCaja, tipo, clave, idDialogo) {
   const dlg = $(idDialogo);
   pintarExplicacion(idCaja, t("expl.pendiente"));
-  let intentos = 0;
+  // Se sigue esperando mientras el dialogo este abierto: en cuanto el barredor
+  // la genera, aparece sola. Se corta al cerrar.
   const iv = setInterval(async () => {
-    if (!dlg.open || intentos++ > 40) {
-      clearInterval(iv);
-      if (dlg.open) pintarExplicacion(idCaja, ""); // se rinde sin dejar el "generando"
-      return;
-    }
+    if (!dlg.open) { clearInterval(iv); return; }
     try {
       const r = await pedirJSON(
         `/api/explicacion?tipo=${encodeURIComponent(tipo)}&clave=${encodeURIComponent(clave)}&idioma=${IDIOMA}`);
@@ -682,7 +679,7 @@ function esperarExplicacion(idCaja, tipo, clave, idDialogo) {
         pintarExplicacion(idCaja, r.explicacion);
       }
     } catch (e) { /* reintenta en el siguiente tick */ }
-  }, 3000);
+  }, 5000);
 }
 
 function pintarExplicacion(idCaja, texto) {

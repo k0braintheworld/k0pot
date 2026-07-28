@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -60,20 +61,24 @@ func (s *Servidor) redactarExplicacionAtaque(ctx context.Context, ex report.Expl
 	return report.ExplicarAtaque(ctx, ex, ep, pasos, notaProv, contextoCampana(s.Almacen, ep), idioma, 2000)
 }
 
-// BarrerExplicaciones es el bucle de fondo del panel: cada poco genera unas
-// pocas narrativas que falten, empezando por lo que alguien acaba de abrir.
+// BarrerExplicaciones es el bucle de fondo del panel: genera UNA narrativa por
+// tick, empezando por lo que alguien acaba de abrir. Una por tick a proposito:
+// el modelo gratis limita por tokens/minuto, asi que ir en rafaga solo provoca
+// errores 429; espaciando, cada explicacion sale y la que abres va primero.
 func (s *Servidor) BarrerExplicaciones(ctx context.Context) {
+	t := time.NewTicker(20 * time.Second)
+	defer t.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(45 * time.Second):
+		case <-t.C:
+			s.generarUnaNarrativa(ctx)
 		}
-		s.generarNarrativasPendientes()
 	}
 }
 
-func (s *Servidor) generarNarrativasPendientes() {
+func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
 	c := s.Config.Actual()
 	if !c.AprendizajeAutomatico {
 		return
@@ -87,122 +92,106 @@ func (s *Servidor) generarNarrativasPendientes() {
 		idioma = "es"
 	}
 	dia := time.Now().Format("2006-01-02")
-	topeFondo := c.InformeTopeDiario * 70 / 100 // reserva un 30% para lo que se pida
+	topeFondo := c.InformeTopeDiario * 70 / 100
 	if topeFondo < 1 {
 		return
 	}
 	desde := time.Now().AddDate(0, 0, -7)
 
-	hechas := 0
-	const maxPorBarrido = 4
-	// consumir intenta generar una narrativa. Devuelve false cuando ya no se
-	// puede seguir: tope del barrido o presupuesto de fondo agotado.
-	consumir := func(redactar func(context.Context, report.Explicador) (string, error), guardar func(string)) bool {
-		if hechas >= maxPorBarrido {
-			return false
-		}
-		if ok, _ := s.Almacen.ConsumirCuotaLLM(dia, topeFondo); !ok {
-			return false
-		}
-		cctx, cancelar := context.WithTimeout(context.Background(), 120*time.Second)
-		texto, err := redactar(cctx, ex)
-		cancelar()
-		if err != nil || texto == "" {
-			s.Almacen.DevolverCuotaLLM(dia)
-			return true // no cuenta, pero se sigue con otras
-		}
-		guardar(texto)
-		hechas++
-		time.Sleep(5 * time.Second) // espacia las llamadas para no reventar el TPM
-		return true
-	}
-
-	generarUno := func(tipoClave string) bool {
-		partes := strings.SplitN(tipoClave, "|", 2)
-		if len(partes) != 2 {
-			return true
-		}
-		clave := partes[1]
-		switch partes[0] {
-		case "ataque":
-			ep, hay, _ := s.Almacen.EpisodioPorClave(clave)
-			if !hay {
-				return true
-			}
-			if ya, _ := s.Almacen.Explicacion(clave); ya != "" {
-				return true
-			}
-			return consumir(
-				func(ctx context.Context, ex report.Explicador) (string, error) {
-					return s.redactarExplicacionAtaque(ctx, ex, ep, idioma)
-				},
-				func(t string) { _ = s.Almacen.GuardarExplicacion(clave, t) })
-		case "campana":
-			if ya, _ := s.Almacen.ExplicacionDe("campana", clave); ya != "" {
-				return true
-			}
-			eps, _ := s.Almacen.Episodios(store.FiltroEpisodios{Desde: desde, Limite: 500})
-			for _, cam := range campana.Detectar(eps) {
-				if string(cam.Tipo)+"|"+cam.Huella != clave {
-					continue
-				}
-				cam := cam
-				return consumir(
-					func(ctx context.Context, ex report.Explicador) (string, error) {
-						return report.ExplicarCampana(ctx, ex, queComparten(cam.Tipo), cam.Muestra,
-							len(cam.IPs), cam.Paises, string(cam.Severidad), idioma, 2000)
-					},
-					func(t string) { _ = s.Almacen.GuardarExplicacionDe("campana", clave, t) })
-			}
-			return true
-		case "artefacto":
-			if ya, _ := s.Almacen.ExplicacionDe("artefacto", clave); ya != "" {
-				return true
-			}
-			det, ok := s.detalleArtefacto(clave)
-			if !ok {
-				return true
-			}
-			return consumir(
-				func(ctx context.Context, ex report.Explicador) (string, error) {
-					return report.ExplicarArtefacto(ctx, ex, det.Tipo, det.Bytes, det.Cadenas, det.URLs, idioma, 2000)
-				},
-				func(t string) { _ = s.Almacen.GuardarExplicacionDe("artefacto", det.SHA256, t) })
-		case "url":
-			if ya, _ := s.Almacen.ExplicacionDe("url", clave); ya != "" {
-				return true
-			}
-			url := clave
-			return consumir(
-				func(ctx context.Context, ex report.Explicador) (string, error) {
-					return report.ExplicarURL(ctx, ex, url, 0, idioma, 2000)
-				},
-				func(t string) { _ = s.Almacen.GuardarExplicacionDe("url", url, t) })
-		}
-		return true
-	}
-
-	// 1) Lo que alguien acaba de abrir (prioridad).
+	// Objetivo: primero lo que alguien acaba de abrir; si no, un ataque
+	// notable reciente que aun no tenga narrativa.
+	var objetivo string
 	explicacionesPedidas.Range(func(k, _ any) bool {
+		objetivo = k.(string)
 		explicacionesPedidas.Delete(k)
-		return generarUno(k.(string))
+		return false // uno por tick
 	})
-
-	// 2) Ataques notables recientes que aun no tienen narrativa.
-	eps, _ := s.Almacen.EpisodiosNotablesSinExplicacion(desde, maxPorBarrido)
-	for _, ep := range eps {
-		ep := ep
-		if ya, _ := s.Almacen.Explicacion(ep.Clave); ya != "" {
-			continue
+	if objetivo == "" {
+		if eps, _ := s.Almacen.EpisodiosNotablesSinExplicacion(desde, 1); len(eps) > 0 {
+			objetivo = "ataque|" + eps[0].Clave
 		}
-		if !consumir(
-			func(ctx context.Context, ex report.Explicador) (string, error) {
-				return s.redactarExplicacionAtaque(ctx, ex, ep, idioma)
-			},
-			func(t string) { _ = s.Almacen.GuardarExplicacion(ep.Clave, t) }) {
+	}
+	if objetivo == "" {
+		return
+	}
+
+	partes := strings.SplitN(objetivo, "|", 2)
+	if len(partes) != 2 {
+		return
+	}
+	clave := partes[1]
+	var redactar func(context.Context, report.Explicador) (string, error)
+	var guardar func(string)
+	switch partes[0] {
+	case "ataque":
+		ep, hay, _ := s.Almacen.EpisodioPorClave(clave)
+		if !hay {
 			return
 		}
+		if ya, _ := s.Almacen.Explicacion(clave); ya != "" {
+			return
+		}
+		redactar = func(ctx context.Context, ex report.Explicador) (string, error) {
+			return s.redactarExplicacionAtaque(ctx, ex, ep, idioma)
+		}
+		guardar = func(t string) { _ = s.Almacen.GuardarExplicacion(clave, t) }
+	case "campana":
+		if ya, _ := s.Almacen.ExplicacionDe("campana", clave); ya != "" {
+			return
+		}
+		eps, _ := s.Almacen.Episodios(store.FiltroEpisodios{Desde: desde, Limite: 500})
+		for _, cam := range campana.Detectar(eps) {
+			if string(cam.Tipo)+"|"+cam.Huella != clave {
+				continue
+			}
+			cam := cam
+			redactar = func(ctx context.Context, ex report.Explicador) (string, error) {
+				return report.ExplicarCampana(ctx, ex, queComparten(cam.Tipo), cam.Muestra,
+					len(cam.IPs), cam.Paises, string(cam.Severidad), idioma, 2000)
+			}
+			guardar = func(t string) { _ = s.Almacen.GuardarExplicacionDe("campana", clave, t) }
+			break
+		}
+	case "artefacto":
+		if ya, _ := s.Almacen.ExplicacionDe("artefacto", clave); ya != "" {
+			return
+		}
+		det, ok := s.detalleArtefacto(clave)
+		if !ok {
+			return
+		}
+		redactar = func(ctx context.Context, ex report.Explicador) (string, error) {
+			return report.ExplicarArtefacto(ctx, ex, det.Tipo, det.Bytes, det.Cadenas, det.URLs, idioma, 2000)
+		}
+		guardar = func(t string) { _ = s.Almacen.GuardarExplicacionDe("artefacto", det.SHA256, t) }
+	case "url":
+		if ya, _ := s.Almacen.ExplicacionDe("url", clave); ya != "" {
+			return
+		}
+		url := clave
+		redactar = func(ctx context.Context, ex report.Explicador) (string, error) {
+			return report.ExplicarURL(ctx, ex, url, 0, idioma, 2000)
+		}
+		guardar = func(t string) { _ = s.Almacen.GuardarExplicacionDe("url", url, t) }
 	}
+	if redactar == nil {
+		return
+	}
+	if ok, _ := s.Almacen.ConsumirCuotaLLM(dia, topeFondo); !ok {
+		return // presupuesto de fondo agotado hoy
+	}
+	cctx, cancelar := context.WithTimeout(ctx, 90*time.Second)
+	texto, err := redactar(cctx, ex)
+	cancelar()
+	if err != nil || texto == "" {
+		s.Almacen.DevolverCuotaLLM(dia)
+		if err != nil {
+			log.Printf("narrativa %s: %v", partes[0], err)
+		}
+		return
+	}
+	guardar(texto)
+	log.Printf("narrativa %s generada", partes[0])
 }
 
 // explicacionEstado deja al cliente sondear si la narrativa que se cocina en
