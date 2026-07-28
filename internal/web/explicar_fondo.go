@@ -94,10 +94,8 @@ func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
 		idioma = "es"
 	}
 	dia := time.Now().Format("2006-01-02")
-	topeFondo := c.InformeTopeDiario * 70 / 100
-	if topeFondo < 1 {
-		return
-	}
+	// 0 = sin tope global: cada modelo se limita por su proveedor (429).
+	tope := c.InformeTopeDiario
 	desde := time.Now().AddDate(0, 0, -7)
 
 	// Objetivo: primero lo que alguien acaba de abrir; si no, un ataque
@@ -179,7 +177,7 @@ func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
 	if redactar == nil {
 		return
 	}
-	if ok, _ := s.Almacen.ConsumirCuotaLLM(dia, topeFondo); !ok {
+	if ok, _ := s.Almacen.ConsumirCuotaLLM(dia, tope); !ok {
 		return // presupuesto de fondo agotado hoy
 	}
 	// Marca "usando tokens ahora mismo", para que el indicador de la cabecera
@@ -227,7 +225,6 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 	c := s.Config.Actual()
 	_, hayModelo := s.Generador.(report.Explicador)
 	activo := c.AprendizajeAutomatico && c.UsarLLM && hayModelo
-	topeFondo := c.InformeTopeDiario * 70 / 100
 
 	// Estado por proveedor: sin_tokens global solo si TODOS estan agotados.
 	type estadoModelo struct {
@@ -277,7 +274,7 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 		"hoy":           usadas,
 		"tope":          c.InformeTopeDiario,
 		"activo":        activo,
-		"pausado":       activo && usadas >= topeFondo,
+		"pausado":       activo && c.InformeTopeDiario > 0 && usadas >= c.InformeTopeDiario,
 		"sin_tokens":    activo && sinTokens,
 		"generando":     activo && generando && !(activo && sinTokens),
 		"tokens_hoy":    tokensHoy,

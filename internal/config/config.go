@@ -196,7 +196,7 @@ func PorDefecto() Config {
 		URLBase:               "https://api.groq.com/openai/v1",
 		// 40 al dia caben de sobra en cualquier plan gratuito, y son
 		// muchos mas de los que nadie va a pedir a mano.
-		InformeTopeDiario: 40,
+		InformeTopeDiario: 0,
 		RefrescoSegundos:  20,
 		Idioma:            "es",
 		PaisPropio:        "ES",

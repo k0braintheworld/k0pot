@@ -435,13 +435,13 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 	if idioma == "" {
 		idioma = "es"
 	}
-	topeFondo := c.InformeTopeDiario * 70 / 100 // deja un 30% para el usuario
-	if topeFondo < 1 {
-		return 0, nil
-	}
+	// 0 = sin tope global: cada modelo se limita por su proveedor (429).
+	tope := c.InformeTopeDiario
 	dia := time.Now().Format("2006-01-02")
-	if usadas, _ := almacen.CuotaLLMUsada(dia); usadas >= topeFondo {
-		return 0, nil // hoy ya se gasto el presupuesto de fondo
+	if tope > 0 {
+		if usadas, _ := almacen.CuotaLLMUsada(dia); usadas >= tope {
+			return 0, nil // agotado el tope global de hoy
+		}
 	}
 
 	grupos, err := almacen.ComandosRecientesAgrupados(time.Now().AddDate(0, 0, -30))
@@ -500,7 +500,7 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 			chars += len(f.repr) + 8
 			orden = orden[1:]
 		}
-		if ok, _ := almacen.ConsumirCuotaLLM(dia, topeFondo); !ok {
+		if ok, _ := almacen.ConsumirCuotaLLM(dia, tope); !ok {
 			break // agotado el presupuesto de fondo de hoy
 		}
 		lineas := make([]string, len(lote))
