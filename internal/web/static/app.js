@@ -1913,9 +1913,6 @@ const CAMPOS = {
   "c-denuncias": "denuncias_altas",
   "c-caducidad": "caducidad_ip_dias",
   "c-reserva": "reserva_cuota",
-  "c-modelo": "modelo",
-  "c-proveedor": "proveedor",
-  "c-url-base": "url_base",
   "c-refresco": "refresco_segundos",
   "c-pais": "pais_propio",
   "c-latitud": "latitud_propia",
@@ -1950,22 +1947,8 @@ function volcarAjustes(c) {
   $("estado-abuse").textContent = c.tiene_abuseipdb
     ? `clave guardada: ${c.clave_abuseipdb}`
     : "sin clave: no se enriqueceran las IPs";
-  $("estado-anthropic").textContent = c.tiene_anthropic
-    ? `clave guardada: ${c.clave_anthropic}`
-    : "sin clave: los informes los redactaran las reglas";
-  $("estado-compatible").textContent = c.tiene_compatible
-    ? `clave guardada: ${c.clave_compatible}`
-    : "sin clave: los informes los redactaran las reglas";
-  mostrarCamposDelProveedor();
+  cargarModelos(c);
   $("abrir-asistente").hidden = !c.asistente_activo;
-}
-
-// Solo se ensenan los campos del proveedor elegido: URL base no significa
-// nada con Anthropic, y dos casillas de clave a la vez confunden.
-function mostrarCamposDelProveedor() {
-  const compatible = $("c-proveedor").value === "compatible";
-  $("campos-compatible").hidden = !compatible;
-  $("campos-anthropic").hidden = compatible;
 }
 
 function leerAjustes() {
@@ -1985,16 +1968,100 @@ function leerAjustes() {
 
   for (const [id, clave] of [
     ["c-clave-abuse", "clave_abuseipdb"],
-    ["c-clave-anthropic", "clave_anthropic"],
-    ["c-clave-compatible", "clave_compatible"],
     ["c-clave-virustotal", "clave_virustotal"],
     ["c-aviso-clave", "clave_aviso"],
   ]) {
     const v = $(id).value.trim();
     if (v) cuerpo[clave] = v;
   }
+  cuerpo.modelos = modelosConfig.map((m) => ({
+    proveedor: m.proveedor, modelo: m.modelo || "", clave: m.claveNueva || "",
+  }));
   return cuerpo;
 }
+
+// ─── Modelos de IA: lista con failover, "elige proveedor y pega clave" ───
+let catalogoProveedores = [];
+let modelosConfig = [];
+
+async function cargarCatalogoProveedores() {
+  try {
+    catalogoProveedores = await pedirJSON("/api/proveedores");
+  } catch (e) {
+    catalogoProveedores = [];
+  }
+  const sel = $("nuevo-proveedor");
+  sel.replaceChildren();
+  for (const p of catalogoProveedores) {
+    const o = document.createElement("option");
+    o.value = p.id;
+    o.textContent = p.nombre;
+    sel.appendChild(o);
+  }
+}
+
+function nombreProveedor(id) {
+  const p = catalogoProveedores.find((x) => x.id === id);
+  return p ? p.nombre : (id || "compatible");
+}
+
+function cargarModelos(c) {
+  modelosConfig = (c.modelos || []).map((m) => ({
+    proveedor: m.proveedor || "", modelo: m.modelo || "",
+    claveMasked: m.clave || "", claveNueva: "",
+  }));
+  pintarModelos();
+}
+
+function pintarModelos() {
+  const cont = $("lista-modelos");
+  cont.replaceChildren();
+  if (!modelosConfig.length) {
+    cont.appendChild(nodo("p", "sub", t("cfg.modelos.vacio")));
+    return;
+  }
+  modelosConfig.forEach((m, i) => {
+    const fila = nodo("div", "modelo-fila");
+    fila.appendChild(nodo("span", "modelo-nombre", nombreProveedor(m.proveedor)));
+    const clave = nodo("input", "modelo-clave");
+    clave.type = "password";
+    clave.autocomplete = "off";
+    clave.placeholder = m.claveMasked
+      ? t("cfg.modelos.configurada", { c: m.claveMasked })
+      : t("cfg.modelos.clave");
+    clave.value = m.claveNueva;
+    clave.addEventListener("input", () => { m.claveNueva = clave.value; });
+    fila.appendChild(clave);
+    const acc = nodo("div", "modelo-acciones");
+    const boton = (txt, fn, dis) => {
+      const b = nodo("button", "boton-menor", txt);
+      b.type = "button";
+      b.disabled = !!dis;
+      b.addEventListener("click", fn);
+      return b;
+    };
+    acc.appendChild(boton("↑", () => {
+      [modelosConfig[i - 1], modelosConfig[i]] = [modelosConfig[i], modelosConfig[i - 1]];
+      pintarModelos();
+    }, i === 0));
+    acc.appendChild(boton("↓", () => {
+      [modelosConfig[i + 1], modelosConfig[i]] = [modelosConfig[i], modelosConfig[i + 1]];
+      pintarModelos();
+    }, i === modelosConfig.length - 1));
+    acc.appendChild(boton("✕", () => { modelosConfig.splice(i, 1); pintarModelos(); }));
+    fila.appendChild(acc);
+    cont.appendChild(fila);
+  });
+}
+
+$("anadir-modelo").addEventListener("click", () => {
+  const prov = $("nuevo-proveedor").value;
+  if (!prov) return;
+  modelosConfig.push({ proveedor: prov, modelo: "", claveMasked: "", claveNueva: $("nueva-clave").value.trim() });
+  $("nueva-clave").value = "";
+  pintarModelos();
+});
+cargarCatalogoProveedores();
 
 
 // ─── Servicios de honeypot y red ───────────────────────────────────────
@@ -2382,7 +2449,6 @@ function aplicarRefresco(segundos) {
   temporizadorAprendizaje = setInterval(() => cargarAprendizaje().catch(() => {}), 15000);
 }
 
-$("c-proveedor").addEventListener("change", mostrarCamposDelProveedor);
 $("abrir-ajustes").addEventListener("click", abrirAjustes);
 $("cerrar-ajustes").addEventListener("click", () => dialogo.close());
 $("guardar-ajustes").addEventListener("click", guardarAjustes);

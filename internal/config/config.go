@@ -314,6 +314,14 @@ type Publica struct {
 
 // ParaPanel enmascara las claves antes de salir del servidor.
 func (c Config) ParaPanel() Publica {
+	// Se expone la lista EFECTIVA (migrada si hace falta) con las claves
+	// enmascaradas: el panel ve que proveedores hay sin recibir los secretos.
+	efectivos := c.ModelosEfectivos()
+	masked := make([]ModeloIA, len(efectivos))
+	for i, m := range efectivos {
+		masked[i] = ModeloIA{Proveedor: m.Proveedor, Modelo: m.Modelo, Clave: enmascarar(m.Clave)}
+	}
+	c.Modelos = masked
 	return Publica{
 		Config:          c,
 		ClaveAbuseIPDB:  enmascarar(c.ClaveAbuseIPDB),

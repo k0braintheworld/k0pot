@@ -142,33 +142,19 @@
       <p class="ayuda" data-i18n="cfg.asistente.ayuda">Añade un botón "Preguntar" para chatear con la IA sobre lo que ve el honeypot. Gasta cuota como los informes.</p>
       <label class="fila" data-i18n-first="cfg.aprendizaje"><input type="checkbox" id="c-aprendizaje-auto"> Aprender comandos en segundo plano</label>
       <p class="ayuda" data-i18n="cfg.aprendizaje.ayuda">k0Pot glosa solo, con la cuota que sobre, los comandos nuevos que ve. Así, al abrir un ataque, las explicaciones ya están hechas. Reserva un margen de cuota para lo que pidas tú.</p>
-      <label data-i18n-first="cfg.inf.proveedor">Proveedor
-        <select id="c-proveedor">
-          <option value="compatible" data-i18n="cfg.inf.compat">Compatible con OpenAI (Groq, OpenRouter, Mistral, Ollama…)</option>
-          <option value="anthropic">Anthropic</option>
-        </select>
-      </label>
-      <label data-i18n-first="cfg.inf.modelo">Modelo<input type="text" id="c-modelo" autocomplete="off"></label>
+      <p class="ayuda" data-i18n="cfg.modelos.ayuda">Elige el proveedor y pega tu clave. Puedes añadir varios: k0Pot usa el primero con tokens y salta al siguiente si se agota. El orden es la prioridad (↑/↓).</p>
+      <div id="lista-modelos" class="lista-modelos"></div>
+      <div class="anadir-modelo">
+        <select id="nuevo-proveedor"></select>
+        <input type="password" id="nueva-clave" autocomplete="off" data-i18n-placeholder="cfg.modelos.clave" placeholder="clave de API">
+        <button id="anadir-modelo" type="button" class="boton-secundario" data-i18n="cfg.modelos.anadir">Añadir</button>
+      </div>
 
       <label data-i18n-first="cfg.inf.tope">Tope de informes con IA al dia (pedidos a mano)
         <input type="number" id="c-informe-tope" min="0" max="10000">
         <small data-i18n-html="cfg.inf.tope.small">Los informes automaticos no cuentan: los redactan las reglas, que no cuestan nada. 0 = sin limite.</small>
       </label>
 
-      <div id="campos-compatible">
-        <label data-i18n-first="cfg.inf.url">URL base<input type="text" id="c-url-base" autocomplete="off"></label>
-        <label data-i18n-first="cfg.inf.claveprov">Clave del proveedor
-          <input type="password" id="c-clave-compatible" autocomplete="off" data-i18n-placeholder="cfg.sincambios" placeholder="sin cambios">
-        </label>
-        <p class="ayuda" id="estado-compatible"></p>
-      </div>
-
-      <div id="campos-anthropic">
-        <label data-i18n-first="cfg.inf.claveanth">Clave de Anthropic
-          <input type="password" id="c-clave-anthropic" autocomplete="off" data-i18n-placeholder="cfg.sincambios" placeholder="sin cambios">
-        </label>
-        <p class="ayuda" id="estado-anthropic"></p>
-      </div>
     </div>
 
     <div class="grupo" data-pestana="avisos">

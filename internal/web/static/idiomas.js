@@ -886,3 +886,17 @@ Object.assign(IDIOMAS.en, {
   "apr.tokens": "Tokens today: {usados} / {limite}",
   "apr.tokens.solo": "Tokens used today: {usados}"
 });
+Object.assign(IDIOMAS.es, {
+  "cfg.modelos.ayuda": "Elige el proveedor y pega tu clave. Puedes añadir varios: k0Pot usa el primero con tokens y salta al siguiente si se agota. El orden es la prioridad (↑/↓).",
+  "cfg.modelos.clave": "clave de API",
+  "cfg.modelos.anadir": "Añadir",
+  "cfg.modelos.vacio": "Aún no hay ningún modelo. Elige proveedor, pega la clave y pulsa Añadir.",
+  "cfg.modelos.configurada": "configurada ({c}) · escribe para cambiar"
+});
+Object.assign(IDIOMAS.en, {
+  "cfg.modelos.ayuda": "Pick a provider and paste your key. You can add several: k0Pot uses the first one with tokens and falls back to the next if it runs out. Order is priority (↑/↓).",
+  "cfg.modelos.clave": "API key",
+  "cfg.modelos.anadir": "Add",
+  "cfg.modelos.vacio": "No models yet. Pick a provider, paste the key and press Add.",
+  "cfg.modelos.configurada": "configured ({c}) · type to change"
+});

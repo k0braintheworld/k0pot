@@ -1021,3 +1021,12 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .apr-estado.trabajando { color: var(--acento); animation: chip-trabajando 1.4s ease-in-out infinite; }
 .apr-estado.sin-tokens { color: #d9a441; animation: chip-alerta 2s ease-in-out infinite; }
 .apr-estado.en-pausa { color: var(--sub); }
+/* Modelos de IA: lista con failover */
+.lista-modelos { display: flex; flex-direction: column; gap: .4rem; margin: .3rem 0; }
+.modelo-fila { display: flex; align-items: center; gap: .5rem; padding: .4rem .5rem; border: 1px solid var(--borde); border-radius: 8px; background: var(--fondo-2); }
+.modelo-nombre { font-weight: 600; min-width: 8rem; }
+.modelo-clave { flex: 1; min-width: 6rem; }
+.modelo-acciones { display: flex; gap: .2rem; }
+.modelo-acciones .boton-menor { padding: .2rem .5rem; }
+.anadir-modelo { display: flex; gap: .5rem; align-items: center; margin-top: .3rem; }
+.anadir-modelo #nueva-clave { flex: 1; }

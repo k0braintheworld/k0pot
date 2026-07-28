@@ -44,6 +44,7 @@ type entradaAjustes struct {
 	Proveedor              *string                    `json:"proveedor"`
 	Modelo                 *string                    `json:"modelo"`
 	URLBase                *string                    `json:"url_base"`
+	Modelos                *[]config.ModeloIA         `json:"modelos"`
 	RefrescoSegundos       *int                       `json:"refresco_segundos"`
 	PanelHTTPS             *bool                      `json:"panel_https"`
 	TLSCert                *string                    `json:"tls_cert"`
@@ -146,6 +147,27 @@ func (s *Servidor) guardarAjustes(w http.ResponseWriter, r *http.Request) {
 	}
 	if e.URLBase != nil {
 		c.URLBase = *e.URLBase
+	}
+	if e.Modelos != nil {
+		// Clave vacia = "sin cambios": se conserva la que ya habia para ese
+		// proveedor. Asi el panel no tiene que recibir ni reenviar las claves.
+		viejos := map[string]string{}
+		for _, m := range c.ModelosEfectivos() {
+			if m.Clave != "" {
+				viejos[m.Proveedor] = m.Clave
+			}
+		}
+		nuevos := make([]config.ModeloIA, 0, len(*e.Modelos))
+		for _, m := range *e.Modelos {
+			if m.Clave == "" {
+				m.Clave = viejos[m.Proveedor]
+			}
+			if m.Clave == "" {
+				continue // sin clave util
+			}
+			nuevos = append(nuevos, m)
+		}
+		c.Modelos = nuevos
 	}
 	if e.PanelHTTPS != nil {
 		c.PanelHTTPS = *e.PanelHTTPS
@@ -301,4 +323,10 @@ func interfacesDelSistema() []interfazPanel {
 // miles de eventos.
 func (s *Servidor) uso(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, retencion.Medir(s.RutaBD, s.DirCowrie))
+}
+
+// proveedoresIA sirve el catalogo de proveedores conocidos, para que el panel
+// ofrezca la lista y el usuario solo elija y pegue la clave.
+func (s *Servidor) proveedoresIA(w http.ResponseWriter, r *http.Request) {
+	responderJSON(w, config.Proveedores)
 }
