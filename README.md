@@ -94,13 +94,24 @@ corta por limite de tokens.
 —Mirai, droppers, reconocimiento, escapes de contenedor...—, asi que una
 instalacion nueva explica lo de siempre desde el primer minuto sin gastar IA.
 
-**El proveedor es intercambiable.** Vale cualquier API compatible con OpenAI
-—Groq, OpenRouter, Mistral, Together, Ollama— o la de Anthropic; se elige en
-Ajustes. **Sin clave, k0Pot funciona igual**: se apagan solo las explicaciones
-con IA, y todo lo demas —semaforo, agrupacion, catalogo de fabrica, informe—
-sigue gratis y por reglas. El encuadre es defensivo: al modelo se le dice que
-esto es un senuelo y que NO recomiende cerrar la trampa (ver *"Los textos
-hablan de un senuelo"* mas abajo).
+**Configurar la IA es elegir y pegar la clave.** En Ajustes hay un catalogo de
+proveedores integrado —Groq, Google Gemini, OpenAI, Anthropic, OpenRouter,
+Mistral, DeepSeek—; eliges uno y pegas tu clave, sin URLs ni nombres de modelo
+que recordar. Y puedes **configurar varios**: k0Pot usa el primero de la lista
+con tokens y, si se agota, **salta solo al siguiente** (failover automatico);
+cuando el primero se recupera, vuelve a el. El orden es la prioridad.
+
+**Los limites son de cada modelo y automaticos.** No configuras cuotas: cada
+proveedor avisa con su error de "sin tokens" y k0Pot lo aprende, pausa ese
+modelo por separado y sigue con otro. Un indicador en la cabecera muestra
+cuantos comandos lleva aprendidos, si esta aprendiendo en ese momento, los
+tokens gastados hoy y si algun modelo se quedo sin cuota.
+
+**Sin clave, k0Pot funciona igual**: se apagan solo las explicaciones con IA, y
+todo lo demas —semaforo, agrupacion, catalogo de fabrica, informe— sigue gratis
+y por reglas. El encuadre es defensivo: al modelo se le dice que esto es un
+senuelo y que NO recomiende cerrar la trampa (ver *"Los textos hablan de un
+senuelo"* mas abajo).
 
 ## Mas en el panel
 
@@ -391,8 +402,7 @@ con freno**.
   por servicio, metricas y el informe completo se calculan con reglas
   deterministas. Ningun refresco llama a un modelo.
 - **La IA trabaja en segundo plano, no al abrir.** Aprende los comandos y
-  redacta las narrativas por su cuenta, a ritmo lento, **reservando un 30% de
-  la cuota diaria** para lo que abras tu, que se prioriza. Abrir un ataque no
+  redacta las narrativas por su cuenta, a ritmo lento. Abrir un ataque no
   dispara ninguna llamada: todo sale de lo ya aprendido.
 - **Respeta los limites del proveedor.** Si el modelo corta por cuota de
   tokens —habitual en los tiers gratuitos—, k0Pot hace pausa, lo avisa en la
@@ -402,12 +412,13 @@ con freno**.
 
 ### Cuando se acaban los tokens
 
-Los proveedores gratuitos (Groq, por ejemplo) no cobran, pero limitan por
-**tokens al dia** —del orden de un par de cientos de miles, unas decenas de
-explicaciones—. Cuando se agotan, el modelo responde con un error de limite y
-k0Pot **no insiste**: hace una pausa, lo dice en la cabecera con un indicador
-ambar (*"Aprendizaje detenido · tokens agotados"*) y **se reactiva solo** en
-cuanto la ventana se libera (al dia siguiente, o antes segun el proveedor).
+Los proveedores gratuitos (Groq, Gemini...) no cobran, pero limitan —por tokens
+al dia, o por minuto—. Cuando un modelo se agota, k0Pot **no insiste con el**:
+lo pausa y, si tienes otro configurado, **sigue con ese** sin que te enteres. Si
+se agotan TODOS, lo dice en la cabecera con un indicador ambar (*"tokens
+agotados"*) y **se reactiva solo** en cuanto alguno libera cuota (por minuto en
+segundos, por dia al reiniciarse la ventana). Por eso configurar dos proveedores
+—p. ej. Groq y Gemini— hace que casi nunca te quedes sin explicaciones.
 
 Mientras tanto **no se rompe nada**: el panel, el semaforo, la agrupacion, el
 catalogo de fabrica y **todo lo ya aprendido** siguen igual, porque salen de
@@ -585,7 +596,7 @@ sistema es la unica que puede quitarselo al proceso.
 | Alcance | Wrapper sobre Cowrie, no honeypot propio | Los honeypots maduros ya estan resueltos; uno mal hecho es una puerta real |
 | Lenguaje | Go, binario unico | Despliegue trivial y poco consumo de memoria |
 | Base de datos | SQLite via `modernc.org/sqlite` | Cero configuracion y sin CGO |
-| IA | Aprende sola en segundo plano con presupuesto reservado; abrir nunca llama al modelo | El panel refresca cada 20 s: gastar al mirar quemaria la cuota en nada |
+| IA | Aprende sola en segundo plano; varios modelos con failover automatico; abrir nunca llama al modelo | El panel refresca cada 20 s: gastar al mirar quemaria la cuota; cada modelo se limita por su proveedor |
 | Contexto | Catalogo propio + lo aprendido y guardado, no la memoria suelta del modelo | Un modelo explica de memoria una ruta con el mismo aplomo acierte o no; k0Pot guarda lo que aprende |
 | Idioma | Espanol en codigo y comentarios | El proyecto se escribe y se lee en espanol |
 
