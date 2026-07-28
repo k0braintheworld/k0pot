@@ -422,8 +422,15 @@ func enviarResumen(ctx context.Context, almacen *store.Store, c config.Config) e
 // explicaciones ya esten hechas sin tener que pedirlas. Reserva parte de la
 // cuota diaria para lo que pida el usuario en directo y avanza despacio: unas
 // pocas formas por vuelta, empezando por las mas repetidas.
+// aprendizajeEnEspera frena el aprendiz tras un 429 del modelo (cuota de
+// tokens diaria agotada), para no insistir cada vuelta del bucle.
+var aprendizajeEnEspera time.Time
+
 func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config, sinLLM bool) (int, error) {
 	if sinLLM || !c.UsarLLM || !c.AprendizajeAutomatico {
+		return 0, nil
+	}
+	if time.Now().Before(aprendizajeEnEspera) {
 		return 0, nil
 	}
 	ex, ok := generadorDe(c, sinLLM).(report.Explicador)
@@ -511,6 +518,9 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 		cancelar()
 		if err != nil {
 			almacen.DevolverCuotaLLM(dia)
+			if m := strings.ToLower(err.Error()); strings.Contains(m, "429") || strings.Contains(m, "rate limit") {
+				aprendizajeEnEspera = time.Now().Add(5 * time.Minute)
+			}
 			return aprendidas, err
 		}
 		for i, f := range lote {

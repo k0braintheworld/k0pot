@@ -22,6 +22,11 @@ import (
 // "pendiente".
 var explicacionesPedidas sync.Map // "tipo|clave" -> struct{}
 
+// narrativaEnEspera frena el barredor tras un 429: el modelo gratis limita por
+// tokens/dia, y una vez agotado no vale la pena reintentar cada 20 s. Solo la
+// toca el barredor (una goroutine), asi que no necesita candado.
+var narrativaEnEspera time.Time
+
 // pedirExplicacion pone algo en cabeza de la cola del barredor.
 func (s *Servidor) pedirExplicacion(tipoClave string) {
 	explicacionesPedidas.Store(tipoClave, struct{}{})
@@ -79,6 +84,9 @@ func (s *Servidor) BarrerExplicaciones(ctx context.Context) {
 }
 
 func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
+	if time.Now().Before(narrativaEnEspera) {
+		return // en pausa tras un 429; se reintenta cuando la ventana se libere
+	}
 	c := s.Config.Actual()
 	if !c.AprendizajeAutomatico {
 		return
@@ -186,7 +194,12 @@ func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
 	if err != nil || texto == "" {
 		s.Almacen.DevolverCuotaLLM(dia)
 		if err != nil {
-			log.Printf("narrativa %s: %v", partes[0], err)
+			if esLimiteDeRitmo(err) {
+				narrativaEnEspera = time.Now().Add(5 * time.Minute)
+				log.Printf("narrativa: limite del modelo alcanzado, pausa 5 min")
+			} else {
+				log.Printf("narrativa %s: %v", partes[0], err)
+			}
 		}
 		return
 	}
@@ -230,4 +243,11 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 		"activo":  activo,
 		"pausado": activo && usadas >= topeFondo,
 	})
+}
+
+// esLimiteDeRitmo reconoce el 429 de -has gastado tu cuota de tokens- del
+// proveedor, para pausar en vez de insistir.
+func esLimiteDeRitmo(err error) bool {
+	m := strings.ToLower(err.Error())
+	return strings.Contains(m, "429") || strings.Contains(m, "rate limit") || strings.Contains(m, "too many requests")
 }
