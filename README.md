@@ -396,6 +396,23 @@ con freno**.
 - **Nace con conocimiento de fabrica**, asi que el gasto de arranque es minimo:
   solo aprende lo que tu honeypot ve por primera vez.
 
+### Cuando se acaban los tokens
+
+Los proveedores gratuitos (Groq, por ejemplo) no cobran, pero limitan por
+**tokens al dia** —del orden de un par de cientos de miles, unas decenas de
+explicaciones—. Cuando se agotan, el modelo responde con un error de limite y
+k0Pot **no insiste**: hace una pausa, lo dice en la cabecera con un indicador
+ambar (*"Aprendizaje detenido · tokens agotados"*) y **se reactiva solo** en
+cuanto la ventana se libera (al dia siguiente, o antes segun el proveedor).
+
+Mientras tanto **no se rompe nada**: el panel, el semaforo, la agrupacion, el
+catalogo de fabrica y **todo lo ya aprendido** siguen igual, porque salen de
+memoria y de reglas, no del modelo. Lo unico que espera es la explicacion de lo
+que k0Pot ve *por primera vez*; y como reserva el 30% de la cuota para lo que
+abras tu, casi siempre queda margen para lo que de verdad estas mirando. Si te
+quedas corto a menudo, sube el tope diario en *Ajustes -> Informes*, cambia a
+un proveedor con mas cuota, o deja que se ponga al dia solo en unos dias.
+
 ## Los textos hablan de un senuelo, no de un servidor comprometido
 
 Un modelo de lenguaje al que le cuentas que alguien entro como root por SSH

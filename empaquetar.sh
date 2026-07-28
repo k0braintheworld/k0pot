@@ -106,7 +106,28 @@ echo
 rm -rf "$ARBOL"
 rm -f "$DESTINO/k0pot"
 
+# Y un unico archivo con los tres, listo para subir como asset de una release
+# de GitHub. Preferimos .zip; si no hay "zip", caemos a .tar.gz, que no falta
+# en ningun Linux.
+DEB="$(basename "$PAQUETE")"
+if command -v zip >/dev/null; then
+  ARCHIVO="$DESTINO/k0pot_${VERSION}_${ARCO}.zip"
+  rm -f "$ARCHIVO"
+  ( cd "$DESTINO" && zip -q -j "$(basename "$ARCHIVO")" "$DEB" instalar.sh LEEME.txt )
+else
+  ARCHIVO="$DESTINO/k0pot_${VERSION}_${ARCO}.tar.gz"
+  rm -f "$ARCHIVO"
+  ( cd "$DESTINO" && tar czf "$(basename "$ARCHIVO")" "$DEB" instalar.sh LEEME.txt )
+fi
+echo "  release:  $ARCHIVO  ($(du -h "$ARCHIVO" | cut -f1))"
+echo
+
 echo "  Instalar todo (un paso): copia la carpeta dist/ al servidor y ejecuta"
 echo "                           sudo ./instalar.sh"
 echo
 echo "  O a mano:  sudo apt install $PAQUETE  &&  sudo k0pot-configurar"
+if [ -n "${ARCHIVO:-}" ]; then
+  echo
+  echo "  Publicar release: sube $ARCHIVO a GitHub, o con gh:"
+  echo "                    gh release create v$VERSION \"$ARCHIVO\" -t \"k0Pot $VERSION\" --generate-notes"
+fi
