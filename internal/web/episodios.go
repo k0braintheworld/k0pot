@@ -561,7 +561,7 @@ func (s *Servidor) radar(w http.ResponseWriter, r *http.Request) {
 	idioma := idiomaDe(r)
 	desde := time.Now().AddDate(0, 0, -dias(r))
 
-	nuevos, err := s.Almacen.ArtefactosNuevos(desde)
+	nuevos, err := s.Almacen.ArtefactosNuevosSinVer(desde)
 	if err != nil {
 		http.Error(w, "no se pudieron leer los ficheros nuevos", http.StatusInternalServerError)
 		return
@@ -586,6 +586,25 @@ func (s *Servidor) radar(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	responderJSON(w, map[string]any{"malware": nuevos, "manual": manual})
+}
+
+// artefactoVisto marca un fichero como ya mirado, para que salga de novedades:
+// una novedad deja de serlo en cuanto la abres.
+func (s *Servidor) artefactoVisto(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		responderError(w, http.StatusMethodNotAllowed, "usa POST")
+		return
+	}
+	hash := strings.TrimSpace(r.URL.Query().Get("hash"))
+	if !reHashArtefacto.MatchString(hash) {
+		responderError(w, http.StatusBadRequest, "hash no valido")
+		return
+	}
+	if err := s.Almacen.MarcarArtefactoVisto(hash); err != nil {
+		http.Error(w, "no se pudo marcar", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // tendencias compara el periodo con el anterior: si la cosa va a mas o a

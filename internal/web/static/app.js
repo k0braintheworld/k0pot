@@ -1440,6 +1440,10 @@ async function abrirArtefacto(hash) {
 t("artef.aviso")));
 
   hashArtefactoAbierto = hash;
+  // Abrirlo lo convierte en "visto": deja de ser novedad y se refresca el radar.
+  pedirJSON(`/api/artefacto/visto?hash=${encodeURIComponent(hash)}`, { method: "POST" })
+    .then(() => cargarRadar())
+    .catch(() => {});
   pintarExplicacion("artefacto-explicacion", "");
 
   const datos = $("artefacto-datos");
