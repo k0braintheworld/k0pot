@@ -1,10 +1,11 @@
 # k0Pot
 
 Honeypot ligero que **explica** lo que pasa en lugar de limitarse a
-registrarlo. Captura los ataques, separa el ruido de lo que importa y, cuando
-quieres entender uno de verdad, **te lo cuenta con IA en lenguaje llano**
-—que es, como funciona y que buscaban— sin que tengas que ser analista de
-seguridad.
+registrarlo. Captura los ataques, separa el ruido de lo que importa y **te
+cuenta en lenguaje llano** que es cada uno, como funciona y que buscaban, sin
+que tengas que ser analista de seguridad. Lo que no sabe **lo aprende solo**,
+en segundo plano, y lo va guardando: cuando abres un ataque, la explicacion ya
+esta puesta.
 
 Ligero a proposito: un unico binario en Go y Cowrie en un contenedor, sin
 stacks de gigabytes ni bases de datos que administrar. Reutiliza honeypots que
@@ -24,9 +25,10 @@ k0Pot responde a tres preguntas, en este orden:
    consiguieron, no por cuanto insistieron.
 3. **¿Que significa?** `GET /SDK/webLanguage` es un hecho; *"buscan camaras IP
    Hikvision expuestas para reclutarlas en una botnet"* es lo que necesitas
-   saber. Un catalogo propio traduce lo rutinario al instante; y para lo que
-   no basta con eso —entender un ataque entero, un binario capturado o una
-   campana coordinada— esta el boton de **Explicar con IA**.
+   saber. Un catalogo propio traduce lo rutinario al instante, y **lo que no
+   sabe lo aprende solo**: la IA explica en segundo plano cada comando o
+   ataque nuevo y lo guarda, de modo que cuando abres algo la explicacion ya
+   esta puesta, sin botones ni esperas.
 
 ## Como funciona
 
@@ -65,42 +67,59 @@ Mil conexiones de un escaner valen menos que una sola sesion donde alguien
 tecleo `cat /etc/passwd`. Ordenar por volumen es justo lo que entierra el
 unico episodio que habia que mirar.
 
-## Entender con IA: ataques, campanas y artefactos
+## Explicaciones que se generan solas
 
-Es lo que mas distingue a k0Pot. Cuando abres el detalle de algo y quieres
-saber que esta pasando de verdad, tienes un boton de **Explicar con IA** que
-lo cuenta para alguien con conocimientos minimos, **traduciendo cada
-termino**. Esta en los tres sitios donde importa:
+Es lo que mas distingue a k0Pot, y funciona en dos capas, **sin botones**:
 
-- **Un ataque** — que buscaban, **como funciona la tecnica paso a paso**,
-  hasta donde llegaron, y que significaria en un servidor de verdad.
-- **Una campana** (varias IPs con el mismo guion) — que operacion coordinada
-  hay detras y por que reparten el trabajo entre tantas direcciones.
-- **Un artefacto capturado** (posible malware) — que es y que hace, deducido
-  de su tipo y de las cadenas de texto que lleva dentro, **sin ejecutarlo**.
+- **Comando a comando.** Cada orden que teclea un atacante lleva al lado, en
+  llano, que hace y para que: `chmod +x` prepara el fichero recien descargado
+  para lanzarlo; `chroot /host` es un escape del contenedor hacia la maquina
+  real. Un catalogo propio cubre al instante lo habitual; **lo que no conoce
+  lo aprende**: pregunta a la IA una vez, guarda la respuesta y a partir de
+  ahi la sirve gratis, aqui y en cualquier ataque futuro con ese mismo
+  comando. El conocimiento crece con lo que ve.
+- **El ataque entero, la campana o el artefacto.** Una narrativa en prosa:
+  que buscaban, como funciona la tecnica, hasta donde llegaron y que
+  significaria en un servidor de verdad. Un artefacto capturado se explica a
+  partir de su tipo y de las cadenas que lleva dentro, **sin ejecutarlo**.
 
-La explicacion de un ataque sigue esta forma, en prosa llana:
+**Abrir algo NUNCA llama al modelo.** Todo se cocina en segundo plano —con la
+cuota que sobre y reservando siempre un margen para lo que pidas tu— y aparece
+desde memoria. Si algo aun no esta explicado, el panel lo dice y lo pone en
+cabeza de la cola; en cuanto se genera, aparece solo sin que reabras. Un
+indicador en la cabecera muestra cuanto lleva aprendido y avisa si el proveedor
+corta por limite de tokens.
 
-1. **Que buscan.** El proposito en una frase.
-2. **Como funciona.** Que tecnica es, por que funciona y como se encadenan
-   los pasos del registro.
-3. **Hasta donde llegaron.** "No pasaron de llamar a la puerta" es una
-   respuesta perfecta y frecuente.
-4. **Que significaria en un servidor de verdad**, y que revisar alli.
-
-Cada explicacion se **guarda** con lo explicado (por su clave, hash o
-huella), asi que reabrirlo no vuelve a gastar. El encuadre es defensivo: al
-modelo se le dice por delante de todo que esto es un **senuelo** y que NO
-recomiende aislar la maquina ni cerrar la trampa (ver *"Los textos hablan de
-un senuelo"* mas abajo).
+**Nace sabiendo.** k0Pot trae de fabrica un catalogo de comandos ya aprendido
+—Mirai, droppers, reconocimiento, escapes de contenedor...—, asi que una
+instalacion nueva explica lo de siempre desde el primer minuto sin gastar IA.
 
 **El proveedor es intercambiable.** Vale cualquier API compatible con OpenAI
 —Groq, OpenRouter, Mistral, Together, Ollama— o la de Anthropic; se elige en
-Ajustes. **Sin clave, k0Pot funciona igual**: solo se apagan las
-explicaciones, y todo lo demas (semaforo, agrupacion, catalogo, informe) se
-calcula con reglas, gratis. Ademas **la IA nunca se gasta sola** (ver mas
-abajo): solo cuando pulsas, y una llamada que el proveedor rechaza no
-consume cuota.
+Ajustes. **Sin clave, k0Pot funciona igual**: se apagan solo las explicaciones
+con IA, y todo lo demas —semaforo, agrupacion, catalogo de fabrica, informe—
+sigue gratis y por reglas. El encuadre es defensivo: al modelo se le dice que
+esto es un senuelo y que NO recomiende cerrar la trampa (ver *"Los textos
+hablan de un senuelo"* mas abajo).
+
+## Mas en el panel
+
+- **Modo aprende.** Un aula corta —honeypot, escaneo, fuerza bruta, botnet,
+  dropper, C2...— en lenguaje llano, donde cada concepto enlaza a un caso
+  **real** capturado en tu maquina.
+- **Tendencias.** El periodo actual frente al anterior: si la cosa va a mas o
+  a menos, y que ha aparecido de nuevo.
+- **Novedades.** Ficheros que no habias visto nunca y sesiones que no encajan
+  con la automatizacion conocida; dejan de salir en cuanto los miras.
+- **Ficha de una IP** con su linea de vida: cuando estuvo activa y como
+  evoluciono, un ataque por marca coloreado por gravedad.
+- **Asistente** (opcional, se activa en Ajustes): chatear con la IA sobre lo
+  que ha visto el honeypot esta semana.
+- **Exportar IOCs** (CSV y STIX 2.1): las IPs, hashes y URLs capturados,
+  listos para importar en tu firewall, tu SIEM o en MISP.
+- **Trampas con cebo.** La web falsa sirve un `.env`, un panel de login o la
+  config de git creibles, y captura las credenciales o el payload que envian:
+  nadie legitimo teclea su usuario en la maquina trampa.
 
 ## Servicios
 
@@ -359,19 +378,23 @@ El panel ensena **cuanto ocupa cada cosa** al abrir los ajustes, porque
 elegir un plazo sin ese dato es elegir a ojo. Y cuenta el fichero `-wal` de
 SQLite, que puede ser mayor que la propia base.
 
-## La IA nunca se gasta sola
+## Como gasta la IA (con cabeza)
 
-El principio: **nada que cueste dinero ocurre sin que lo pidas**.
+El principio: **mirar el panel jamas cuesta dinero, y la IA trabaja sola pero
+con freno**.
 
-- **El panel es gratis y siempre al dia.** El semaforo, el reparto por
-  gravedad y por servicio y las metricas se calculan con reglas
-  deterministas, al momento. Ningun refresco llama a un modelo de pago.
-- **La IA entra solo cuando pulsas.** "Explicar con IA" en un ataque, una
-  campana o un artefacto es el unico gasto, y es justo el momento en que
-  alguien quiere entender algo. Cada explicacion se guarda: reabrirla no
-  vuelve a gastar.
-- **El informe completo** ("Generar informe") es un documento con toda la
-  actividad, redactado por reglas: se abre cuantas veces quieras sin coste.
+- **El panel es gratis y siempre al dia.** Semaforo, reparto por gravedad y
+  por servicio, metricas y el informe completo se calculan con reglas
+  deterministas. Ningun refresco llama a un modelo.
+- **La IA trabaja en segundo plano, no al abrir.** Aprende los comandos y
+  redacta las narrativas por su cuenta, a ritmo lento, **reservando un 30% de
+  la cuota diaria** para lo que abras tu, que se prioriza. Abrir un ataque no
+  dispara ninguna llamada: todo sale de lo ya aprendido.
+- **Respeta los limites del proveedor.** Si el modelo corta por cuota de
+  tokens —habitual en los tiers gratuitos—, k0Pot hace pausa, lo avisa en la
+  cabecera y se reactiva solo en cuanto vuelve a haber.
+- **Nace con conocimiento de fabrica**, asi que el gasto de arranque es minimo:
+  solo aprende lo que tu honeypot ve por primera vez.
 
 ## Los textos hablan de un senuelo, no de un servidor comprometido
 
@@ -541,8 +564,8 @@ sistema es la unica que puede quitarselo al proceso.
 | Alcance | Wrapper sobre Cowrie, no honeypot propio | Los honeypots maduros ya estan resueltos; uno mal hecho es una puerta real |
 | Lenguaje | Go, binario unico | Despliegue trivial y poco consumo de memoria |
 | Base de datos | SQLite via `modernc.org/sqlite` | Cero configuracion y sin CGO |
-| Informes | Reglas siempre; IA solo a peticion | El panel refresca cada 20 s: que eso costara dinero gastaria la cuota en mirar |
-| Contexto | Catalogo propio, no memoria del modelo | Un modelo explica de memoria que es una ruta con el mismo aplomo acierte o no |
+| IA | Aprende sola en segundo plano con presupuesto reservado; abrir nunca llama al modelo | El panel refresca cada 20 s: gastar al mirar quemaria la cuota en nada |
+| Contexto | Catalogo propio + lo aprendido y guardado, no la memoria suelta del modelo | Un modelo explica de memoria una ruta con el mismo aplomo acierte o no; k0Pot guarda lo que aprende |
 | Idioma | Espanol en codigo y comentarios | El proyecto se escribe y se lee en espanol |
 
 Sobre la penultima: cuando k0Pot no sabe que significa algo, **no lo inventa**.
