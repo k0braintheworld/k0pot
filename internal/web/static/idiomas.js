@@ -856,3 +856,11 @@ Object.assign(IDIOMAS.en, {
   "expl.pendiente": "Explanation pending… (being prepared in the background)",
   "apr.chip.pausa": "Paused until tomorrow · today's budget spent ({hoy}/{tope})"
 });
+Object.assign(IDIOMAS.es, {
+  "apr.chip.sintokens": "⏸ Aprendizaje detenido · tokens agotados",
+  "apr.chip.sintokens.t": "El modelo gratis agotó su cuota de tokens del día. k0Pot reintenta solo y se reactiva en cuanto vuelva a haber."
+});
+Object.assign(IDIOMAS.en, {
+  "apr.chip.sintokens": "⏸ Learning paused · tokens exhausted",
+  "apr.chip.sintokens.t": "The free model ran out of its daily token budget. k0Pot retries on its own and resumes as soon as tokens are back."
+});

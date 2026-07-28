@@ -1006,3 +1006,8 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   30% { transform: scale(1.09); }
   100% { color: var(--sub); border-color: var(--borde); transform: scale(1); }
 }
+.chip-aprendizaje.sin-tokens {
+  border-color: #d9a441; color: #d9a441; opacity: 1;
+  animation: chip-alerta 2s ease-in-out infinite;
+}
+@keyframes chip-alerta { 0%,100% { opacity: 1; } 50% { opacity: .55; } }

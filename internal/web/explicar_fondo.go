@@ -196,6 +196,7 @@ func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
 		if err != nil {
 			if esLimiteDeRitmo(err) {
 				narrativaEnEspera = time.Now().Add(5 * time.Minute)
+				_ = s.Almacen.GuardarEstado("ia_pausa_hasta", narrativaEnEspera.UTC().Format(time.RFC3339))
 				log.Printf("narrativa: limite del modelo alcanzado, pausa 5 min")
 			} else {
 				log.Printf("narrativa %s: %v", partes[0], err)
@@ -204,6 +205,7 @@ func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
 		return
 	}
 	guardar(texto)
+	_ = s.Almacen.GuardarEstado("ia_pausa_hasta", "") // funciona: se rearma el aprendizaje
 	log.Printf("narrativa %s generada", partes[0])
 }
 
@@ -236,12 +238,19 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 	_, hayModelo := s.Generador.(report.Explicador)
 	activo := c.AprendizajeAutomatico && c.UsarLLM && hayModelo
 	topeFondo := c.InformeTopeDiario * 70 / 100
+	sinTokens := false
+	if v, _ := s.Almacen.LeerEstado("ia_pausa_hasta"); v != "" {
+		if hasta, err := time.Parse(time.RFC3339, v); err == nil && time.Now().Before(hasta) {
+			sinTokens = true
+		}
+	}
 	responderJSON(w, map[string]any{
-		"total":   total,
-		"hoy":     usadas,
-		"tope":    c.InformeTopeDiario,
-		"activo":  activo,
-		"pausado": activo && usadas >= topeFondo,
+		"total":      total,
+		"hoy":        usadas,
+		"tope":       c.InformeTopeDiario,
+		"activo":     activo,
+		"pausado":    activo && usadas >= topeFondo,
+		"sin_tokens": activo && sinTokens,
 	})
 }
 

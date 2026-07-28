@@ -1599,13 +1599,20 @@ async function cargarAprendizaje() {
     const chip = $("aprendizaje-chip");
     if (!a.activo && !a.total) { chip.hidden = true; return; }
     chip.hidden = false;
-    chip.textContent = t("apr.chip", { n: a.total });
-    chip.title = !a.activo
-      ? t("apr.chip.inactivo")
-      : a.pausado
-        ? t("apr.chip.pausa", { hoy: a.hoy, tope: a.tope })
-        : t("apr.chip.activo", { hoy: a.hoy, tope: a.tope });
-    chip.classList.toggle("en-pausa", !a.activo || a.pausado);
+    chip.classList.toggle("sin-tokens", !!a.sin_tokens);
+    chip.classList.toggle("en-pausa", (!a.activo || a.pausado) && !a.sin_tokens);
+    if (a.sin_tokens) {
+      // Lo mas visible: si esta parado por falta de tokens, que se sepa.
+      chip.textContent = t("apr.chip.sintokens");
+      chip.title = t("apr.chip.sintokens.t");
+    } else {
+      chip.textContent = t("apr.chip", { n: a.total });
+      chip.title = !a.activo
+        ? t("apr.chip.inactivo")
+        : a.pausado
+          ? t("apr.chip.pausa", { hoy: a.hoy, tope: a.tope })
+          : t("apr.chip.activo", { hoy: a.hoy, tope: a.tope });
+    }
     // Pulso cuando aprende algo nuevo, para que se vea vivo.
     if (aprendidasPrevias !== null && a.total > aprendidasPrevias) {
       chip.classList.remove("recien");

@@ -520,6 +520,7 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 			almacen.DevolverCuotaLLM(dia)
 			if m := strings.ToLower(err.Error()); strings.Contains(m, "429") || strings.Contains(m, "rate limit") {
 				aprendizajeEnEspera = time.Now().Add(5 * time.Minute)
+				_ = almacen.GuardarEstado("ia_pausa_hasta", aprendizajeEnEspera.UTC().Format(time.RFC3339))
 			}
 			return aprendidas, err
 		}
@@ -529,6 +530,7 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 				aprendidas++
 			}
 		}
+		_ = almacen.GuardarEstado("ia_pausa_hasta", "") // funciono: hay tokens de nuevo
 	}
 	return aprendidas, nil
 }
