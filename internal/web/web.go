@@ -62,16 +62,24 @@ func (s *Servidor) Rutas() http.Handler {
 		panic(fmt.Sprintf("empaquetando estaticos: %v", err))
 	}
 	ficheros := http.FileServer(http.FS(sub))
+	// El panel cambia en cada despliegue: sin esto el navegador se queda
+	// pegado a la version vieja (botones que ya no existen, textos antiguos)
+	// hasta un refresco duro. Con no-cache revalida siempre y el deploy se ve
+	// al momento.
+	servir := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		ficheros.ServeHTTP(w, r)
+	}
 
 	// La pagina de login y sus recursos son publicos; el resto del panel
 	// no, porque el HTML de por si no filtra nada pero no tiene sentido
 	// servir una interfaz que no va a poder cargar ningun dato.
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if esPublico(r.URL.Path) {
-			ficheros.ServeHTTP(w, r)
+			servir(w, r)
 			return
 		}
-		s.protegido(ficheros.ServeHTTP)(w, r)
+		s.protegido(servir)(w, r)
 	})
 
 	// Publicas: son la puerta de entrada.
