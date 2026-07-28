@@ -2412,7 +2412,7 @@ async function guardarAjustes() {
     });
     volcarAjustes(c);
     pintarServicios(await pedirJSON("/api/servicios"));
-    for (const id of ["c-clave-abuse", "c-clave-anthropic", "c-clave-compatible", "c-clave-virustotal"]) {
+    for (const id of ["c-clave-abuse", "c-clave-virustotal"]) {
       $(id).value = "";
     }
     estado.textContent = t("aj.guardado");
