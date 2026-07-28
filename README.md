@@ -117,6 +117,10 @@ hablan de un senuelo"* mas abajo).
   que ha visto el honeypot esta semana.
 - **Exportar IOCs** (CSV y STIX 2.1): las IPs, hashes y URLs capturados,
   listos para importar en tu firewall, tu SIEM o en MISP.
+- **Blocklist descargable.** Un fichero con las IPs que *de verdad* atacaron
+  —por defecto las que consiguieron entrar—, en texto plano o como set de
+  `nftables`, listo para bloquearlas en tus servidores reales. Atacaron un
+  senuelo, asi que bloquearlas es seguro.
 - **Trampas con cebo.** La web falsa sirve un `.env`, un panel de login o la
   config de git creibles, y captura las credenciales o el payload que envian:
   nadie legitimo teclea su usuario en la maquina trampa.
