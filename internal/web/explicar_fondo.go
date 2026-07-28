@@ -4,13 +4,13 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/k0braintheworld/k0pot/internal/campana"
+	"github.com/k0braintheworld/k0pot/internal/config"
 	"github.com/k0braintheworld/k0pot/internal/report"
 	"github.com/k0braintheworld/k0pot/internal/saber"
 	"github.com/k0braintheworld/k0pot/internal/store"
@@ -23,11 +23,6 @@ import (
 // para que salga en el siguiente barrido; mientras, el panel muestra
 // "pendiente".
 var explicacionesPedidas sync.Map // "tipo|clave" -> struct{}
-
-// narrativaEnEspera frena el barredor tras un 429: el modelo gratis limita por
-// tokens/dia, y una vez agotado no vale la pena reintentar cada 20 s. Solo la
-// toca el barredor (una goroutine), asi que no necesita candado.
-var narrativaEnEspera time.Time
 
 // pedirExplicacion pone algo en cabeza de la cola del barredor.
 func (s *Servidor) pedirExplicacion(tipoClave string) {
@@ -86,9 +81,6 @@ func (s *Servidor) BarrerExplicaciones(ctx context.Context) {
 }
 
 func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
-	if time.Now().Before(narrativaEnEspera) {
-		return // en pausa tras un 429; se reintenta cuando la ventana se libere
-	}
 	c := s.Config.Actual()
 	if !c.AprendizajeAutomatico {
 		return
@@ -199,21 +191,11 @@ func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
 	if err != nil || texto == "" {
 		s.Almacen.DevolverCuotaLLM(dia)
 		if err != nil {
-			if esLimiteDeRitmo(err) {
-				narrativaEnEspera = time.Now().Add(5 * time.Minute)
-				_ = s.Almacen.GuardarEstado("ia_pausa_hasta", narrativaEnEspera.UTC().Format(time.RFC3339))
-				if lim := limiteDiarioDeTokens(err); lim > 0 {
-					_ = s.Almacen.GuardarEstado("tokens_limite", strconv.Itoa(lim))
-				}
-				log.Printf("narrativa: limite del modelo alcanzado, pausa 5 min")
-			} else {
-				log.Printf("narrativa %s: %v", partes[0], err)
-			}
+			log.Printf("narrativa %s: %v", partes[0], err)
 		}
 		return
 	}
 	guardar(texto)
-	_ = s.Almacen.GuardarEstado("ia_pausa_hasta", "") // funciona: se rearma el aprendizaje
 	log.Printf("narrativa %s generada", partes[0])
 }
 
@@ -246,12 +228,42 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 	_, hayModelo := s.Generador.(report.Explicador)
 	activo := c.AprendizajeAutomatico && c.UsarLLM && hayModelo
 	topeFondo := c.InformeTopeDiario * 70 / 100
-	sinTokens := false
-	if v, _ := s.Almacen.LeerEstado("ia_pausa_hasta"); v != "" {
-		if hasta, err := time.Parse(time.RFC3339, v); err == nil && time.Now().Before(hasta) {
-			sinTokens = true
-		}
+
+	// Estado por proveedor: sin_tokens global solo si TODOS estan agotados.
+	type estadoModelo struct {
+		Nombre    string `json:"nombre"`
+		SinTokens bool   `json:"sin_tokens"`
 	}
+	modelos := c.ModelosEfectivos()
+	lista := make([]estadoModelo, 0, len(modelos))
+	sinTokens := len(modelos) > 0
+	limiteTotal := 0
+	for _, m := range modelos {
+		id := m.Proveedor
+		if id == "" {
+			id = "compatible"
+		}
+		nombre := id
+		if p, ok := config.ProveedorPorID(m.Proveedor); ok {
+			nombre = p.Nombre
+		}
+		agotado := false
+		if v, _ := s.Almacen.LeerEstado("ia_pausa:" + id); v != "" {
+			if hasta, err := time.Parse(time.RFC3339, v); err == nil && time.Now().Before(hasta) {
+				agotado = true
+			}
+		}
+		if !agotado {
+			sinTokens = false
+		}
+		if v, _ := s.Almacen.LeerEstado("tokens_limite:" + id); v != "" {
+			if n, e := strconv.Atoi(v); e == nil {
+				limiteTotal += n
+			}
+		}
+		lista = append(lista, estadoModelo{Nombre: nombre, SinTokens: agotado})
+	}
+
 	generando := false
 	if v, _ := s.Almacen.LeerEstado("ia_activa_hasta"); v != "" {
 		if hasta, err := time.Parse(time.RFC3339, v); err == nil && time.Now().Before(hasta) {
@@ -259,10 +271,7 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	tokensHoy, _ := s.Almacen.TokensLLMUsados(dia)
-	tokensLimite := 0
-	if v, _ := s.Almacen.LeerEstado("tokens_limite"); v != "" {
-		tokensLimite, _ = strconv.Atoi(v)
-	}
+
 	responderJSON(w, map[string]any{
 		"total":         total,
 		"hoy":           usadas,
@@ -270,28 +279,12 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 		"activo":        activo,
 		"pausado":       activo && usadas >= topeFondo,
 		"sin_tokens":    activo && sinTokens,
-		"generando":     activo && generando && !sinTokens,
+		"generando":     activo && generando && !(activo && sinTokens),
 		"tokens_hoy":    tokensHoy,
-		"tokens_limite": tokensLimite,
+		"tokens_limite": limiteTotal,
+		"modelos":       lista,
 	})
 }
 
 // esLimiteDeRitmo reconoce el 429 de -has gastado tu cuota de tokens- del
 // proveedor, para pausar en vez de insistir.
-// reLimiteDia extrae el tope de tokens POR DIA del mensaje 429 del proveedor
-// ("... tokens per day (TPD): Limit 200000 ..."). El por-minuto se ignora: lo
-// que interesa es el presupuesto del dia.
-var reLimiteDia = regexp.MustCompile(`(?i)tokens per day.*?limit\s+(\d+)`)
-
-func limiteDiarioDeTokens(err error) int {
-	if m := reLimiteDia.FindStringSubmatch(err.Error()); len(m) == 2 {
-		n, _ := strconv.Atoi(m[1])
-		return n
-	}
-	return 0
-}
-
-func esLimiteDeRitmo(err error) bool {
-	m := strings.ToLower(err.Error())
-	return strings.Contains(m, "429") || strings.Contains(m, "rate limit") || strings.Contains(m, "too many requests")
-}

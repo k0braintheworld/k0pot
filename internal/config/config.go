@@ -49,6 +49,11 @@ type Config struct {
 	// nada. 0 significa sin limite.
 	InformeTopeDiario int `json:"informe_tope_diario"`
 
+	// Modelos es la lista ORDENADA de modelos de IA configurados. k0Pot usa
+	// el primero con tokens disponibles y salta al siguiente si se agota. Si
+	// esta vacia, se cae a los campos sueltos de arriba (config antigua).
+	Modelos []ModeloIA `json:"modelos,omitempty"`
+
 	// Red. Dos interfaces distintas a proposito: el panel se sirve por la
 	// de gestion y los honeypots escuchan en la expuesta.
 	//
@@ -137,6 +142,37 @@ type Config struct {
 type Servicio struct {
 	Activo bool `json:"activo"`
 	Puerto int  `json:"puerto"`
+}
+
+// ModeloIA es un modelo configurado: que proveedor del catalogo y su clave.
+// El modelo se hereda del catalogo salvo que se sobrescriba.
+type ModeloIA struct {
+	Proveedor string `json:"proveedor"`
+	Clave     string `json:"clave"`
+	Modelo    string `json:"modelo,omitempty"`
+}
+
+// ModelosEfectivos devuelve la lista de modelos a usar. Si Modelos esta
+// definida, es esa; si no, se sintetiza una entrada a partir de la config
+// antigua de un solo proveedor, para no perder lo ya configurado.
+func (c Config) ModelosEfectivos() []ModeloIA {
+	if len(c.Modelos) > 0 {
+		return c.Modelos
+	}
+	if !c.UsarLLM {
+		return nil
+	}
+	switch c.Proveedor {
+	case ProveedorAnthropic:
+		if c.ClaveAnthropic != "" {
+			return []ModeloIA{{Proveedor: "anthropic", Clave: c.ClaveAnthropic, Modelo: c.Modelo}}
+		}
+	case ProveedorCompatible:
+		if c.ClaveCompatible != "" {
+			return []ModeloIA{{Proveedor: presetPorURL(c.URLBase), Clave: c.ClaveCompatible, Modelo: c.Modelo}}
+		}
+	}
+	return nil
 }
 
 // Proveedores admitidos para los informes.

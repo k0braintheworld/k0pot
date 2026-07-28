@@ -14,8 +14,8 @@ import (
 	nethttp "net/http"
 	"os"
 	"os/signal"
-	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -423,20 +423,11 @@ func enviarResumen(ctx context.Context, almacen *store.Store, c config.Config) e
 // explicaciones ya esten hechas sin tener que pedirlas. Reserva parte de la
 // cuota diaria para lo que pida el usuario en directo y avanza despacio: unas
 // pocas formas por vuelta, empezando por las mas repetidas.
-// aprendizajeEnEspera frena el aprendiz tras un 429 del modelo (cuota de
-// tokens diaria agotada), para no insistir cada vuelta del bucle.
-var aprendizajeEnEspera time.Time
-
-var reLimiteDiaCol = regexp.MustCompile(`(?i)tokens per day.*?limit\s+(\d+)`)
-
 func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config, sinLLM bool) (int, error) {
 	if sinLLM || !c.UsarLLM || !c.AprendizajeAutomatico {
 		return 0, nil
 	}
-	if time.Now().Before(aprendizajeEnEspera) {
-		return 0, nil
-	}
-	ex, ok := generadorDe(c, sinLLM, hookTokens(almacen)).(report.Explicador)
+	ex, ok := generadorDe(almacen, c, sinLLM).(report.Explicador)
 	if !ok {
 		return 0, nil
 	}
@@ -522,13 +513,6 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 		cancelar()
 		if err != nil {
 			almacen.DevolverCuotaLLM(dia)
-			if m := strings.ToLower(err.Error()); strings.Contains(m, "429") || strings.Contains(m, "rate limit") {
-				aprendizajeEnEspera = time.Now().Add(5 * time.Minute)
-				_ = almacen.GuardarEstado("ia_pausa_hasta", aprendizajeEnEspera.UTC().Format(time.RFC3339))
-				if mm := reLimiteDiaCol.FindStringSubmatch(err.Error()); len(mm) == 2 {
-					_ = almacen.GuardarEstado("tokens_limite", mm[1])
-				}
-			}
 			return aprendidas, err
 		}
 		for i, f := range lote {
@@ -1063,7 +1047,7 @@ func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion, rutaBD
 		Almacen:   almacen,
 		Config:    ajustes,
 		Version:   version,
-		Generador: generadorDe(ajustes.Actual(), sinLLM, hookTokens(almacen)),
+		Generador: generadorDe(almacen, ajustes.Actual(), sinLLM),
 		Trampas:   trampa.Disponibles(),
 		// Donde Cowrie deja lo que consigue capturar. Que el directorio no
 		// exista es lo normal hasta que alguien descargue algo.
@@ -1074,7 +1058,7 @@ func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion, rutaBD
 	// Al guardar ajustes se rehace el generador, para que cambiar de modelo
 	// o de clave surta efecto sin reiniciar el servicio.
 	srv.AlCambiarConfig = func(c config.Config) {
-		srv.Generador = generadorDe(c, sinLLM, hookTokens(almacen))
+		srv.Generador = generadorDe(almacen, c, sinLLM)
 	}
 
 	http := &nethttp.Server{
@@ -1170,27 +1154,71 @@ func hookTokens(almacen *store.Store) func(int) {
 	}
 }
 
-func generadorDe(c config.Config, sinLLM bool, alUsar func(int)) report.Generador {
+func generadorDe(almacen *store.Store, c config.Config, sinLLM bool) report.Generador {
 	if sinLLM || !c.UsarLLM {
 		return report.PorReglas{}
 	}
-	switch c.Proveedor {
-	case config.ProveedorAnthropic:
-		if c.ClaveAnthropic == "" {
-			return report.PorReglas{}
+	var gens []report.ModeloGen
+	for _, m := range c.ModelosEfectivos() {
+		if m.Clave == "" {
+			continue
 		}
-		g := report.NuevoConLLM(c.ClaveAnthropic, c.Modelo)
-		g.AlUsar = alUsar
-		return g
-	case config.ProveedorCompatible:
-		if c.ClaveCompatible == "" {
-			return report.PorReglas{}
+		id := m.Proveedor
+		if id == "" {
+			id = "compatible"
 		}
-		g := report.NuevoCompatible(c.URLBase, c.ClaveCompatible, c.Modelo)
-		g.AlUsar = alUsar
-		return g
+		prov, ok := config.ProveedorPorID(m.Proveedor)
+		modelo := m.Modelo
+		if modelo == "" && ok {
+			modelo = prov.Modelo
+		}
+		esAnthropic := (ok && prov.Tipo == config.ProveedorAnthropic) || m.Proveedor == "anthropic"
+		var g report.Explicador
+		if esAnthropic {
+			cl := report.NuevoConLLM(m.Clave, modelo)
+			cl.AlUsar = hookTokens(almacen)
+			g = cl
+		} else {
+			url := ""
+			if ok {
+				url = prov.URLBase
+			}
+			cc := report.NuevoCompatible(url, m.Clave, modelo)
+			cc.AlUsar = hookTokens(almacen)
+			g = cc
+		}
+		gens = append(gens, report.ModeloGen{ID: id, Gen: g})
 	}
-	return report.PorReglas{}
+	if len(gens) == 0 {
+		return report.PorReglas{}
+	}
+	return &report.Multiplexor{
+		Modelos:    gens,
+		Disponible: func(id string) bool { return disponibleProv(almacen, id) },
+		AlAgotar:   func(id string, err error) { marcarAgotadoProv(almacen, id, err) },
+		Respaldo:   report.PorReglas{},
+	}
+}
+
+// disponibleProv dice si un proveedor tiene tokens ahora (no esta en pausa por
+// un 429 reciente). El multiplexor lo usa para saltarse el agotado sin gastar
+// una llamada.
+func disponibleProv(almacen *store.Store, id string) bool {
+	v, _ := almacen.LeerEstado("ia_pausa:" + id)
+	if v == "" {
+		return true
+	}
+	hasta, err := time.Parse(time.RFC3339, v)
+	return err != nil || !time.Now().Before(hasta)
+}
+
+// marcarAgotadoProv apunta que un proveedor se quedo sin tokens: pausa 5 min y,
+// si el 429 revela el tope diario, lo guarda.
+func marcarAgotadoProv(almacen *store.Store, id string, err error) {
+	_ = almacen.GuardarEstado("ia_pausa:"+id, time.Now().Add(5*time.Minute).UTC().Format(time.RFC3339))
+	if lim := report.LimiteDiarioDeTokens(err); lim > 0 {
+		_ = almacen.GuardarEstado("tokens_limite:"+id, strconv.Itoa(lim))
+	}
 }
 
 // reunirDatos junta en una sola estructura todo lo que un informe necesita.
@@ -1221,7 +1249,7 @@ func mostrarInforme(almacen *store.Store, ajustes *config.Gestor, dias int, sinL
 		return err
 	}
 
-	res, err := generadorDe(ajustes.Actual(), sinLLM, hookTokens(almacen)).Generar(context.Background(), datos)
+	res, err := generadorDe(almacen, ajustes.Actual(), sinLLM).Generar(context.Background(), datos)
 	if err != nil {
 		return err
 	}
