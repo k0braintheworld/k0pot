@@ -864,3 +864,5 @@ Object.assign(IDIOMAS.en, {
   "apr.chip.sintokens": "⏸ Learning paused · tokens exhausted",
   "apr.chip.sintokens.t": "The free model ran out of its daily token budget. k0Pot retries on its own and resumes as soon as tokens are back."
 });
+Object.assign(IDIOMAS.es, { "apr.chip.generando": "🧠 Aprendiendo… · {n}" });
+Object.assign(IDIOMAS.en, { "apr.chip.generando": "🧠 Learning… · {n}" });

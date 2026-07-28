@@ -188,6 +188,9 @@ func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
 	if ok, _ := s.Almacen.ConsumirCuotaLLM(dia, topeFondo); !ok {
 		return // presupuesto de fondo agotado hoy
 	}
+	// Marca "usando tokens ahora mismo", para que el indicador de la cabecera
+	// muestre que esta aprendiendo mientras hay una llamada en vuelo.
+	_ = s.Almacen.GuardarEstado("ia_activa_hasta", time.Now().Add(25*time.Second).UTC().Format(time.RFC3339))
 	cctx, cancelar := context.WithTimeout(ctx, 90*time.Second)
 	texto, err := redactar(cctx, ex)
 	cancelar()
@@ -244,6 +247,12 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 			sinTokens = true
 		}
 	}
+	generando := false
+	if v, _ := s.Almacen.LeerEstado("ia_activa_hasta"); v != "" {
+		if hasta, err := time.Parse(time.RFC3339, v); err == nil && time.Now().Before(hasta) {
+			generando = true
+		}
+	}
 	responderJSON(w, map[string]any{
 		"total":      total,
 		"hoy":        usadas,
@@ -251,6 +260,7 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 		"activo":     activo,
 		"pausado":    activo && usadas >= topeFondo,
 		"sin_tokens": activo && sinTokens,
+		"generando":  activo && generando && !sinTokens,
 	})
 }
 

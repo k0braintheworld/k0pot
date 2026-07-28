@@ -1011,3 +1011,8 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   animation: chip-alerta 2s ease-in-out infinite;
 }
 @keyframes chip-alerta { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+.chip-aprendizaje.trabajando {
+  border-color: var(--acento); color: var(--acento);
+  animation: chip-trabajando 1.4s ease-in-out infinite;
+}
+@keyframes chip-trabajando { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }

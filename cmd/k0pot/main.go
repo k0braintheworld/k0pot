@@ -513,6 +513,7 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 		for i, f := range lote {
 			lineas[i] = f.repr
 		}
+		_ = almacen.GuardarEstado("ia_activa_hasta", time.Now().Add(25*time.Second).UTC().Format(time.RFC3339))
 		cctx, cancelar := context.WithTimeout(ctx, 90*time.Second)
 		glosas, err := report.GlosarComandos(cctx, ex, lineas, idioma, 3000)
 		cancelar()

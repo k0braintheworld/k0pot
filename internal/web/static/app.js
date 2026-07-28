@@ -1600,11 +1600,16 @@ async function cargarAprendizaje() {
     if (!a.activo && !a.total) { chip.hidden = true; return; }
     chip.hidden = false;
     chip.classList.toggle("sin-tokens", !!a.sin_tokens);
-    chip.classList.toggle("en-pausa", (!a.activo || a.pausado) && !a.sin_tokens);
+    chip.classList.toggle("trabajando", !!a.generando && !a.sin_tokens);
+    chip.classList.toggle("en-pausa", (!a.activo || a.pausado) && !a.sin_tokens && !a.generando);
     if (a.sin_tokens) {
       // Lo mas visible: si esta parado por falta de tokens, que se sepa.
       chip.textContent = t("apr.chip.sintokens");
       chip.title = t("apr.chip.sintokens.t");
+    } else if (a.generando) {
+      // Esta usando tokens ahora mismo: se muestra el trabajo en vivo.
+      chip.textContent = t("apr.chip.generando", { n: a.total });
+      chip.title = t("apr.chip.activo", { hoy: a.hoy, tope: a.tope });
     } else {
       chip.textContent = t("apr.chip", { n: a.total });
       chip.title = !a.activo
