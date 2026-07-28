@@ -1599,25 +1599,27 @@ async function cargarAprendizaje() {
     const chip = $("aprendizaje-chip");
     if (!a.activo && !a.total) { chip.hidden = true; return; }
     chip.hidden = false;
-    chip.classList.toggle("sin-tokens", !!a.sin_tokens);
-    chip.classList.toggle("trabajando", !!a.generando && !a.sin_tokens);
-    chip.classList.toggle("en-pausa", (!a.activo || a.pausado) && !a.sin_tokens && !a.generando);
+    // La cuenta SIEMPRE visible; el estado va como sufijo aparte con su color,
+    // sin tapar el numero de comandos aprendidos.
+    chip.replaceChildren();
+    chip.appendChild(nodo("span", "apr-cuenta", t("apr.chip", { n: a.total })));
+    let estadoTxt = "", estadoCls = "", titulo = t("apr.chip.activo", { hoy: a.hoy, tope: a.tope });
     if (a.sin_tokens) {
-      // Lo mas visible: si esta parado por falta de tokens, que se sepa.
-      chip.textContent = t("apr.chip.sintokens");
-      chip.title = t("apr.chip.sintokens.t");
+      estadoTxt = t("apr.estado.sintokens"); estadoCls = "sin-tokens";
+      titulo = t("apr.chip.sintokens.t");
     } else if (a.generando) {
-      // Esta usando tokens ahora mismo: se muestra el trabajo en vivo.
-      chip.textContent = t("apr.chip.generando", { n: a.total });
-      chip.title = t("apr.chip.activo", { hoy: a.hoy, tope: a.tope });
-    } else {
-      chip.textContent = t("apr.chip", { n: a.total });
-      chip.title = !a.activo
-        ? t("apr.chip.inactivo")
-        : a.pausado
-          ? t("apr.chip.pausa", { hoy: a.hoy, tope: a.tope })
-          : t("apr.chip.activo", { hoy: a.hoy, tope: a.tope });
+      estadoTxt = t("apr.estado.generando"); estadoCls = "trabajando";
+    } else if (!a.activo) {
+      estadoTxt = t("apr.estado.inactivo"); estadoCls = "en-pausa";
+      titulo = t("apr.chip.inactivo");
+    } else if (a.pausado) {
+      estadoTxt = t("apr.estado.pausa"); estadoCls = "en-pausa";
+      titulo = t("apr.chip.pausa", { hoy: a.hoy, tope: a.tope });
     }
+    if (estadoTxt) {
+      chip.appendChild(nodo("span", "apr-estado " + estadoCls, estadoTxt));
+    }
+    chip.title = titulo;
     // Pulso cuando aprende algo nuevo, para que se vea vivo.
     if (aprendidasPrevias !== null && a.total > aprendidasPrevias) {
       chip.classList.remove("recien");

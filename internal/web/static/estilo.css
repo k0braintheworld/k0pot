@@ -1016,3 +1016,8 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   animation: chip-trabajando 1.4s ease-in-out infinite;
 }
 @keyframes chip-trabajando { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+/* Estado del aprendizaje como sufijo del chip, sin tapar la cuenta */
+.apr-estado { margin-left: .45rem; padding-left: .45rem; border-left: 1px solid var(--borde); font-weight: 600; }
+.apr-estado.trabajando { color: var(--acento); animation: chip-trabajando 1.4s ease-in-out infinite; }
+.apr-estado.sin-tokens { color: #d9a441; animation: chip-alerta 2s ease-in-out infinite; }
+.apr-estado.en-pausa { color: var(--sub); }

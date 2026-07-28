@@ -866,3 +866,15 @@ Object.assign(IDIOMAS.en, {
 });
 Object.assign(IDIOMAS.es, { "apr.chip.generando": "🧠 Aprendiendo… · {n}" });
 Object.assign(IDIOMAS.en, { "apr.chip.generando": "🧠 Learning… · {n}" });
+Object.assign(IDIOMAS.es, {
+  "apr.estado.generando": "aprendiendo…",
+  "apr.estado.sintokens": "⏸ tokens agotados",
+  "apr.estado.pausa": "en pausa",
+  "apr.estado.inactivo": "desactivado"
+});
+Object.assign(IDIOMAS.en, {
+  "apr.estado.generando": "learning…",
+  "apr.estado.sintokens": "⏸ tokens exhausted",
+  "apr.estado.pausa": "paused",
+  "apr.estado.inactivo": "off"
+});
