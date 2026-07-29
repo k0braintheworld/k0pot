@@ -18,3 +18,12 @@ func TestSemillaGlosas(t *testing.T) {
 		t.Log("nota: wget <url> no esta en la semilla (puede ser normal segun lo aprendido)")
 	}
 }
+
+func TestSemillaNarrativas(t *testing.T) {
+	s := almacenTemporal(t) // BD nueva
+	var n int
+	s.db.QueryRow("SELECT COUNT(*) FROM narrativas_aprendidas").Scan(&n)
+	if n < 10 {
+		t.Fatalf("la semilla de narrativas no cargo en una BD nueva: %d", n)
+	}
+}

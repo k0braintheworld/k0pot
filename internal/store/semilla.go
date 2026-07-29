@@ -63,3 +63,59 @@ func (s *Store) sembrarGlosas() error {
 	}
 	return tx.Commit()
 }
+
+// narrativasSemilla trae de fabrica las explicaciones de las formas de ataque
+// mas comunes (Mirai, droppers, fuerza bruta, escapes de contenedor...), por
+// firma. Una instalacion nueva reconoce y explica esos ataques desde el primer
+// dia sin gastar IA, igual que con las glosas de comandos.
+//
+//go:embed narrativas_semilla.json
+var narrativasSemilla []byte
+
+type narrativaSemilla struct {
+	Firma  string `json:"firma"`
+	Idioma string `json:"idioma"`
+	Texto  string `json:"texto"`
+}
+
+// sembrarNarrativasDeFabrica precarga las narrativas del catalogo sin pisar lo
+// aprendido en local. Idempotente.
+func (s *Store) sembrarNarrativasDeFabrica() error {
+	if len(narrativasSemilla) == 0 {
+		return nil
+	}
+	var lista []narrativaSemilla
+	if err := json.Unmarshal(narrativasSemilla, &lista); err != nil {
+		return fmt.Errorf("semilla de narrativas: %w", err)
+	}
+	if len(lista) == 0 {
+		return nil
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	st, err := tx.Prepare(
+		`INSERT INTO narrativas_aprendidas (firma, idioma, texto, veces, creado)
+		      VALUES (?, ?, ?, 1, ?)
+		 ON CONFLICT(firma, idioma) DO NOTHING`)
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+	ahora := time.Now().UTC().Format(time.RFC3339Nano)
+	for _, n := range lista {
+		if n.Firma == "" || n.Texto == "" {
+			continue
+		}
+		idioma := n.Idioma
+		if idioma == "" {
+			idioma = "es"
+		}
+		if _, err := st.Exec(n.Firma, idioma, n.Texto, ahora); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
