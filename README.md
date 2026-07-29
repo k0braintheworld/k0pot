@@ -169,6 +169,9 @@ senuelo"* mas abajo).
 | VNC | 5900 | nativo |
 | Docker API | 2375 | nativo |
 | Elasticsearch | 9200 | nativo |
+| Jenkins | 8080 | nativo |
+| Grafana | 3000 | nativo |
+| MongoDB | 27017 | nativo |
 
 Se activan y desactivan desde el panel. Los puertos son configurables; el
 panel indica a cuales hay que redirigir el trafico.
@@ -177,6 +180,14 @@ El senuelo de Elasticsearch va mas alla de responder: sirve indices con
 nombres jugosos (`users`, `payments`, `customers`...) y documentos con
 **credenciales senuelo** dentro, asi que vaciar esa "base de datos" es a la
 vez el gancho y una trampa: si el atacante reutiliza una, salta la alarma.
+
+En la misma linea, **Jenkins**, **Grafana** y **MongoDB** imitan servicios
+que se rastrean sin descanso: paneles de login que capturan las credenciales
+que prueban (tambien en JSON), la consola de scripts Groovy de Jenkins, el
+path traversal de Grafana (CVE-2021-43798) respondido con un `/etc/passwd`
+de pega, y el apreton de manos binario de MongoDB con bases de nombres
+jugosos. Cada uno se activa desde el panel; recuerda abrir su puerto en el
+aislamiento (ya listados) y redirigirlo en tu router.
 
 ## Botin y cebos que avisan (canary tokens)
 
