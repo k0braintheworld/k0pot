@@ -149,8 +149,8 @@ func mirarCebo(ruta string) *cebo {
 
 // camposCredencial son los nombres habituales del usuario y la clave en los
 // formularios de login que rondan por internet.
-var camposUsuario = []string{"username", "user", "usuario", "login", "email", "log", "uname"}
-var camposClave = []string{"password", "pass", "passwd", "pwd", "clave", "pwd1"}
+var camposUsuario = []string{"username", "user", "usuario", "login", "email", "log", "uname", "j_username"}
+var camposClave = []string{"password", "pass", "passwd", "pwd", "clave", "pwd1", "j_password"}
 
 func primerCampo(v url.Values, nombres []string) string {
 	for _, n := range nombres {

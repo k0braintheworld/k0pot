@@ -139,5 +139,8 @@ func Disponibles() []Trampa {
 		&VNC{},
 		&Docker{},
 		&Elasticsearch{},
+		&Jenkins{},
+		&Grafana{},
+		&MongoDB{},
 	}
 }

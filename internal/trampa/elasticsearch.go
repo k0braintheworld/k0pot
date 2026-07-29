@@ -1,17 +1,13 @@
 package trampa
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"strings"
 
 	cebopkg "github.com/k0braintheworld/k0pot/internal/cebo"
-	"github.com/k0braintheworld/k0pot/internal/exploit"
-	"github.com/k0braintheworld/k0pot/internal/model"
 )
 
 // Elasticsearch finge un Elasticsearch abierto sin autenticacion, uno de los
@@ -34,82 +30,29 @@ func (*Elasticsearch) Descripcion() string {
 
 func (t *Elasticsearch) Servir(ctx context.Context, direccion string, reg Registrar) error {
 	return servirTCP(ctx, direccion, func(conn net.Conn) {
-		lector := bufio.NewReader(&lectorLimitado{r: conn, quedan: maxPorConexion})
-		req, err := http.ReadRequest(lector)
-		if err != nil {
-			// Basura que no es HTTP: se anota como conexion a secas.
-			reg(evento(t.ID(), "elasticsearch", ipDe(conn), model.Conexion,
-				map[string]string{"puerto": puertoDe(direccion)}))
-			return
-		}
-
-		detalle := map[string]string{
-			"metodo": req.Method,
-			"ruta":   recortar(req.URL.RequestURI(), 512),
-		}
-		if ua := req.UserAgent(); ua != "" {
-			detalle["cliente"] = recortar(ua, 256)
-		}
-		if h := req.Host; h != "" {
-			detalle["host"] = recortar(h, 128)
-		}
-		// Algunos escaneres prueban credenciales por Basic Auth contra el
-		// cluster; son credenciales que estan probando, se anotan.
-		if usuario, clave, ok := req.BasicAuth(); ok {
-			detalle["usuario"] = recortar(usuario, 128)
-			detalle["password"] = recortar(clave, 128)
-		}
-
-		var cuerpo []byte
-		if req.Method == http.MethodPost || req.Method == http.MethodPut {
-			cuerpo, _ = io.ReadAll(io.LimitReader(req.Body, 8192))
-			if len(cuerpo) > 0 {
-				detalle["cuerpo"] = recortar(string(cuerpo), 512)
-			}
-		}
-
-		// ES corre sobre HTTP y ha sufrido exploits (incluido Log4Shell): se
-		// mira toda la peticion por si filtran su infraestructura.
-		if h, ok := exploit.Detectar(superficieDe(req, cuerpo)); ok {
-			detalle["exploit"] = h.Familia
-			if h.Destino != "" {
-				detalle["callback"] = recortar(h.Destino, 512)
-			}
-		}
-
-		cuerpoResp, tipoResp, que := responderES(req.URL.Path)
-		if que != "" {
-			detalle["cebo"] = que
-		}
-
-		reg(evento(t.ID(), "elasticsearch", ipDe(conn), model.PeticionHTTP, detalle))
-
-		fmt.Fprintf(conn, "HTTP/1.1 200 OK\r\n"+
-			"content-type: %s\r\n"+
-			"Content-Length: %d\r\n"+
-			"Connection: close\r\n\r\n%s", tipoResp, len(cuerpoResp), cuerpoResp)
+		atenderHTTP(t, "elasticsearch", direccion, conn, reg, func(req *http.Request, _ []byte) respuestaHTTP {
+			return responderES(req.URL.Path)
+		})
 	})
 }
 
-// responderES elige la respuesta segun la ruta pedida, imitando la API REST
-// de Elasticsearch. Devuelve el cuerpo, su tipo y una etiqueta de cebo para
-// el panel (vacia si no sirve nada especialmente jugoso).
-func responderES(ruta string) (cuerpo, tipo, que string) {
+// responderES imita la API REST de Elasticsearch segun la ruta pedida.
+func responderES(ruta string) respuestaHTTP {
 	const json = "application/json; charset=UTF-8"
 	p := strings.ToLower(ruta)
 	switch {
 	case strings.Contains(p, "_search"):
-		return esBusqueda, json, "documentos con credenciales senuelo dentro"
+		return respuestaHTTP{Cuerpo: esBusqueda, Tipo: json, Cebo: "documentos con credenciales senuelo dentro"}
 	case strings.Contains(p, "_cat/indices"):
-		return esIndices, "text/plain; charset=UTF-8", "el listado de indices, con nombres jugosos"
+		return respuestaHTTP{Cuerpo: esIndices, Tipo: "text/plain; charset=UTF-8", Cebo: "el listado de indices, con nombres jugosos"}
 	case strings.Contains(p, "_cluster/health"):
-		return esSalud, json, ""
+		return respuestaHTTP{Cuerpo: esSalud, Tipo: json}
 	case strings.HasPrefix(p, "/_cat/nodes"), strings.HasPrefix(p, "/_nodes"):
-		return esNodos, json, ""
+		return respuestaHTTP{Cuerpo: esNodos, Tipo: json}
 	default:
 		// La raiz y todo lo demas: el banner. Es lo que el escaner mira para
 		// confirmar que ha encontrado un Elasticsearch de verdad.
-		return esBanner, json, ""
+		return respuestaHTTP{Cuerpo: esBanner, Tipo: json}
 	}
 }
 
