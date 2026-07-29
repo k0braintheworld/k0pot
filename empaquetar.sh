@@ -67,6 +67,13 @@ install -m 644 deploy/cowrie.cfg                       "$ARBOL/usr/share/k0pot/"
 install -m 644 .env.ejemplo                            "$ARBOL/usr/share/k0pot/k0pot.env.ejemplo"
 install -m 644 deploy/aislamiento.nft                  "$ARBOL/usr/share/k0pot/deploy/"
 install -m 755 deploy/comprobar-aislamiento.sh         "$ARBOL/usr/share/k0pot/deploy/"
+# Assets del engano: el botin (pickle del FS falso de Cowrie) y las salidas
+# creibles de mysql/docker/aws/sshpass. Sin ellos el compose montaria
+# ficheros que no existen y Cowrie no arrancaria.
+install -m 644 deploy/fs-botin.pickle                  "$ARBOL/usr/share/k0pot/fs-botin.pickle"
+cp -r deploy/cowrie-txtcmds                            "$ARBOL/usr/share/k0pot/cowrie-txtcmds"
+find "$ARBOL/usr/share/k0pot/cowrie-txtcmds" -type d -exec chmod 755 {} +
+find "$ARBOL/usr/share/k0pot/cowrie-txtcmds" -type f -exec chmod 644 {} +
 install -m 644 README.md LICENSE                       "$ARBOL/usr/share/doc/k0pot/"
 
 # El compose del paquete apunta a las rutas del sistema y toma el UID del
@@ -74,6 +81,8 @@ install -m 644 README.md LICENSE                       "$ARBOL/usr/share/doc/k0p
 # conoce hasta entonces.
 sed -e 's|\./data/cowrie|/var/lib/k0pot/cowrie|g' \
     -e 's|\./deploy/cowrie.cfg|/usr/share/k0pot/cowrie.cfg|' \
+    -e 's|\./deploy/fs-botin.pickle|/usr/share/k0pot/fs-botin.pickle|' \
+    -e 's|\./deploy/cowrie-txtcmds|/usr/share/k0pot/cowrie-txtcmds|' \
     -e 's|^    user: "1000:1000"|    user: "${K0POT_UID}:${K0POT_GID}"|' \
     docker-compose.yml > "$ARBOL/usr/share/k0pot/docker-compose.yml"
 
