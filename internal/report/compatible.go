@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -138,9 +139,17 @@ func (c *ConCompatible) Preguntar(ctx context.Context, sistema, usuario string, 
 	}
 	defer resp.Body.Close()
 
+	cuerpoResp, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	var r respuestaChat
-	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		return "", fmt.Errorf("HTTP %d con respuesta ilegible", resp.StatusCode)
+	if err := json.Unmarshal(cuerpoResp, &r); err != nil {
+		// Algunos proveedores (Gemini) envuelven la respuesta o el error en un
+		// array [{...}]. Se prueba tambien asi para no perder el mensaje real.
+		var arr []respuestaChat
+		if json.Unmarshal(cuerpoResp, &arr) == nil && len(arr) > 0 {
+			r = arr[0]
+		} else {
+			return "", fmt.Errorf("HTTP %d con respuesta ilegible", resp.StatusCode)
+		}
 	}
 	if r.Error != nil {
 		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, r.Error.Mensaje)

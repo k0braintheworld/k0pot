@@ -24,6 +24,11 @@ import (
 // "pendiente".
 var explicacionesPedidas sync.Map // "tipo|clave" -> struct{}
 
+// ultimoBackfill limita el relleno PROACTIVO (atacar el backlog de narrativas):
+// en tiers gratuitos la cuota diaria de tokens es pequena y hacerlo a toda
+// velocidad la agota en horas. Lo que abre el usuario no pasa por aqui.
+var ultimoBackfill time.Time
+
 // pedirExplicacion pone algo en cabeza de la cola del barredor.
 func (s *Servidor) pedirExplicacion(tipoClave string) {
 	explicacionesPedidas.Store(tipoClave, struct{}{})
@@ -68,7 +73,7 @@ func (s *Servidor) redactarExplicacionAtaque(ctx context.Context, ex report.Expl
 // el modelo gratis limita por tokens/minuto, asi que ir en rafaga solo provoca
 // errores 429; espaciando, cada explicacion sale y la que abres va primero.
 func (s *Servidor) BarrerExplicaciones(ctx context.Context) {
-	t := time.NewTicker(40 * time.Second)
+	t := time.NewTicker(20 * time.Second)
 	defer t.Stop()
 	for {
 		select {
@@ -107,6 +112,11 @@ func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
 		return false // uno por tick
 	})
 	if objetivo == "" {
+		// Relleno proactivo a cuentagotas para no quemar la cuota del dia.
+		if time.Since(ultimoBackfill) < 4*time.Minute {
+			return
+		}
+		ultimoBackfill = time.Now()
 		if eps, _ := s.Almacen.EpisodiosNotablesSinExplicacion(desde, 1); len(eps) > 0 {
 			objetivo = "ataque|" + eps[0].Clave
 		}
