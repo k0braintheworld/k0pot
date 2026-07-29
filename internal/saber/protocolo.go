@@ -14,7 +14,7 @@ import "strings"
 // Callarse ante lo desconocido es como se pierden los incidentes.
 func SinShell(protocolo string) bool {
 	switch strings.ToLower(protocolo) {
-	case "redis", "ftp", "http", "smtp", "mongodb", "elasticsearch":
+	case "redis", "ftp", "http", "smtp", "mongodb", "elasticsearch", "mysql", "postgres":
 		return true
 	}
 	return false

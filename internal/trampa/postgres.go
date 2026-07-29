@@ -4,27 +4,31 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
+	"time"
 
 	"github.com/k0braintheworld/k0pot/internal/model"
 )
 
-// Postgres finge un PostgreSQL abierto.
-//
-// A diferencia de MySQL, aqui si se captura la contrasena en claro: se le
-// pide al cliente autenticacion en texto plano (que es una opcion legitima
-// del protocolo) y el bot la manda tal cual. Se queda usuario, base de
-// datos y contrasena, justo lo que estaba probando.
+// Postgres finge un PostgreSQL abierto y DEBIL: pide la contrasena en claro
+// (opcion legitima del protocolo), la anota, y luego deja "entrar" para ver
+// que consulta el bot. Sirve botin falso -tablas jugosas con credenciales
+// SENUELO- de modo que exfiltrarlo y reutilizarlo dispara la alarma. Se quedan
+// usuario, base, contrasena en claro y cada consulta.
 type Postgres struct{}
 
 func (*Postgres) ID() string            { return "postgres" }
 func (*Postgres) Nombre() string        { return "PostgreSQL" }
 func (*Postgres) PuertoPorDefecto() int { return 5432 }
 func (*Postgres) Descripcion() string {
-	return "Finge una base de datos PostgreSQL abierta. Captura usuario, base de " +
-		"datos y contrasena en claro de los bots que buscan bases mal protegidas."
+	return "Finge una base de datos PostgreSQL abierta y debil: captura usuario, " +
+		"base y contrasena en claro, deja entrar y sirve tablas con datos falsos " +
+		"y credenciales senuelo, anotando cada consulta."
 }
+
+const versionPG = "PostgreSQL 14.11 on x86_64-pc-linux-gnu, compiled by gcc 12.2.0, 64-bit"
 
 func (t *Postgres) Servir(ctx context.Context, direccion string, reg Registrar) error {
 	return servirTCP(ctx, direccion, func(conn net.Conn) {
@@ -64,14 +68,99 @@ func (t *Postgres) Servir(ctx context.Context, direccion string, reg Registrar) 
 			det["password"] = recortar(string(bytes.TrimRight(pass, "\x00")), 128)
 		}
 		if usuario != "" || det["password"] != "" {
-			reg(evento(t.ID(), "postgres", ipDe(conn), model.LoginFallido, det))
+			// LoginExitoso a proposito: le dejamos pasar para ver que hace.
+			reg(evento(t.ID(), "postgres", ipDe(conn), model.LoginExitoso, det))
 		}
 
-		// ErrorResponse: contrasena invalida. El bot se va como de un
-		// Postgres real que le ha dado un portazo.
-		conn.Write(errorPG("28P01", "password authentication failed"))
+		// El login "cuela": autenticacion aceptada y listo para consultas.
+		conn.Write([]byte{'R', 0, 0, 0, 8, 0, 0, 0, 0}) // AuthenticationOk
+		conn.Write(parametroPG("server_version", "14.11"))
+		conn.Write(listoPG())
+
+		for {
+			conn.SetDeadline(time.Now().Add(plazoLectura))
+			tipo, cuerpo, err := leerMensajeTipadoPG(lector)
+			if err != nil {
+				return
+			}
+			switch tipo {
+			case 'X': // Terminate
+				return
+			case 'Q': // Simple Query
+				sql := string(bytes.TrimRight(cuerpo, "\x00"))
+				reg(evento(t.ID(), "postgres", ipDe(conn), model.ComandoEjecutado,
+					map[string]string{"comando": recortar(sql, 512)}))
+				tabla := tablaParaConsulta(sql, versionPG)
+				conn.Write(resultadoPG(tabla))
+				conn.Write(completadoPG("SELECT", len(tabla.Filas)))
+				conn.Write(listoPG())
+			default:
+				// Protocolo extendido u otro mensaje: se le dice que puede
+				// seguir. Mejor eso que cortar y perder la sesion.
+				conn.Write(listoPG())
+			}
+		}
 	})
 }
+
+// --- Mensajes del servidor -------------------------------------------------
+
+// mensajePG antepone el tipo (1 byte) y la longitud (4, se incluye a si misma).
+func mensajePG(tipo byte, cuerpo []byte) []byte {
+	out := make([]byte, 5, 5+len(cuerpo))
+	out[0] = tipo
+	binary.BigEndian.PutUint32(out[1:], uint32(len(cuerpo)+4))
+	return append(out, cuerpo...)
+}
+
+// listoPG es ReadyForQuery en estado "ocioso" ('I').
+func listoPG() []byte { return mensajePG('Z', []byte{'I'}) }
+
+// parametroPG es un ParameterStatus (clave y valor de configuracion).
+func parametroPG(clave, valor string) []byte {
+	var b bytes.Buffer
+	b.WriteString(clave)
+	b.WriteByte(0)
+	b.WriteString(valor)
+	b.WriteByte(0)
+	return mensajePG('S', b.Bytes())
+}
+
+// resultadoPG codifica una tabla como RowDescription seguida de una DataRow
+// por registro. Todas las columnas se declaran de tipo texto (OID 25).
+func resultadoPG(t tablaFalsa) []byte {
+	var desc bytes.Buffer
+	binary.Write(&desc, binary.BigEndian, int16(len(t.Columnas)))
+	for _, col := range t.Columnas {
+		desc.WriteString(col)
+		desc.WriteByte(0)
+		binary.Write(&desc, binary.BigEndian, int32(0))  // OID de la tabla
+		binary.Write(&desc, binary.BigEndian, int16(0))  // numero de columna
+		binary.Write(&desc, binary.BigEndian, int32(25)) // OID de tipo: text
+		binary.Write(&desc, binary.BigEndian, int16(-1)) // longitud de tipo
+		binary.Write(&desc, binary.BigEndian, int32(-1)) // modificador de tipo
+		binary.Write(&desc, binary.BigEndian, int16(0))  // formato: texto
+	}
+	out := mensajePG('T', desc.Bytes())
+
+	for _, fila := range t.Filas {
+		var row bytes.Buffer
+		binary.Write(&row, binary.BigEndian, int16(len(fila)))
+		for _, v := range fila {
+			binary.Write(&row, binary.BigEndian, int32(len(v)))
+			row.WriteString(v)
+		}
+		out = append(out, mensajePG('D', row.Bytes())...)
+	}
+	return out
+}
+
+// completadoPG es CommandComplete con la etiqueta del comando ("SELECT n").
+func completadoPG(etiqueta string, n int) []byte {
+	return mensajePG('C', append([]byte(fmt.Sprintf("%s %d", etiqueta, n)), 0))
+}
+
+// --- Lectura de mensajes del cliente ---------------------------------------
 
 // leerArranquePG lee un mensaje sin tipo (StartupMessage o SSLRequest):
 // 4 bytes de longitud, que incluye esos 4, y luego el cuerpo.
@@ -120,22 +209,31 @@ func paramsArranquePG(cuerpo []byte) (usuario, bd string) {
 // leerMensajePG lee un mensaje con tipo (1 byte) + longitud (4, se incluye)
 // y comprueba que el tipo sea el esperado.
 func leerMensajePG(r io.Reader, tipo byte) ([]byte, error) {
-	cab := make([]byte, 5)
-	if _, err := io.ReadFull(r, cab); err != nil {
+	got, cuerpo, err := leerMensajeTipadoPG(r)
+	if err != nil {
 		return nil, err
 	}
-	if cab[0] != tipo {
+	if got != tipo {
 		return nil, io.ErrUnexpectedEOF
+	}
+	return cuerpo, nil
+}
+
+// leerMensajeTipadoPG lee un mensaje con tipo y devuelve su tipo y su cuerpo.
+func leerMensajeTipadoPG(r io.Reader) (byte, []byte, error) {
+	cab := make([]byte, 5)
+	if _, err := io.ReadFull(r, cab); err != nil {
+		return 0, nil, err
 	}
 	n := int(binary.BigEndian.Uint32(cab[1:])) - 4
 	if n < 0 || n > maxPorConexion {
-		return nil, io.ErrUnexpectedEOF
+		return 0, nil, io.ErrUnexpectedEOF
 	}
 	cuerpo := make([]byte, n)
 	if _, err := io.ReadFull(r, cuerpo); err != nil {
-		return nil, err
+		return 0, nil, err
 	}
-	return cuerpo, nil
+	return cab[0], cuerpo, nil
 }
 
 // errorPG arma un ErrorResponse minimo: severidad, codigo SQLSTATE y
@@ -152,12 +250,5 @@ func errorPG(codigo, mensaje string) []byte {
 	b.WriteString(mensaje)
 	b.WriteByte(0)
 	b.WriteByte(0) // fin de los campos
-
-	var m bytes.Buffer
-	m.WriteByte('E')
-	long := make([]byte, 4)
-	binary.BigEndian.PutUint32(long, uint32(b.Len()+4))
-	m.Write(long)
-	m.Write(b.Bytes())
-	return m.Bytes()
+	return mensajePG('E', b.Bytes())
 }

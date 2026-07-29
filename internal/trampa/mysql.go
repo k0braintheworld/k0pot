@@ -7,25 +7,26 @@ import (
 	"encoding/binary"
 	"io"
 	"net"
+	"time"
 
 	"github.com/k0braintheworld/k0pot/internal/model"
 )
 
-// MySQL finge un servidor MySQL abierto.
-//
-// Es de los puertos de base de datos mas escaneados: los bots buscan MySQL
-// con contrasena floja o sin ella para robar datos o dejar una tarea que
-// mine. La contrasena viaja cifrada con la sal que mandamos, asi que no se
-// puede recuperar en claro; lo que si se captura es el usuario que prueban
-// y la base de datos a la que apuntan, que ya dice a que vienen.
+// MySQL finge un servidor MySQL abierto y, ademas, DEBIL: acepta el login y
+// deja "entrar". Asi el bot que buscaba una base mal protegida se anima a
+// hurgar, y capturamos las consultas que lanza. Lo que sirve es botin falso
+// -tablas con nombres jugosos y filas con credenciales SENUELO-, de modo que
+// exfiltrar estos datos y reutilizarlos mas tarde dispara la alarma. La
+// contrasena viaja cifrada con nuestra sal (irrecuperable en claro), pero el
+// usuario, la base y cada consulta se anotan enteros.
 type MySQL struct{}
 
 func (*MySQL) ID() string            { return "mysql" }
 func (*MySQL) Nombre() string        { return "MySQL" }
 func (*MySQL) PuertoPorDefecto() int { return 3306 }
 func (*MySQL) Descripcion() string {
-	return "Finge una base de datos MySQL abierta. Captura el usuario y la base " +
-		"que prueban los bots que buscan bases de datos mal protegidas."
+	return "Finge una base de datos MySQL abierta y debil: acepta el login, sirve " +
+		"tablas con datos falsos y credenciales senuelo, y anota cada consulta."
 }
 
 func (t *MySQL) Servir(ctx context.Context, direccion string, reg Registrar) error {
@@ -51,12 +52,34 @@ func (t *MySQL) Servir(ctx context.Context, direccion string, reg Registrar) err
 			if bd != "" {
 				det["base_datos"] = recortar(bd, 128)
 			}
-			reg(evento(t.ID(), "mysql", ipDe(conn), model.LoginFallido, det))
+			// LoginExitoso a proposito: le dejamos pasar para ver que hace.
+			reg(evento(t.ID(), "mysql", ipDe(conn), model.LoginExitoso, det))
 		}
 
-		// "Access denied": el bot se va sabiendo que la credencial no valia,
-		// que es justo lo que un MySQL real le diria.
-		conn.Write(errMySQL())
+		// OK: el login "cuela" y entramos en la fase de comandos.
+		if _, err := conn.Write(okMySQL(2)); err != nil {
+			return
+		}
+
+		for {
+			conn.SetDeadline(time.Now().Add(plazoLectura))
+			carga, err := leerPaqueteMySQL(lector)
+			if err != nil || len(carga) == 0 {
+				return
+			}
+			switch carga[0] {
+			case 0x01: // COM_QUIT
+				return
+			case 0x03: // COM_QUERY
+				sql := string(carga[1:])
+				reg(evento(t.ID(), "mysql", ipDe(conn), model.ComandoEjecutado,
+					map[string]string{"comando": recortar(sql, 512)}))
+				conn.Write(resultadoMySQL(tablaParaConsulta(sql, "8.0.36"), 1))
+			default:
+				// COM_PING, COM_INIT_DB y demas: un OK y a seguir.
+				conn.Write(okMySQL(1))
+			}
+		}
 	})
 }
 
@@ -68,32 +91,91 @@ func saludoMySQL() []byte {
 	p.WriteByte(10) // protocolo v10
 	p.WriteString("8.0.36")
 	p.WriteByte(0)
-	p.Write([]byte{0x01, 0x00, 0x00, 0x00})     // id de conexion
-	p.Write([]byte("k0potSal"))                 // sal, parte 1 (8 bytes)
-	p.WriteByte(0)                              // relleno
-	p.Write([]byte{0x01, 0x82})                 // flags bajos: LONG_PASSWORD|PROTOCOL_41|SECURE_CONNECTION
-	p.WriteByte(0x21)                          // juego de caracteres utf8
-	p.Write([]byte{0x02, 0x00})                 // estado: autocommit
-	p.Write([]byte{0x08, 0x00})                 // flags altos: PLUGIN_AUTH
-	p.WriteByte(21)                            // longitud de los datos de auth
-	p.Write(make([]byte, 10))                   // reservado
-	p.Write([]byte("k0potSalParte2"[:12]))      // sal, parte 2 (12 bytes)
+	p.Write([]byte{0x01, 0x00, 0x00, 0x00}) // id de conexion
+	p.Write([]byte("k0potSal"))             // sal, parte 1 (8 bytes)
+	p.WriteByte(0)                          // relleno
+	p.Write([]byte{0x01, 0x82})             // flags bajos: LONG_PASSWORD|PROTOCOL_41|SECURE_CONNECTION
+	p.WriteByte(0x21)                       // juego de caracteres utf8
+	p.Write([]byte{0x02, 0x00})             // estado: autocommit
+	p.Write([]byte{0x08, 0x00})             // flags altos: PLUGIN_AUTH
+	p.WriteByte(21)                         // longitud de los datos de auth
+	p.Write(make([]byte, 10))               // reservado
+	p.Write([]byte("k0potSalParte2"[:12]))  // sal, parte 2 (12 bytes)
 	p.WriteByte(0)
 	p.WriteString("mysql_native_password")
 	p.WriteByte(0)
 	return conPaqueteMySQL(p.Bytes(), 0)
 }
 
-// errMySQL es un paquete de error "Access denied" con secuencia 2, la que
-// toca despues del login del cliente (secuencia 1).
-func errMySQL() []byte {
-	var p bytes.Buffer
-	p.WriteByte(0xff)
-	p.Write([]byte{0x15, 0x04}) // codigo 1045
-	p.WriteByte('#')
-	p.WriteString("28000") // estado SQL
-	p.WriteString("Access denied for user")
-	return conPaqueteMySQL(p.Bytes(), 2)
+// okMySQL es un paquete OK: header 0x00, filas afectadas 0, ultimo id 0,
+// estado autocommit y 0 avisos.
+func okMySQL(seq byte) []byte {
+	return conPaqueteMySQL([]byte{0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00}, seq)
+}
+
+// resultadoMySQL codifica una tabla como un conjunto de resultados del
+// protocolo clasico (con paquetes EOF, que es lo que anunciamos en el saludo):
+// cuenta de columnas, definicion de cada una, EOF, una fila por registro y EOF.
+func resultadoMySQL(t tablaFalsa, seq byte) []byte {
+	var out []byte
+	añade := func(carga []byte) {
+		out = append(out, conPaqueteMySQL(carga, seq)...)
+		seq++
+	}
+	añade(lenencEntero(uint64(len(t.Columnas))))
+	for _, col := range t.Columnas {
+		añade(colDefMySQL(col))
+	}
+	añade(eofMySQL())
+	for _, fila := range t.Filas {
+		var row []byte
+		for _, v := range fila {
+			row = append(row, lenencCadena(v)...)
+		}
+		añade(row)
+	}
+	añade(eofMySQL())
+	return out
+}
+
+// eofMySQL es un paquete EOF: 0xfe, 0 avisos, estado autocommit.
+func eofMySQL() []byte { return []byte{0xfe, 0x00, 0x00, 0x02, 0x00} }
+
+// colDefMySQL arma la definicion de una columna (formato del protocolo 41),
+// toda de tipo cadena, que es lo que necesitan estos resultados de texto.
+func colDefMySQL(nombre string) []byte {
+	var b []byte
+	b = append(b, lenencCadena("def")...)       // catalogo
+	b = append(b, lenencCadena("acme_prod")...) // esquema
+	b = append(b, lenencCadena("users")...)     // tabla
+	b = append(b, lenencCadena("users")...)     // tabla original
+	b = append(b, lenencCadena(nombre)...)      // nombre
+	b = append(b, lenencCadena(nombre)...)      // nombre original
+	b = append(b, 0x0c)                         // longitud de los campos fijos
+	b = append(b, 0x21, 0x00)                   // juego de caracteres utf8
+	b = append(b, 0xff, 0x00, 0x00, 0x00)       // longitud de columna
+	b = append(b, 0xfd)                         // tipo VAR_STRING
+	b = append(b, 0x00, 0x00)                   // flags
+	b = append(b, 0x00)                         // decimales
+	b = append(b, 0x00, 0x00)                   // relleno
+	return b
+}
+
+// lenencEntero codifica un entero pequeno en el formato "length-encoded" de
+// MySQL. Solo se usan cuentas pequenas, asi que basta el caso de un byte.
+func lenencEntero(n uint64) []byte {
+	if n < 251 {
+		return []byte{byte(n)}
+	}
+	b := make([]byte, 9)
+	b[0] = 0xfe
+	binary.LittleEndian.PutUint64(b[1:], n)
+	return b
+}
+
+// lenencCadena codifica una cadena precedida de su longitud length-encoded.
+func lenencCadena(s string) []byte {
+	return append(lenencEntero(uint64(len(s))), s...)
 }
 
 // conPaqueteMySQL antepone la cabecera de 4 bytes: 3 de longitud en little

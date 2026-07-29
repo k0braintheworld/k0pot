@@ -121,7 +121,7 @@ func TestMySQLCapturaUsuario(t *testing.T) {
 	carga = append(carga, 0)
 	c.Write(conPaqueteMySQL(carga, 1))
 
-	ev, ok := rec.esperar(model.LoginFallido, time.Second)
+	ev, ok := rec.esperar(model.LoginExitoso, time.Second)
 	if !ok {
 		t.Fatal("no se registro el login")
 	}
@@ -177,7 +177,7 @@ func TestPostgresCapturaPassword(t *testing.T) {
 	pm = append(pm, pass...)
 	c.Write(pm)
 
-	ev, ok := rec.esperar(model.LoginFallido, time.Second)
+	ev, ok := rec.esperar(model.LoginExitoso, time.Second)
 	if !ok {
 		t.Fatal("no se registro el login")
 	}
