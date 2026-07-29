@@ -664,9 +664,9 @@ let claveAbierta = null;
 // esperarExplicacion muestra "generando..." y sondea hasta que la explicacion
 // que se cocina en segundo plano esta lista, para pintarla en el sitio sin que
 // haya que reabrir. Se detiene si cierras el dialogo o si tarda demasiado.
-function esperarExplicacion(idCaja, tipo, clave, idDialogo) {
+function esperarExplicacion(idCaja, tipo, clave, idDialogo, mensaje) {
   const dlg = $(idDialogo);
-  pintarExplicacion(idCaja, t("expl.pendiente"));
+  pintarExplicacion(idCaja, mensaje || t("expl.pendiente"));
   // Se sigue esperando mientras el dialogo este abierto: en cuanto el barredor
   // la genera, aparece sola. Se corta al cerrar.
   const iv = setInterval(async () => {
@@ -704,7 +704,13 @@ async function abrirAtaque(clave) {
   // Si ya se explico una vez, se ensena sin volver a preguntar: la
   // explicacion de un ataque terminado no cambia por reabrir el dialogo.
   pintarExplicacion("ataque-explicacion", d.explicacion);
-  if (!d.explicacion && d.pendiente) esperarExplicacion("ataque-explicacion", "ataque", clave, "dialogo-ataque");
+  if (!d.explicacion && d.pendiente) {
+    // El detalle paso a paso ya esta debajo (narracion + glosas de memoria);
+    // solo falta el resumen global de la IA. Que el aviso lo diga.
+    const hayPasos = (d.pasos || []).length > 0;
+    esperarExplicacion("ataque-explicacion", "ataque", clave, "dialogo-ataque",
+      hayPasos ? t("expl.pendiente.pasos") : t("expl.pendiente"));
+  }
 
   const titulo = $("ataque-titulo");
   titulo.replaceChildren();

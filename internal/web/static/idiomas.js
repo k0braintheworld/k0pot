@@ -900,3 +900,5 @@ Object.assign(IDIOMAS.en, {
   "cfg.modelos.vacio": "No models yet. Pick a provider, paste the key and press Add.",
   "cfg.modelos.configurada": "configured ({c}) · type to change"
 });
+Object.assign(IDIOMAS.es, { "expl.pendiente.pasos": "El detalle paso a paso está más abajo. La IA prepara además un resumen del ataque entero; aparecerá aquí cuando haya cuota disponible." });
+Object.assign(IDIOMAS.en, { "expl.pendiente.pasos": "The step-by-step detail is below. The AI is also preparing a summary of the whole attack; it will appear here when quota is available." });

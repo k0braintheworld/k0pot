@@ -24,11 +24,6 @@ import (
 // "pendiente".
 var explicacionesPedidas sync.Map // "tipo|clave" -> struct{}
 
-// ultimoBackfill limita el relleno PROACTIVO (atacar el backlog de narrativas):
-// en tiers gratuitos la cuota diaria de tokens es pequena y hacerlo a toda
-// velocidad la agota en horas. Lo que abre el usuario no pasa por aqui.
-var ultimoBackfill time.Time
-
 // pedirExplicacion pone algo en cabeza de la cola del barredor.
 func (s *Servidor) pedirExplicacion(tipoClave string) {
 	explicacionesPedidas.Store(tipoClave, struct{}{})
@@ -112,16 +107,10 @@ func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
 		return false // uno por tick
 	})
 	if objetivo == "" {
-		// Relleno proactivo a cuentagotas para no quemar la cuota del dia.
-		if time.Since(ultimoBackfill) < 4*time.Minute {
-			return
-		}
-		ultimoBackfill = time.Now()
-		if eps, _ := s.Almacen.EpisodiosNotablesSinExplicacion(desde, 1); len(eps) > 0 {
-			objetivo = "ataque|" + eps[0].Clave
-		}
-	}
-	if objetivo == "" {
+		// Solo se genera la narrativa de lo que ALGUIEN ABRE: la cuota (escasa
+		// en tiers gratuitos) se reserva para lo que de verdad se mira, no se
+		// malgasta rellenando a ciegas un backlog de miles de ataques que
+		// nadie va a abrir.
 		return
 	}
 
