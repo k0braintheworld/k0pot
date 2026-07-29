@@ -292,6 +292,24 @@ func narrar(ev model.Evento, idioma string) (string, bool) {
 // porque quien lee el panel no tiene como distinguir una de otra.
 func notaDe(ev model.Evento, idioma string) *saber.Nota {
 	d := ev.Detalle
+	// Lo mas fuerte que sabemos de un paso: reutilizo una credencial
+	// senuelo. Va antes que cualquier otra cosa.
+	if m := d["cebo_mordido"]; m != "" {
+		if idioma == "en" {
+			return &saber.Nota{
+				Que: "took the bait",
+				Por: "reused a decoy credential this machine had planted; nobody " +
+					"types it by chance, so its reuse proves the attacker read it " +
+					"here and came back",
+			}
+		}
+		return &saber.Nota{
+			Que: "mordio el cebo",
+			Por: "reutilizo " + m + ", una credencial senuelo que esta maquina " +
+				"habia plantado; nadie la teclea por azar, asi que su reaparicion " +
+				"confirma que la leyo aqui y volvio",
+		}
+	}
 	var (
 		n   saber.Nota
 		hay bool

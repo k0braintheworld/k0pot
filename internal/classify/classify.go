@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/k0braintheworld/k0pot/internal/cebo"
 	"github.com/k0braintheworld/k0pot/internal/model"
 	"github.com/k0braintheworld/k0pot/internal/saber"
 )
@@ -61,6 +62,22 @@ func Nuevo() *Clasificador {
 // despues. En ese caso se clasifica solo con lo que el evento dice de si
 // mismo, y basta con volver a clasificar cuando el contexto aparezca.
 func (c *Clasificador) Clasificar(ev *model.Evento, origen model.Origen) Resultado {
+	// La senal mas limpia de todas: reutilizo una credencial o token que
+	// solo pudo sacar del cebo que plantamos. No hay falso positivo
+	// posible -nadie teclea estas cadenas por azar-, asi que va la
+	// primera y pesa mas que cualquier otra cosa.
+	if et := cebo.EnDetalle(ev.Detalle); et != "" {
+		if ev.Detalle == nil {
+			ev.Detalle = map[string]string{}
+		}
+		ev.Detalle["cebo_mordido"] = et
+		return Resultado{
+			Clasificacion: model.Notable,
+			Motivo: "mordio el cebo: reutilizo " + et + ", que solo pudo " +
+				"encontrar husmeando en la trampa. Confirma que leyo el " +
+				"senuelo y volvio a usarlo",
+		}
+	}
 	// Lo que el atacante HACE pesa mas que quien sea: ejecutar comandos o
 	// descargar ficheros es haber entrado y estar actuando, no llamar a
 	// la puerta. Por eso estas reglas van primero.

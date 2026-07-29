@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/k0braintheworld/k0pot/internal/campana"
+	"github.com/k0braintheworld/k0pot/internal/cebo"
 	"github.com/k0braintheworld/k0pot/internal/config"
 	"github.com/k0braintheworld/k0pot/internal/report"
 	"github.com/k0braintheworld/k0pot/internal/saber"
@@ -51,6 +52,12 @@ func firmaDeAtaque(ep store.EpisodioFila) string {
 		ep.Protocolo, ep.Severidad, ep.LoginExitoso,
 		strings.Join(dedup(ep.Comandos), "\n"),
 		strings.Join(dedup(ep.Rutas), "\n"))
+	// Un ataque que mordio el cebo es, a efectos de relato, distinto de
+	// uno que no: merece su propia narrativa. Al variar la firma no
+	// reutiliza la de un ataque de forma parecida que no pico.
+	if et := cebo.EnListas(ep.Comandos, ep.Passwords, ep.Rutas); et != "" {
+		base += "||CEBO:" + et
+	}
 	h := sha256.Sum256([]byte(base))
 	return hex.EncodeToString(h[:16])
 }

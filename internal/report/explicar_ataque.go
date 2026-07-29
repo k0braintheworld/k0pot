@@ -3,6 +3,7 @@ package report
 import (
 	"context"
 	"fmt"
+	"github.com/k0braintheworld/k0pot/internal/cebo"
 	"strings"
 
 	"github.com/k0braintheworld/k0pot/internal/store"
@@ -129,6 +130,16 @@ func ataqueComoTexto(ep store.EpisodioFila, pasos []PasoDeAtaque, notaProveedor,
 
 	if contexto != "" {
 		fmt.Fprintf(&b, "CONTEXTO EN EL PERIODO: %s\n\n", contexto)
+	}
+	// La senal de maximo valor: reutilizo una credencial que solo estaba
+	// en el cebo. Se le dice al modelo de forma inequivoca y destacada.
+	if et := cebo.EnListas(ep.Comandos, ep.Passwords, ep.Rutas); et != "" {
+		fmt.Fprintf(&b, "*** CEBO MORDIDO (senal de maximo valor): el atacante "+
+			"REUTILIZO %s, una credencial SENUELO que esta maquina habia plantado "+
+			"a proposito en su sistema de ficheros. No abre nada real y solo "+
+			"existia aqui, en el cebo de este honeypot; que reaparezca CONFIRMA con "+
+			"total certeza que el atacante la leyo en esta maquina y volvio a usarla. "+
+			"Explica esto de forma DESTACADA y al principio de la narracion.\n\n", et)
 	}
 	b.WriteString("SECUENCIA COMPLETA:\n")
 	for i, p := range pasos {

@@ -1,0 +1,34 @@
+[
+  {
+    "valor": "Pr0d_9xQZ!ktm2024",
+    "etiqueta": "la contraseña de base de datos del cebo"
+  },
+  {
+    "valor": "AKIA7ACMEQK2NR0PZ3XV",
+    "etiqueta": "la clave de acceso AWS del cebo"
+  },
+  {
+    "valor": "wq8Lz2Kd9xR3mNp7Ht4bV6cY0aJ1eU5oI2sFgQ",
+    "etiqueta": "la clave secreta AWS del cebo"
+  },
+  {
+    "valor": "r3d1s_Wq82Lp!x",
+    "etiqueta": "la contraseña de Redis del cebo"
+  },
+  {
+    "valor": "Sm7p__Nz19Kd",
+    "etiqueta": "la contraseña de correo del cebo"
+  },
+  {
+    "valor": "kR3p9Xv2mQ8sLd1fH7bN4wZ6cT0yUeI5oPaJgKlMnQ=",
+    "etiqueta": "la APP_KEY del cebo"
+  },
+  {
+    "valor": "B@ckup_nas3!7z",
+    "etiqueta": "la contraseña SSH de copia de seguridad plantada"
+  },
+  {
+    "valor": "k0tok_7Fq3Rn9ZbW1sYpX",
+    "etiqueta": "el token de API interno plantado"
+  }
+]

@@ -100,6 +100,10 @@ type Episodio struct {
 	// contradiccion en pantalla, y quien la lee deja de fiarse del resto.
 	Motivos []string `json:"motivos,omitempty"`
 
+	// CeboMordido lleva la etiqueta del senuelo que el atacante
+	// reutilizo. Es la senal mas fuerte: leyo el cebo y volvio.
+	CeboMordido string `json:"cebo_mordido,omitempty"`
+
 	// Resumen cuenta en una frase que paso, para poder leer la lista sin
 	// abrir cada episodio.
 	Resumen string `json:"resumen"`
@@ -160,6 +164,14 @@ func (e *Episodio) absorber(ev model.Evento) {
 	e.Eventos++
 	if ev.Timestamp.After(e.Fin) {
 		e.Fin = ev.Timestamp
+	}
+
+	// Mordio el cebo: reutilizo una credencial plantada. Es lo mas
+	// grave que sabemos con certeza, sea cual sea el tipo de evento.
+	if m := ev.Detalle["cebo_mordido"]; m != "" {
+		e.CeboMordido = m
+		e.Severidad = Peor(e.Severidad, Intrusion)
+		anadir(&e.Motivos, "mordio el cebo: reutilizo "+m, 5)
 	}
 
 	if ev.Tipo == model.Conexion {
@@ -237,6 +249,10 @@ func (e *Episodio) redactar(idioma string) string {
 		return es
 	}
 	var partes []string
+
+	if e.CeboMordido != "" {
+		partes = append(partes, tr("mordio el cebo plantado", "took the planted bait"))
+	}
 
 	if e.LoginExitoso {
 		if u := ultimo(e.Usuarios); u != "" {
