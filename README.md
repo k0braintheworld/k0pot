@@ -168,9 +168,15 @@ senuelo"* mas abajo).
 | RDP | 3389 | nativo |
 | VNC | 5900 | nativo |
 | Docker API | 2375 | nativo |
+| Elasticsearch | 9200 | nativo |
 
 Se activan y desactivan desde el panel. Los puertos son configurables; el
 panel indica a cuales hay que redirigir el trafico.
+
+El senuelo de Elasticsearch va mas alla de responder: sirve indices con
+nombres jugosos (`users`, `payments`, `customers`...) y documentos con
+**credenciales senuelo** dentro, asi que vaciar esa "base de datos" es a la
+vez el gancho y una trampa: si el atacante reutiliza una, salta la alarma.
 
 ## Botin y cebos que avisan (canary tokens)
 
