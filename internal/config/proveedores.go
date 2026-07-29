@@ -18,7 +18,7 @@ var Proveedores = []Proveedor{
 	{"gemini", "Google Gemini", ProveedorCompatible, "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-flash-latest"},
 	{"openai", "OpenAI", ProveedorCompatible, "https://api.openai.com/v1", "gpt-4o-mini"},
 	{"anthropic", "Anthropic", ProveedorAnthropic, "", "claude-3-5-haiku-latest"},
-	{"openrouter", "OpenRouter", ProveedorCompatible, "https://openrouter.ai/api/v1", "meta-llama/llama-3.3-70b-instruct"},
+	{"openrouter", "OpenRouter", ProveedorCompatible, "https://openrouter.ai/api/v1", "meta-llama/llama-3.3-70b-instruct:free"},
 	{"mistral", "Mistral", ProveedorCompatible, "https://api.mistral.ai/v1", "mistral-small-latest"},
 	{"deepseek", "DeepSeek", ProveedorCompatible, "https://api.deepseek.com", "deepseek-chat"},
 }
