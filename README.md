@@ -7,6 +7,12 @@ que tengas que ser analista de seguridad. Lo que no sabe **lo aprende solo**,
 en segundo plano, y lo va guardando: cuando abres un ataque, la explicacion ya
 esta puesta.
 
+Y no se limita a esperar: **tienta** al atacante con botin creible —un
+`.env` con claves, bases de datos con filas jugosas, servicios que aparentan
+estar mal protegidos— sembrado de credenciales **senuelo** (*canary tokens*).
+Si alguien las roba y las reutiliza, k0Pot lo sabe con certeza: es la senal
+de mas valor que puede dar un honeypot, y salta sin avisar a nada externo.
+
 Ligero a proposito: un unico binario en Go y Cowrie en un contenedor, sin
 stacks de gigabytes ni bases de datos que administrar. Reutiliza honeypots que
 ya funcionan bien y aporta la capa que suele faltar: **la interpretacion**.
@@ -37,7 +43,8 @@ k0Pot responde a tres preguntas, en este orden:
       |
       v
  [ Cowrie ]  SSH y Telnet, en contenedor
- [ trampas ] HTTP, Redis, FTP, MySQL, PostgreSQL,
+ [ trampas ] HTTP, Elasticsearch, Jenkins, Grafana,
+             Redis, MySQL, PostgreSQL, MongoDB, FTP,
              SMTP, RDP, VNC, Docker; nativas en Go
       |
       v
