@@ -316,6 +316,15 @@ func notaDe(ev model.Evento, idioma string) *saber.Nota {
 	)
 	switch ev.Tipo {
 	case model.PeticionHTTP:
+		// Un exploit reconocido pesa mas que la ruta: si ademas filtro su
+		// C2, se dice, que es la parte valiosa.
+		if fam := d["exploit"]; fam != "" {
+			por := "un intento de ejecutar codigo aprovechando una vulnerabilidad conocida"
+			if cb := d["callback"]; cb != "" {
+				por = "y de paso filtro su propia infraestructura: " + cb
+			}
+			return &saber.Nota{Que: fam, Por: por}
+		}
 		n, hay = saber.DeRuta(d["ruta"])
 	case model.ComandoEjecutado:
 		if saber.SinShell(ev.Protocolo) {

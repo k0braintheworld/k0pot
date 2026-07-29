@@ -94,6 +94,19 @@ func (s *Servidor) reunirIOCs(desde time.Time) []ioc {
 	for _, ic := range urls {
 		out = append(out, *ic)
 	}
+	// Callbacks de exploits: la infraestructura del propio atacante
+	// (el C2 del Log4Shell, el host que sirve la segunda fase). Es el
+	// indicador de mas valor que se puede exportar.
+	if cbs, err := s.Almacen.CallbacksDesde(desde); err == nil {
+		for _, cb := range cbs {
+			et := "retrollamada de exploit (C2 o segunda fase)"
+			if cb.Exploit != "" {
+				et = cb.Exploit + " — C2/retrollamada capturada"
+			}
+			out = append(out, ioc{clase: "url", valor: cb.Destino,
+				primera: cb.Primera, ultima: cb.Ultima, etiqueta: et})
+		}
+	}
 	for _, f := range s.ficherosCapturados() {
 		if f.Fichero == "" {
 			continue

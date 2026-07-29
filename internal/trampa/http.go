@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/k0braintheworld/k0pot/internal/exploit"
 	"github.com/k0braintheworld/k0pot/internal/model"
 )
 
@@ -193,8 +194,9 @@ func (t *HTTP) Servir(ctx context.Context, direccion string, reg Registrar) erro
 
 		// El cuerpo del POST es la parte mas jugosa: lo que teclean en el
 		// panel falso o el payload que inyectan. Se lee acotado.
+		var cuerpo []byte
 		if req.Method == http.MethodPost || req.Method == http.MethodPut {
-			cuerpo, _ := io.ReadAll(io.LimitReader(req.Body, 8192))
+			cuerpo, _ = io.ReadAll(io.LimitReader(req.Body, 8192))
 			if len(cuerpo) > 0 {
 				ct := req.Header.Get("Content-Type")
 				if strings.Contains(ct, "form-urlencoded") {
@@ -213,6 +215,16 @@ func (t *HTTP) Servir(ctx context.Context, direccion string, reg Registrar) erro
 
 		// Si la ruta pide algo jugoso, mordemos: contenido falso creible y
 		// una etiqueta que deja claro en el panel que fue un cebo.
+		// Un escaneo de explotacion filtra a menudo la infraestructura del
+		// propio atacante (el ldap:// del Log4Shell, el http:// de la segunda
+		// fase). Se extrae de toda la peticion, sin ejecutar nada.
+		if h, ok := exploit.Detectar(superficieDe(req, cuerpo)); ok {
+			detalle["exploit"] = h.Familia
+			if h.Destino != "" {
+				detalle["callback"] = recortar(h.Destino, 512)
+			}
+		}
+
 		trampa := mirarCebo(req.URL.RequestURI())
 		cuerpoResp, tipoResp := paginaNginx, "text/html"
 		if trampa != nil {
@@ -260,4 +272,27 @@ func recortar(s string, max int) string {
 		return s[:max]
 	}
 	return s
+}
+
+// superficieDe junta lo que un atacante puede usar para colar un payload
+// -la ruta, todas las cabeceras y el cuerpo- en un solo texto. Log4Shell,
+// por ejemplo, suele venir en una cabecera cualquiera, no en la ruta.
+func superficieDe(req *http.Request, cuerpo []byte) string {
+	var b strings.Builder
+	b.WriteString(req.Method)
+	b.WriteByte(' ')
+	b.WriteString(req.URL.RequestURI())
+	for k, vals := range req.Header {
+		for _, v := range vals {
+			b.WriteByte('\n')
+			b.WriteString(k)
+			b.WriteString(": ")
+			b.WriteString(v)
+		}
+	}
+	if len(cuerpo) > 0 {
+		b.WriteByte('\n')
+		b.Write(cuerpo)
+	}
+	return b.String()
 }

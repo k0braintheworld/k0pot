@@ -137,6 +137,21 @@ func (c *Clasificador) porAccion(ev *model.Evento) (Resultado, bool) {
 		}, true
 
 	case model.PeticionHTTP:
+		// Un intento de explotacion es intencion pura. Y si de paso filtro
+		// su infraestructura -el C2 del Log4Shell, el host de la segunda
+		// fase-, eso es inteligencia de primera: sube a notable.
+		if fam := ev.Detalle["exploit"]; fam != "" {
+			if cb := ev.Detalle["callback"]; cb != "" {
+				return Resultado{
+					Clasificacion: model.Notable,
+					Motivo:        "intento de " + fam + " y filtro su infraestructura: " + cb,
+				}, true
+			}
+			return Resultado{
+				Clasificacion: model.Revisar,
+				Motivo:        "intento de " + fam,
+			}, true
+		}
 		// Mordio el cebo: envio credenciales a un panel de la maquina trampa.
 		// Nadie legitimo teclea su usuario aqui; es intencion pura, no ruido.
 		if ev.Detalle["usuario"] != "" || ev.Detalle["password"] != "" {

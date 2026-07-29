@@ -191,6 +191,48 @@ func (s *Store) FuentesDeArtefacto(sha256 string) (FuenteArtefacto, error) {
 	return f, filas.Err()
 }
 
+// CallbackIOC es un destino de retrollamada (C2 o servidor de segunda
+// fase) que un atacante filtro al lanzar un exploit contra las trampas.
+// Es su propia infraestructura: el IOC de mas valor que deja un escaneo.
+type CallbackIOC struct {
+	Destino string
+	Exploit string
+	Primera time.Time
+	Ultima  time.Time
+}
+
+// CallbacksDesde reune los destinos de retrollamada capturados desde una
+// fecha, agrupados por destino (un mismo C2 sale en muchos escaneos).
+func (s *Store) CallbacksDesde(desde time.Time) ([]CallbackIOC, error) {
+	rows, err := s.db.Query(
+		`SELECT json_extract(detalle,'$.callback'),
+		        COALESCE(json_extract(detalle,'$.exploit'),''),
+		        MIN(timestamp), MAX(timestamp)
+		   FROM eventos
+		  WHERE json_extract(detalle,'$.callback') IS NOT NULL
+		    AND json_extract(detalle,'$.callback') <> ''
+		    AND timestamp >= ?
+		  GROUP BY json_extract(detalle,'$.callback')
+		  ORDER BY MAX(timestamp) DESC`,
+		desde.UTC().Format(time.RFC3339Nano))
+	if err != nil {
+		return nil, fmt.Errorf("leyendo callbacks: %w", err)
+	}
+	defer rows.Close()
+	var out []CallbackIOC
+	for rows.Next() {
+		var c CallbackIOC
+		var pri, ult string
+		if err := rows.Scan(&c.Destino, &c.Exploit, &pri, &ult); err != nil {
+			return nil, err
+		}
+		c.Primera, _ = time.Parse(time.RFC3339Nano, pri)
+		c.Ultima, _ = time.Parse(time.RFC3339Nano, ult)
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 func (s *Store) EventosDesde(desde time.Time) ([]model.Evento, error) {
 	filas, err := s.db.Query(
 		`SELECT id, timestamp, COALESCE(protocolo,''), ip, tipo,
