@@ -163,6 +163,31 @@ senuelo"* mas abajo).
 Se activan y desactivan desde el panel. Los puertos son configurables; el
 panel indica a cuales hay que redirigir el trafico.
 
+## Botin y cebos que avisan (canary tokens)
+
+Un honeypot ensena mas cuanto mas se queda el atacante. Por eso el sistema
+de ficheros falso de Cowrie viene con **botin** creible: quien entra por SSH
+encuentra un `/root/.env` con credenciales de "produccion", un
+`.bash_history` con los comandos del "administrador", claves SSH y AWS, un
+`.mysql_history`, un `crontab` y un volcado de base de datos. Y comandos como
+`mysql`, `docker`, `aws` o `sshpass` responden de forma creible, en vez de
+delatar la trampa con un "command not found".
+
+Todo es **falso e inerte**: ninguna credencial abre nada real, la clave
+privada no autentica en ningun sitio y nada se ejecuta (Cowrie simula). Pero
+cada credencial es unica y de alta entropia: es un **canary**. Si una
+reaparece mas tarde —el atacante prueba esa contrasena en un login, la teclea
+en un comando o la envia al panel falso— k0Pot lo detecta con **certeza
+total**: nadie escribe esas cadenas por casualidad, asi que su reaparicion
+confirma que leyo el cebo y volvio. El ataque salta a **intrusion**, el
+resumen lo encabeza con "mordio el cebo" y la narrativa lo explica lo primero.
+Todo dentro de la maquina, sin avisar a ningun servicio externo.
+
+El botin se planta parcheando el filesystem de Cowrie con contenido embebido
+(`deploy/plantar-botin.py` inyecta `deploy/loot/` en el pickle); las
+credenciales senuelo viven en `internal/cebo` y se detectan en
+`internal/classify`.
+
 ## Instalacion
 
 ### Con paquete (recomendado)

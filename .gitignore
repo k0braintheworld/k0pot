@@ -31,3 +31,7 @@
 # prueba de internal/geoip/testdata SI se versiona: es de dominio publico.
 /data/*.mmdb
 GeoLite2-City.mmdb
+
+# El pickle base de Cowrie se re-extrae de la imagen (docker cp); el de
+# botin (deploy/fs-botin.pickle) SI se versiona: es lo que monta el compose.
+/deploy/fs-base.pickle
