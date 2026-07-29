@@ -1657,6 +1657,79 @@ async function cargarAprendizaje() {
   } catch (e) { /* silencioso: el indicador no debe romper el refresco */ }
 }
 
+
+
+// ── Inteligencia: C2, botnets, tuneles ──────────────────────────────
+async function cargarC2() {
+  const lista = await traer("/api/c2");
+  const cont = $("lista-c2");
+  cont.replaceChildren();
+  const sec = document.querySelector(".bloque-c2");
+  if (!lista.length) { if (sec) sec.hidden = true; return; }
+  if (sec) sec.hidden = false;
+  const fuentes = { callback: "c2.fuente.callback", muestra: "c2.fuente.muestra", descarga: "c2.fuente.descarga" };
+  for (const n of lista) {
+    const card = nodo("div", "intel-card");
+    card.appendChild(nodo("span", "host", n.host));
+    for (const f of (n.fuentes || [])) {
+      const cls = "badge badge-" + f;
+      card.appendChild(nodo("span", cls, t(fuentes[f] || f)));
+    }
+    if (n.familias?.length) {
+      for (const f of n.familias) card.appendChild(nodo("span", "familia-tag", f));
+    }
+    const partes = [];
+    partes.push(n.veces + "x");
+    if (n.ultima) partes.push(hace(n.ultima));
+    card.appendChild(nodo("span", "stat", partes.join(" \u00b7 ")));
+    cont.appendChild(card);
+  }
+}
+
+async function cargarBotnets() {
+  const lista = await traer("/api/botnets");
+  const cont = $("lista-botnets");
+  cont.replaceChildren();
+  const sec = document.querySelector(".bloque-botnets");
+  if (!lista.length) { if (sec) sec.hidden = true; return; }
+  if (sec) sec.hidden = false;
+  for (const b of lista) {
+    const card = nodo("div", "bot-card");
+    card.appendChild(nodo("div", "bot-nombre", b.familia));
+    card.appendChild(nodo("div", "bot-desc", b.descripcion));
+    const stats = nodo("div", "bot-stats");
+    stats.appendChild(nodo("span", null, b.episodios + " " + t("bot.episodios")));
+    stats.appendChild(nodo("span", null, b.ips + " " + t("bot.ips")));
+    if (b.ultima) stats.appendChild(nodo("span", null, hace(b.ultima)));
+    card.appendChild(stats);
+    if (b.ejemplo?.length) {
+      const pre = document.createElement("pre");
+      pre.textContent = b.ejemplo.join("\n");
+      card.appendChild(pre);
+    }
+    cont.appendChild(card);
+  }
+}
+
+async function cargarTuneles() {
+  const lista = await traer("/api/tuneles");
+  const cont = $("lista-tuneles");
+  cont.replaceChildren();
+  const sec = document.querySelector(".bloque-tuneles");
+  if (!lista.length) { if (sec) sec.hidden = true; return; }
+  if (sec) sec.hidden = false;
+  for (const d of lista) {
+    const card = nodo("div", "tun-card");
+    card.appendChild(nodo("code", null, d.destino));
+    const partes = [];
+    partes.push(d.veces + " " + t("tun.veces"));
+    partes.push(d.ips.length + " " + t("tun.ips"));
+    if (d.ultima) partes.push(hace(d.ultima));
+    card.appendChild(nodo("span", "stat", partes.join(" \u00b7 ")));
+    cont.appendChild(card);
+  }
+}
+
 async function refrescar() {
   const latido = $("latido");
   latido.className = "punto cargando";
@@ -1676,6 +1749,9 @@ async function refrescar() {
       cargarTendencias(),
       cargarAprendizaje(),
       traer("/api/serie").then(pintarSerie),
+      cargarC2(),
+      cargarBotnets(),
+      cargarTuneles(),
     ]);
     latido.className = "punto conectado";
     $("actualizado").textContent = new Date().toLocaleTimeString("es");
