@@ -858,23 +858,23 @@ Object.assign(IDIOMAS.en, {
 });
 Object.assign(IDIOMAS.es, {
   "apr.chip.sintokens": "⏸ Aprendizaje detenido · tokens agotados",
-  "apr.chip.sintokens.t": "El modelo gratis agotó su cuota de tokens del día. k0Pot reintenta solo y se reactiva en cuanto vuelva a haber."
+  "apr.chip.sintokens.t": "Todos los modelos están sin cuota ahora mismo (límite del proveedor, por minuto o por día). k0Pot reintenta solo y sigue en cuanto alguno se libere."
 });
 Object.assign(IDIOMAS.en, {
   "apr.chip.sintokens": "⏸ Learning paused · tokens exhausted",
-  "apr.chip.sintokens.t": "The free model ran out of its daily token budget. k0Pot retries on its own and resumes as soon as tokens are back."
+  "apr.chip.sintokens.t": "All models are out of quota right now (provider limit, per-minute or per-day). k0Pot retries on its own and continues as soon as one frees up."
 });
 Object.assign(IDIOMAS.es, { "apr.chip.generando": "🧠 Aprendiendo… · {n}" });
 Object.assign(IDIOMAS.en, { "apr.chip.generando": "🧠 Learning… · {n}" });
 Object.assign(IDIOMAS.es, {
   "apr.estado.generando": "aprendiendo…",
-  "apr.estado.sintokens": "⏸ tokens agotados",
+  "apr.estado.sintokens": "⏸ esperando cuota",
   "apr.estado.pausa": "en pausa",
   "apr.estado.inactivo": "desactivado"
 });
 Object.assign(IDIOMAS.en, {
   "apr.estado.generando": "learning…",
-  "apr.estado.sintokens": "⏸ tokens exhausted",
+  "apr.estado.sintokens": "⏸ waiting for quota",
   "apr.estado.pausa": "paused",
   "apr.estado.inactivo": "off"
 });

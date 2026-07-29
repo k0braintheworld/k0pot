@@ -68,7 +68,7 @@ func (s *Servidor) redactarExplicacionAtaque(ctx context.Context, ex report.Expl
 // el modelo gratis limita por tokens/minuto, asi que ir en rafaga solo provoca
 // errores 429; espaciando, cada explicacion sale y la que abres va primero.
 func (s *Servidor) BarrerExplicaciones(ctx context.Context) {
-	t := time.NewTicker(20 * time.Second)
+	t := time.NewTicker(40 * time.Second)
 	defer t.Stop()
 	for {
 		select {
