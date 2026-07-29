@@ -1023,7 +1023,11 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .apr-estado.en-pausa { color: var(--sub); }
 /* Modelos de IA: lista con failover */
 .lista-modelos { display: flex; flex-direction: column; gap: .4rem; margin: .3rem 0; }
-.modelo-fila { display: flex; align-items: center; gap: .5rem; padding: .4rem .5rem; border: 1px solid var(--borde); border-radius: 8px; background: var(--fondo-2); }
+.modelo-fila { display: flex; flex-direction: column; gap: .35rem; padding: .5rem .6rem; border: 1px solid var(--borde); border-radius: 8px; background: var(--fondo-2); }
+.modelo-cab { display: flex; align-items: center; justify-content: space-between; }
+.modelo-campos { display: flex; gap: .4rem; }
+.modelo-campos input { flex: 1; min-width: 5rem; }
+.modelo-modelo { flex: 0 1 40% !important; }
 .modelo-nombre { font-weight: 600; min-width: 8rem; }
 .modelo-clave { flex: 1; min-width: 6rem; }
 .modelo-acciones { display: flex; gap: .2rem; }

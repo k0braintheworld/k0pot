@@ -2019,6 +2019,11 @@ function cargarModelos(c) {
   pintarModelos();
 }
 
+function modeloPorDefecto(id) {
+  const p = catalogoProveedores.find((x) => x.id === id);
+  return p ? p.modelo : "";
+}
+
 function pintarModelos() {
   const cont = $("lista-modelos");
   cont.replaceChildren();
@@ -2028,16 +2033,8 @@ function pintarModelos() {
   }
   modelosConfig.forEach((m, i) => {
     const fila = nodo("div", "modelo-fila");
-    fila.appendChild(nodo("span", "modelo-nombre", nombreProveedor(m.proveedor)));
-    const clave = nodo("input", "modelo-clave");
-    clave.type = "password";
-    clave.autocomplete = "off";
-    clave.placeholder = m.claveMasked
-      ? t("cfg.modelos.configurada", { c: m.claveMasked })
-      : t("cfg.modelos.clave");
-    clave.value = m.claveNueva;
-    clave.addEventListener("input", () => { m.claveNueva = clave.value; });
-    fila.appendChild(clave);
+    const cab = nodo("div", "modelo-cab");
+    cab.appendChild(nodo("span", "modelo-nombre", nombreProveedor(m.proveedor)));
     const acc = nodo("div", "modelo-acciones");
     const boton = (txt, fn, dis) => {
       const b = nodo("button", "boton-menor", txt);
@@ -2055,7 +2052,30 @@ function pintarModelos() {
       pintarModelos();
     }, i === modelosConfig.length - 1));
     acc.appendChild(boton("✕", () => { modelosConfig.splice(i, 1); pintarModelos(); }));
-    fila.appendChild(acc);
+    cab.appendChild(acc);
+    fila.appendChild(cab);
+
+    const campos = nodo("div", "modelo-campos");
+    const clave = nodo("input", "modelo-clave");
+    clave.type = "password";
+    clave.autocomplete = "off";
+    clave.placeholder = m.claveMasked
+      ? t("cfg.modelos.configurada", { c: m.claveMasked })
+      : t("cfg.modelos.clave");
+    clave.value = m.claveNueva;
+    clave.addEventListener("input", () => { m.claveNueva = clave.value; });
+    campos.appendChild(clave);
+
+    const modelo = nodo("input", "modelo-modelo");
+    modelo.type = "text";
+    modelo.autocomplete = "off";
+    modelo.placeholder = modeloPorDefecto(m.proveedor) || t("cfg.modelos.modelo");
+    modelo.title = t("cfg.modelos.modelo.t");
+    modelo.value = m.modelo || "";
+    modelo.addEventListener("input", () => { m.modelo = modelo.value.trim(); });
+    campos.appendChild(modelo);
+    fila.appendChild(campos);
+
     cont.appendChild(fila);
   });
 }

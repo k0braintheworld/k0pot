@@ -902,3 +902,11 @@ Object.assign(IDIOMAS.en, {
 });
 Object.assign(IDIOMAS.es, { "expl.pendiente.pasos": "El detalle paso a paso está más abajo. La IA prepara además un resumen del ataque entero; aparecerá aquí cuando haya cuota disponible." });
 Object.assign(IDIOMAS.en, { "expl.pendiente.pasos": "The step-by-step detail is below. The AI is also preparing a summary of the whole attack; it will appear here when quota is available." });
+Object.assign(IDIOMAS.es, {
+  "cfg.modelos.modelo": "modelo (opcional)",
+  "cfg.modelos.modelo.t": "Nombre del modelo. Vacío = el de por defecto del proveedor. Cámbialo si te hace falta (p. ej. un modelo :free de OpenRouter)."
+});
+Object.assign(IDIOMAS.en, {
+  "cfg.modelos.modelo": "model (optional)",
+  "cfg.modelos.modelo.t": "Model name. Empty = the provider default. Change it if you need to (e.g. a :free OpenRouter model)."
+});
