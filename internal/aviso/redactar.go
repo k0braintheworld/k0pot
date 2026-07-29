@@ -62,7 +62,7 @@ func Redactar(eps []store.EpisodioFila, enlace, idioma string) (Mensaje, bool) {
 	return Mensaje{
 		Titulo:  titulo(eps, peor, idioma),
 		Cuerpo:  b.String(),
-		Urgente: peor == episodio.Intrusion,
+		Urgente: episodio.Rango(peor) >= episodio.Rango(episodio.Intrusion),
 		Enlace:  enlace,
 	}, true
 }
@@ -75,7 +75,10 @@ func titulo(eps []store.EpisodioFila, peor episodio.Severidad, idioma string) st
 		return es
 	}
 	que := tr("Acceso al honeypot", "Access to the honeypot")
-	if peor == episodio.Intrusion {
+	switch {
+	case peor == episodio.Trampa:
+		que = tr("Cebo mordido en el honeypot", "Bait taken in the honeypot")
+	case peor == episodio.Intrusion:
 		que = tr("Intrusion en el honeypot", "Intrusion in the honeypot")
 	}
 	if len(eps) == 1 {

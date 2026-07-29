@@ -539,6 +539,7 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .sev-tanteo    { color: #d9a441; border: 1px solid #d9a441; }
 .sev-acceso    { color: #e8833a; border: 1px solid #e8833a; }
 .sev-intrusion { color: #fff; background: #c0392b; border: 1px solid #c0392b; }
+.sev-trampa    { color: #fff; background: #9b2fd6; border: 1px solid #9b2fd6; }
 
 .fila-ataque-texto { min-width: 0; }
 .fila-ataque-texto strong { font-weight: 600; }
@@ -857,6 +858,8 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .barra-sev.acceso    .relleno { background: #d98a3a; }
 .barra-sev.intrusion .relleno { background: var(--rojo); }
 .barra-sev.intrusion .nombre { color: var(--rojo); font-weight: 600; }
+.barra-sev.trampa    .relleno { background: #9b2fd6; }
+.barra-sev.trampa    .nombre { color: #9b2fd6; font-weight: 600; }
 
 /* Cierre: el embudo en dos, ruido contra lo que importa. Va anclado abajo
    (margin-top:auto) para que el bloque iguale la altura de la lista de
@@ -958,6 +961,7 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .vida-marca.sev-tanteo { background: #d9a441; }
 .vida-marca.sev-acceso { background: #e8833a; }
 .vida-marca.sev-intrusion { background: #c0392b; }
+.vida-marca.sev-trampa { background: #9b2fd6; }
 .vida-ejes { display: flex; justify-content: space-between; font-size: .72rem; color: var(--sub); }
 
 /* ── Modo aprende ──────────────────────────────────────────────────── */

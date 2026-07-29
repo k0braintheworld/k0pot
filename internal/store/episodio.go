@@ -408,7 +408,7 @@ func (s *Store) Episodios(f FiltroEpisodios) ([]EpisodioFila, error) {
 	}
 	consulta += `
 		  ORDER BY CASE e.severidad
-		             WHEN 'intrusion' THEN 3 WHEN 'acceso' THEN 2
+		             WHEN 'trampa' THEN 4 WHEN 'intrusion' THEN 3 WHEN 'acceso' THEN 2
 		             WHEN 'tanteo'    THEN 1 ELSE 0 END DESC,
 		           e.fin DESC
 		  LIMIT ?`
@@ -547,7 +547,7 @@ func (s *Store) NovedadesDesde(ultimoID int64) (maxID int64, minNuevo time.Time,
 // rangoSeveridad ordena las severidades dentro de SQL. Tiene que coincidir
 // con episodio.orden; si divergen, el panel y los avisos discreparian sobre
 // que es mas grave.
-const rangoSeveridad = `CASE %s WHEN 'intrusion' THEN 3 WHEN 'acceso' THEN 2
+const rangoSeveridad = `CASE %s WHEN 'trampa' THEN 4 WHEN 'intrusion' THEN 3 WHEN 'acceso' THEN 2
                                 WHEN 'tanteo' THEN 1 ELSE 0 END`
 
 // EpisodiosPorAvisar devuelve los ataques que alcanzan la severidad minima

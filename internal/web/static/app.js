@@ -601,7 +601,7 @@ async function cargarAtaques() {
   // tanteos y fuerza bruta fallida-, que es la mayoria y no cuenta ninguna
   // historia. Se queda lo que consiguio acceso o actuo dentro.
   if ($("f-ruido").checked) {
-    lista = lista.filter((a) => a.severidad === "acceso" || a.severidad === "intrusion");
+    lista = lista.filter((a) => a.severidad === "acceso" || a.severidad === "intrusion" || a.severidad === "trampa");
   }
 
   const cont = $("ataques");
@@ -1529,6 +1529,7 @@ function pintarGravedad(severidades) {
   cont.replaceChildren();
 
   const orden = [
+    ["trampa", t("grav.trampa")],
     ["intrusion", t("grav.intrusion")],
     ["acceso", t("grav.acceso")],
     ["tanteo", t("grav.tanteo")],
@@ -1564,7 +1565,7 @@ function pintarGravedad(severidades) {
   // lo que de verdad importa. Es lo que separa a k0Pot de mirar un log crudo:
   // casi todo rebota solo, y lo poco que entra queda a la vista.
   const ruido = cuenta("roce") + cuenta("tanteo");
-  const serio = cuenta("acceso") + cuenta("intrusion");
+  const serio = cuenta("acceso") + cuenta("intrusion") + cuenta("trampa");
   const pctRuido = Math.round((ruido / total) * 100);
 
   const embudo = nodo("div", "embudo");

@@ -55,7 +55,7 @@ func (s *Servidor) reporte(w http.ResponseWriter, r *http.Request) {
 	res, _ := report.PorReglas{}.Generar(r.Context(), report.Datos{
 		Desde: desde, Hasta: time.Now(),
 		Resumen: resumen, Niveles: niveles, Episodios: ataques,
-		Idioma:  idioma,
+		Idioma: idioma,
 	})
 
 	modelo := datosReporte(desde, resumen, niveles, ataques, res.Texto, s.Almacen, idioma)
@@ -105,10 +105,10 @@ type reporteVista struct {
 	NumAtaques, Intrusiones int
 	// MasAtaques es cuantos quedan sin detallar por debajo del tope: el
 	// informe detalla solo los mas graves, no vuelca cientos.
-	MasAtaques int
-	Ataques                 []ataqueVista
-	TopIPs                  []filaIP
-	Credenciales            []filaCred
+	MasAtaques   int
+	Ataques      []ataqueVista
+	TopIPs       []filaIP
+	Credenciales []filaCred
 }
 
 // T traduce las etiquetas fijas de la plantilla del informe segun el idioma.
@@ -133,7 +133,7 @@ func (v reporteVista) T(clave string) string {
 		"th_password":    {"Contrasena", "Password"},
 		"lang":           {"es", "en"},
 		"mas_ataques_1":  {"y", "and"},
-		"mas_ataques_2": {"ataques mas, ordenados por gravedad.", "more attacks, ordered by severity."},
+		"mas_ataques_2":  {"ataques mas, ordenados por gravedad.", "more attacks, ordered by severity."},
 	}
 	par := m[clave]
 	if v.Idioma == "en" {
@@ -141,7 +141,6 @@ func (v reporteVista) T(clave string) string {
 	}
 	return par[0]
 }
-
 
 type ataqueVista struct {
 	IP, Origen, Severidad, SevClase, Resumen, Cuando string
@@ -189,7 +188,7 @@ func datosReporte(desde time.Time, r *store.Resumen, niveles map[model.Clasifica
 	// contando todos.
 	const topeDetalle = 30
 	for i, e := range ataques {
-		if e.Severidad == episodio.Intrusion {
+		if episodio.Rango(e.Severidad) >= episodio.Rango(episodio.Intrusion) {
 			v.Intrusiones++
 		}
 		if i < topeDetalle {

@@ -122,7 +122,7 @@ func FraseSemaforo(niveles map[model.Clasificacion]int, idioma string) string {
 // que de verdad importa (rojo).
 func NivelDeAtaques(sev map[string]int) Nivel {
 	switch {
-	case sev["intrusion"] > 0:
+	case sev["trampa"] > 0, sev["intrusion"] > 0:
 		return Rojo
 	case sev["acceso"] > 0:
 		return Ambar
@@ -137,7 +137,7 @@ func FraseSemaforoAtaques(sev map[string]int) string {
 		// "Piden que los mires", no "hay que actuar": en un senuelo que
 		// alguien entre y actue es la trampa funcionando, no una emergencia.
 		return fmt.Sprintf("ROJO — %s merecen que los mires: "+
-			"alguien no se limito a llamar a la puerta", plural(sev["intrusion"], "ataque"))
+			"alguien no se limito a llamar a la puerta", plural(sev["intrusion"]+sev["trampa"], "ataque"))
 	case Ambar:
 		return fmt.Sprintf("AMBAR — %s consiguieron entrar, "+
 			"pero nada indica que llegaran a actuar dentro", plural(sev["acceso"], "ataque"))

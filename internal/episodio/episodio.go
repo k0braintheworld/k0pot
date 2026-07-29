@@ -42,10 +42,13 @@ const (
 	Acceso Severidad = "acceso"
 	// Intrusion: entro y ademas actuo dentro.
 	Intrusion Severidad = "intrusion"
+	// Trampa: mordio el cebo. Reutilizo una credencial senuelo que solo
+	// pudo sacar de aqui; es la senal de mas valor, por encima de todo.
+	Trampa Severidad = "trampa"
 )
 
 // orden permite comparar severidades; el valor mayor manda.
-var orden = map[Severidad]int{Roce: 0, Tanteo: 1, Acceso: 2, Intrusion: 3}
+var orden = map[Severidad]int{Roce: 0, Tanteo: 1, Acceso: 2, Intrusion: 3, Trampa: 4}
 
 // Rango convierte una severidad en un numero comparable.
 //
@@ -170,7 +173,7 @@ func (e *Episodio) absorber(ev model.Evento) {
 	// grave que sabemos con certeza, sea cual sea el tipo de evento.
 	if m := ev.Detalle["cebo_mordido"]; m != "" {
 		e.CeboMordido = m
-		e.Severidad = Peor(e.Severidad, Intrusion)
+		e.Severidad = Peor(e.Severidad, Trampa)
 		anadir(&e.Motivos, "mordio el cebo: reutilizo "+m, 5)
 	}
 
