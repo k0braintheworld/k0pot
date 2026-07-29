@@ -198,8 +198,15 @@ func (s *Servidor) episodio(w http.ResponseWriter, r *http.Request) {
 	// barredor, que la genera en segundo plano.
 	if det.Explicacion == "" && s.puedeExplicar() &&
 		episodio.Rango(ep.Severidad) >= episodio.Rango(episodio.Acceso) {
-		det.Pendiente = true
-		s.pedirExplicacion("ataque|" + clave)
+		// Si ya se explico un ataque de la MISMA forma, se reutiliza al momento
+		// -sin IA, sin espera-. Si no, se marca pendiente y se encola.
+		if txt, ok := s.Almacen.NarrativaAprendida(firmaDeAtaque(ep), idioma); ok {
+			_ = s.Almacen.GuardarExplicacion(clave, txt)
+			det.Explicacion = txt
+		} else {
+			det.Pendiente = true
+			s.pedirExplicacion("ataque|" + clave)
+		}
 	}
 	if n, hay := saber.DeProveedor(ep.ISP); hay {
 		nn := n.En(idioma)

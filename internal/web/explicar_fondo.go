@@ -2,8 +2,12 @@ package web
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,6 +27,33 @@ import (
 // para que salga en el siguiente barrido; mientras, el panel muestra
 // "pendiente".
 var explicacionesPedidas sync.Map // "tipo|clave" -> struct{}
+
+// firmaDeAtaque resume la FORMA de un ataque: su protocolo, si entro, y sus
+// comandos y rutas NORMALIZADOS (sin IPs, hashes ni numeros concretos), sin
+// repetir ni importar el orden. Dos ataques con la misma firma hicieron lo
+// mismo aunque vengan de IPs distintas: comparten narrativa.
+func firmaDeAtaque(ep store.EpisodioFila) string {
+	dedup := func(xs []string) []string {
+		visto := map[string]bool{}
+		var out []string
+		for _, x := range xs {
+			n := saber.NormalizarComando(x)
+			if n == "" || visto[n] {
+				continue
+			}
+			visto[n] = true
+			out = append(out, n)
+		}
+		sort.Strings(out)
+		return out
+	}
+	base := fmt.Sprintf("%s|%s|%t|%s||%s",
+		ep.Protocolo, ep.Severidad, ep.LoginExitoso,
+		strings.Join(dedup(ep.Comandos), "\n"),
+		strings.Join(dedup(ep.Rutas), "\n"))
+	h := sha256.Sum256([]byte(base))
+	return hex.EncodeToString(h[:16])
+}
 
 // pedirExplicacion pone algo en cabeza de la cola del barredor.
 func (s *Servidor) pedirExplicacion(tipoClave string) {
@@ -130,10 +161,19 @@ func (s *Servidor) generarUnaNarrativa(ctx context.Context) {
 		if ya, _ := s.Almacen.Explicacion(clave); ya != "" {
 			return
 		}
+		firma := firmaDeAtaque(ep)
+		if txt, ok := s.Almacen.NarrativaAprendida(firma, idioma); ok {
+			// Misma forma que un ataque ya explicado: se reutiliza, sin IA.
+			_ = s.Almacen.GuardarExplicacion(clave, txt)
+			return
+		}
 		redactar = func(ctx context.Context, ex report.Explicador) (string, error) {
 			return s.redactarExplicacionAtaque(ctx, ex, ep, idioma)
 		}
-		guardar = func(t string) { _ = s.Almacen.GuardarExplicacion(clave, t) }
+		guardar = func(t string) {
+			_ = s.Almacen.GuardarExplicacion(clave, t)
+			_ = s.Almacen.GuardarNarrativaAprendida(firma, idioma, t)
+		}
 	case "campana":
 		if ya, _ := s.Almacen.ExplicacionDe("campana", clave); ya != "" {
 			return
@@ -284,3 +324,32 @@ func (s *Servidor) aprendizaje(w http.ResponseWriter, r *http.Request) {
 
 // esLimiteDeRitmo reconoce el 429 de -has gastado tu cuota de tokens- del
 // proveedor, para pausar en vez de insistir.
+
+// SembrarNarrativas rellena la memoria por firma con los ataques que YA tienen
+// narrativa, una sola vez. Asi lo explicado hasta ahora pasa a reutilizarse de
+// inmediato para cualquier ataque de la misma forma, sin volver a gastar IA.
+func (s *Servidor) SembrarNarrativas() {
+	if v, _ := s.Almacen.LeerEstado("narrativas_sembradas"); v == "1" {
+		return
+	}
+	idioma := s.Config.Actual().Idioma
+	if idioma == "" {
+		idioma = "es"
+	}
+	eps, err := s.Almacen.EpisodiosExplicados()
+	if err != nil {
+		return
+	}
+	n := 0
+	for _, e := range eps {
+		firma := firmaDeAtaque(e.EpisodioFila)
+		if _, ok := s.Almacen.NarrativaAprendida(firma, idioma); ok {
+			continue
+		}
+		if s.Almacen.GuardarNarrativaAprendida(firma, idioma, e.Explicacion) == nil {
+			n++
+		}
+	}
+	_ = s.Almacen.GuardarEstado("narrativas_sembradas", "1")
+	log.Printf("narrativas: memoria sembrada con %d formas desde lo ya explicado", n)
+}

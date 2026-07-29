@@ -116,6 +116,9 @@ func migrar(db *sql.DB) error {
 	if _, err := db.Exec(esquemaVistos); err != nil {
 		return fmt.Errorf("creando esquema de vistos: %w", err)
 	}
+	if _, err := db.Exec(esquemaNarrativas); err != nil {
+		return fmt.Errorf("creando esquema de narrativas: %w", err)
+	}
 	// Bases creadas antes de que los episodios guardaran el motivo del
 	// clasificador.
 	if err := anadirColumna(db, "episodios", "motivos", "TEXT NOT NULL DEFAULT '[]'"); err != nil {

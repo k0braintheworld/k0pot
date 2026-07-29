@@ -1081,6 +1081,7 @@ func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion, rutaBD
 	// Barredor de narrativas: en segundo plano genera las explicaciones de
 	// ataques, campanas y artefactos que faltan, para que aparezcan solas al
 	// abrirlos sin llamar al modelo en ese momento.
+	go srv.SembrarNarrativas()
 	go srv.BarrerExplicaciones(ctx)
 
 	if c := ajustes.Actual(); c.PanelHTTPS {
