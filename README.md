@@ -172,6 +172,18 @@ senuelo"* mas abajo).
   retrollamada**: su C2 o el servidor desde el que sirve la segunda fase. Es
   la inteligencia mas valiosa que deja un escaneo, y se saca leyendo texto,
   sin ejecutar nada.
+- **Panel de infraestructura C2.** Agrega todos los hosts de mando y control
+  extraidos de tres fuentes —embebidos en muestras capturadas, callbacks de
+  exploits y URLs de descarga de malware— en una vista unica con recuento,
+  origen y familia de exploit. Es la respuesta a *contra quien nos
+  enfrentamos*.
+- **Familias de botnet.** Clasifica los ataques con comandos por su firma
+  (Mirai, Gafgyt, Mozi, Hajime, XorDDoS, Tsunami, CoinMiner, ShellBot) y
+  muestra cuantos episodios y cuantas IPs hay de cada una, con un ejemplo de
+  los comandos que los delatan.
+- **Destinos de tunel.** Agrega los destinos a los que los atacantes pidieron
+  reenviar trafico a traves del honeypot, para ver que infraestructura real
+  intentan alcanzar y con cuantas IPs distintas.
 
 ## Servicios
 
