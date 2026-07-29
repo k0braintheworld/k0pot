@@ -80,24 +80,32 @@ Es lo que mas distingue a k0Pot, y funciona en dos capas, **sin botones**:
   comando. El conocimiento crece con lo que ve.
 - **El ataque entero, la campana o el artefacto.** Una narrativa en prosa:
   que buscaban, como funciona la tecnica, hasta donde llegaron y que
-  significaria en un servidor de verdad. Un artefacto capturado se explica a
-  partir de su tipo y de las cadenas que lleva dentro, **sin ejecutarlo**.
+  significaria en un servidor de verdad. Y **tambien se reutiliza**: como los
+  bots repiten el mismo guion desde miles de IPs, cada ataque tiene una *firma*
+  —su forma normalizada, sin IPs ni hashes—; dos ataques con la misma firma
+  comparten narrativa, asi que el primero la genera y el resto la sirven gratis
+  y al instante. En la practica, miles de ataques se reducen a unas decenas de
+  formas. Un artefacto capturado se explica a partir de su tipo y de las cadenas
+  que lleva dentro, **sin ejecutarlo**.
 
-**Abrir algo NUNCA llama al modelo.** Todo se cocina en segundo plano —con la
-cuota que sobre y reservando siempre un margen para lo que pidas tu— y aparece
-desde memoria. Si algo aun no esta explicado, el panel lo dice y lo pone en
-cabeza de la cola; en cuanto se genera, aparece solo sin que reabras. Un
-indicador en la cabecera muestra cuanto lleva aprendido y avisa si el proveedor
-corta por limite de tokens.
+**Abrir algo NUNCA llama al modelo.** Todo sale de memoria. La IA solo trabaja
+en segundo plano y **solo para los ataques que abres** —no malgasta la cuota en
+un backlog de miles que nadie mira—: al abrir uno, si su forma ya se explico se
+reutiliza al momento; si es nueva, se genera y se guarda por firma. Mientras
+tanto, el detalle paso a paso ya esta debajo (narracion + glosas de memoria) y
+el panel avisa de que prepara el resumen del ataque entero. Un indicador en la
+cabecera muestra cuanto lleva aprendido, si esta aprendiendo, los tokens de hoy
+y si algun modelo se quedo sin cuota.
 
-**Nace sabiendo.** k0Pot trae de fabrica un catalogo de comandos ya aprendido
-—Mirai, droppers, reconocimiento, escapes de contenedor...—, asi que una
-instalacion nueva explica lo de siempre desde el primer minuto sin gastar IA.
+**Nace sabiendo.** k0Pot trae de fabrica lo ya aprendido —un catalogo de
+comandos Y las narrativas de las formas de ataque mas comunes: Mirai, droppers,
+reconocimiento, fuerza bruta, escapes de contenedor...—, asi que una instalacion
+nueva reconoce y explica lo de siempre desde el primer minuto sin gastar IA.
 
 **Configurar la IA es elegir y pegar la clave.** En Ajustes hay un catalogo de
 proveedores integrado —Groq, Google Gemini, OpenAI, Anthropic, OpenRouter,
-Mistral, DeepSeek—; eliges uno y pegas tu clave, sin URLs ni nombres de modelo
-que recordar. Y puedes **configurar varios**: k0Pot usa el primero de la lista
+Mistral, DeepSeek—; eliges uno y pegas tu clave, sin URLs que recordar (cada proveedor trae un
+modelo por defecto, que puedes cambiar por fila si te hace falta). Y puedes **configurar varios**: k0Pot usa el primero de la lista
 con tokens y, si se agota, **salta solo al siguiente** (failover automatico);
 cuando el primero se recupera, vuelve a el. El orden es la prioridad.
 
