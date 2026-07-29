@@ -41,6 +41,8 @@ services:
       # conexion en docker-proxy y luego la rechaza, porque detras no hay
       # nadie escuchando.
       - ./deploy/cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg:ro
+      - ./deploy/fs-botin.pickle:/cowrie/fs.pickle:ro
+      - ./deploy/cowrie-txtcmds:/cowrie/txtcmds:ro
     # Un honeypot es codigo expuesto a atacantes: sin privilegios extra
     # y con el filesystem de solo lectura salvo lo que necesita escribir.
     read_only: false

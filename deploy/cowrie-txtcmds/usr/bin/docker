@@ -1,0 +1,5 @@
+CONTAINER ID   IMAGE                     COMMAND                  CREATED       STATUS       PORTS                  NAMES
+a1b2c3d4e5f6   acme/shop-backend:2.4.1   "php-fpm"                3 weeks ago   Up 3 weeks   9000/tcp               acme-app
+b2c3d4e5f6a7   mysql:8.0                 "docker-entrypoint.s…"   3 weeks ago   Up 3 weeks   3306/tcp               acme-db
+c3d4e5f6a7b8   redis:7                   "docker-entrypoint.s…"   3 weeks ago   Up 3 weeks   6379/tcp               acme-redis
+d4e5f6a7b8c9   nginx:1.24                "/docker-entrypoint.…"   3 weeks ago   Up 3 weeks   0.0.0.0:443->443/tcp   acme-web

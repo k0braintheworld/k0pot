@@ -1,0 +1,6 @@
+# /etc/crontab: system-wide crontab
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+0 2 * * *  root  /opt/acme/scripts/backup.sh >> /var/log/acme-backup.log 2>&1
+30 * * * * root  mysqldump -u acme_app -p'Pr0d_9xQZ!ktm2024' acme_prod | gzip > /opt/acme/backup/hourly.sql.gz
