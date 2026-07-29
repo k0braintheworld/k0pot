@@ -62,6 +62,7 @@ que el atacante *consiguio*:
 | `tanteo` | probo credenciales o rutas |
 | `acceso` | entro |
 | `intrusion` | entro y ademas actuo dentro |
+| `trampa` | mordio un cebo: reutilizo una credencial senuelo (la senal de mas valor) |
 
 Mil conexiones de un escaner valen menos que una sola sesion donde alguien
 tecleo `cat /etc/passwd`. Ordenar por volumen es justo lo que entierra el
@@ -211,7 +212,8 @@ cada credencial es unica y de alta entropia: es un **canary**. Si una
 reaparece mas tarde —el atacante prueba esa contrasena en un login, la teclea
 en un comando o la envia al panel falso— k0Pot lo detecta con **certeza
 total**: nadie escribe esas cadenas por casualidad, asi que su reaparicion
-confirma que leyo el cebo y volvio. El ataque salta a **intrusion**, el
+confirma que leyo el cebo y volvio. El ataque salta a **trampa** —una
+severidad propia, por encima de la intrusion—, el
 resumen lo encabeza con "mordio el cebo" y la narrativa lo explica lo primero.
 Todo dentro de la maquina, sin avisar a ningun servicio externo.
 
