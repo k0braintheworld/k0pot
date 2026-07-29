@@ -189,6 +189,12 @@ de pega, y el apreton de manos binario de MongoDB con bases de nombres
 jugosos. Cada uno se activa desde el panel; recuerda abrir su puerto en el
 aislamiento (ya listados) y redirigirlo en tu router.
 
+Y las trampas de **MySQL** y **PostgreSQL** ya no solo capturan el login: lo
+aceptan y dejan "entrar", sirven tablas con datos falsos (`users`, `payments`,
+`customers`...) donde se cuelan credenciales senuelo, y anotan **cada consulta
+SQL** que lanza el atacante. Asi se ve como intenta exfiltrar, y robar esas
+filas y reutilizarlas mas tarde salta la alarma.
+
 ## Botin y cebos que avisan (canary tokens)
 
 Un honeypot ensena mas cuanto mas se queda el atacante. Por eso el sistema
