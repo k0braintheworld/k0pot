@@ -134,8 +134,10 @@ senuelo"* mas abajo).
   evoluciono, un ataque por marca coloreado por gravedad.
 - **Asistente** (opcional, se activa en Ajustes): chatear con la IA sobre lo
   que ha visto el honeypot esta semana.
-- **Exportar IOCs** (CSV y STIX 2.1): las IPs, hashes y URLs capturados,
-  listos para importar en tu firewall, tu SIEM o en MISP.
+- **Exportar IOCs** (CSV y STIX 2.1): las IPs, hashes, URLs de malware y los
+  **C2 que los atacantes filtran** al lanzar un exploit (el `ldap://` de un
+  Log4Shell, el `http://` de la segunda fase), listos para importar en tu
+  firewall, tu SIEM o en MISP.
 - **Blocklist descargable.** Un fichero con las IPs que *de verdad* atacaron
   —por defecto las que consiguieron entrar—, en texto plano o como set de
   `nftables`, listo para bloquearlas en tus servidores reales. Atacaron un
@@ -143,6 +145,13 @@ senuelo"* mas abajo).
 - **Trampas con cebo.** La web falsa sirve un `.env`, un panel de login o la
   config de git creibles, y captura las credenciales o el payload que envian:
   nadie legitimo teclea su usuario en la maquina trampa.
+- **Captura de infraestructura del atacante.** Cuando un escaneo intenta un
+  exploit conocido (Log4Shell, Shellshock, Struts, Spring4Shell, Solr,
+  ThinkPHP...), k0Pot lo reconoce en toda la peticion —tambien en las
+  cabeceras, y deshaciendo la ofuscacion de Log4j— y **extrae el destino de
+  retrollamada**: su C2 o el servidor desde el que sirve la segunda fase. Es
+  la inteligencia mas valiosa que deja un escaneo, y se saca leyendo texto,
+  sin ejecutar nada.
 
 ## Servicios
 
