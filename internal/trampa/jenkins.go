@@ -16,7 +16,7 @@ type Jenkins struct{}
 
 func (*Jenkins) ID() string            { return "jenkins" }
 func (*Jenkins) Nombre() string        { return "Jenkins" }
-func (*Jenkins) PuertoPorDefecto() int { return 8080 }
+func (*Jenkins) PuertoPorDefecto() int { return 8000 }
 func (*Jenkins) Descripcion() string {
 	return "Finge un Jenkins (integracion continua) abierto: cabecera X-Jenkins, " +
 		"panel de login que captura credenciales y la consola de scripts Groovy " +

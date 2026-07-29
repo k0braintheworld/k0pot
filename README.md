@@ -169,7 +169,7 @@ senuelo"* mas abajo).
 | VNC | 5900 | nativo |
 | Docker API | 2375 | nativo |
 | Elasticsearch | 9200 | nativo |
-| Jenkins | 8080 | nativo |
+| Jenkins | 8000 | nativo |
 | Grafana | 3000 | nativo |
 | MongoDB | 27017 | nativo |
 
