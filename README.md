@@ -145,9 +145,9 @@ senuelo"* mas abajo).
 - **Muestras capturadas.** Cada fichero que un atacante deja o se trae se
   guarda y se describe leyendo solo sus bytes —nunca se ejecuta—: la lista
   dice al vuelo qué es cada uno (`ELF MIPS` es una botnet de IoT, `ELF
-  x86-64` un servidor, un script, texto…), dónde lo intentaron dejar
-  (`/dev/.fxcat`) y separa las muestras de verdad de las pruebas de
-  escritura de 1 byte que sueltan los bots. Abrir una enseña sus cadenas y,
+  x86-64` un servidor, un script, texto…), **clasifica la amenaza** —botnet,
+  dropper, minero, webshell, prueba de escritura— y **sube el peligro arriba**,
+  con dónde lo intentaron dejar (`/dev/.fxcat`). Abrir una enseña sus cadenas y,
   con clave, su veredicto en VirusTotal por el hash, sin subir nada. Y se le
   extrae la **infraestructura que lleva escrita dentro** —el C2 de un binario,
   el `wget http://…/mirai.arm7` de un dropper—: esos indicadores pasan a los
