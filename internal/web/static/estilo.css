@@ -1132,6 +1132,7 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   border-bottom-color: var(--acento, #89b4fa);
 }
 .panel-intel { min-height: 2rem; }
+.panel-intel[hidden] { display: none; }
 .intel-card.pulsable, .bot-card.pulsable, .tun-card.pulsable {
   cursor: pointer;
   transition: background .15s;
