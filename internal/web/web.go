@@ -48,6 +48,7 @@ type Servidor struct {
 	DirCowrie string
 	// Version es la del binario, para mostrarla en el panel.
 	Version string
+	intel   cacheIntel
 	// AlCambiarConfig avisa a quien haya que reconfigurar (el generador de
 	// informes, el enriquecedor) cuando se guardan ajustes nuevos.
 	AlCambiarConfig func(config.Config)

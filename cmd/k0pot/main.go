@@ -1060,6 +1060,7 @@ func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion, rutaBD
 	}
 	// Al guardar ajustes se rehace el generador, para que cambiar de modelo
 	// o de clave surta efecto sin reiniciar el servicio.
+	srv.IniciarCacheIntel()
 	srv.AlCambiarConfig = func(c config.Config) {
 		srv.Generador = generadorDe(almacen, c, sinLLM)
 	}
