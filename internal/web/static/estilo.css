@@ -546,6 +546,7 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .amenaza-dropper, .amenaza-minero, .amenaza-webshell { color: #1a1a1a; background: #d98a3a; }
 .amenaza-muestra { color: var(--sub); border: 1px solid var(--borde); }
 .amenaza-prueba { color: var(--sub); border: 1px solid var(--borde); opacity: .7; }
+.artef-c2 { display: block; margin: .1rem 0; font-size: .78rem; font-family: ui-monospace, SFMono-Regular, monospace; color: var(--rojo); letter-spacing: .01em; }
 
 .fila-ataque-texto { min-width: 0; }
 .fila-ataque-texto strong { font-weight: 600; }

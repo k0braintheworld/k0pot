@@ -1371,6 +1371,8 @@ async function cargarArtefactos() {
     // Lo mas util de una muestra: que es. Un ELF MIPS es una botnet de IoT;
     // una "prueba de escritura" de 1 byte no es malware, es un bot tanteando.
     if (a.tipo) caja.appendChild(nodo("span", "artef-tipo", a.tipo));
+    // La infraestructura embebida (C2) en la propia fila: se ve sin abrir.
+    if (a.c2) caja.appendChild(nodo("span", "artef-c2", "C2  " + a.c2));
 
     const partes = [];
     if (a.ips?.length) partes.push(`${a.ips.length} IP${a.ips.length > 1 ? "s" : ""}`);

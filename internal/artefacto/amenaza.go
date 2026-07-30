@@ -20,7 +20,9 @@ func Clasificar(datos []byte, tipo string, tam int64) string {
 		return "webshell"
 	}
 
-	if strings.HasPrefix(tipo, "Script") {
+	// Un dropper puede o no llevar shebang: muchos son solo una tanda de
+	// comandos que se cuelan por "| sh". Cuenta como texto tambien.
+	if strings.HasPrefix(tipo, "Script") || tipo == "Texto" {
 		descarga := strings.Contains(bajo, "wget") || strings.Contains(bajo, "curl") ||
 			strings.Contains(bajo, "tftp")
 		if descarga && (strings.Contains(bajo, "chmod") || arquitecturasEnTexto(bajo) >= 2) {

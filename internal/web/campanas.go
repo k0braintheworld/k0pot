@@ -191,7 +191,10 @@ type Artefacto struct {
 	Destino string `json:"destino,omitempty"`
 	// Amenaza es la clase de peligro (botnet, dropper, minero, webshell,
 	// prueba, muestra), para triar y ordenar de un vistazo.
-	Amenaza string    `json:"amenaza,omitempty"`
+	Amenaza string `json:"amenaza,omitempty"`
+	// C2 resume la infraestructura que la muestra lleva dentro (los hosts),
+	// para verla en la lista sin abrir la ficha.
+	C2      string    `json:"c2,omitempty"`
 	IPs     []string  `json:"ips,omitempty"`
 	Momento time.Time `json:"momento"`
 	// FicheroDe es el SHA-256 del fichero que SI se capturo desde esta URL,
@@ -267,20 +270,60 @@ func (s *Servidor) artefactos(w http.ResponseWriter, r *http.Request) {
 // es, leyendo sus bytes una sola vez, sin ejecutarla. Los ficheros
 // minusculos casi siempre son una prueba de escritura de un bot (echo >
 // /dev/.algo), no malware: se marcan como tal para no confundir.
-func describirFichero(ruta string, tam int64) (tipo, amenaza string) {
+func describirFichero(ruta string, tam int64) (tipo, amenaza, c2 string) {
 	if tam <= 8 {
-		return fmt.Sprintf("prueba de escritura (%d B)", tam), "prueba"
+		return fmt.Sprintf("prueba de escritura (%d B)", tam), "prueba", ""
 	}
 	datos, err := leerAcotado(ruta, 128<<10)
 	if err != nil {
-		return "", ""
+		return "", "", ""
 	}
 	cab := datos
 	if len(cab) > 512 {
 		cab = cab[:512]
 	}
 	tipo = artefacto.Tipo(cab)
-	return tipo, artefacto.Clasificar(datos, tipo, tam)
+	return tipo, artefacto.Clasificar(datos, tipo, tam), c2DeMuestra(artefacto.IndicadoresDe(datos))
+}
+
+// c2DeMuestra resume en una linea los hosts (IPs y dominios) que una muestra
+// lleva dentro, para ensenar la infraestructura del atacante en la lista.
+func c2DeMuestra(ind artefacto.Indicadores) string {
+	vistos := map[string]bool{}
+	var hosts []string
+	anade := func(h string) {
+		h = strings.ToLower(h)
+		if h != "" && !vistos[h] {
+			vistos[h] = true
+			hosts = append(hosts, h)
+		}
+	}
+	for _, ip := range ind.IPs {
+		anade(ip)
+	}
+	for _, u := range ind.URLs {
+		anade(hostDeURL(u))
+	}
+	if len(hosts) == 0 {
+		return ""
+	}
+	if len(hosts) > 2 {
+		return fmt.Sprintf("%s +%d", strings.Join(hosts[:2], ", "), len(hosts)-2)
+	}
+	return strings.Join(hosts, ", ")
+}
+
+// hostDeURL saca el host de una URL (sin esquema, ruta ni puerto).
+func hostDeURL(u string) string {
+	i := strings.Index(u, "://")
+	if i < 0 {
+		return ""
+	}
+	h := u[i+3:]
+	if j := strings.IndexAny(h, "/:?@"); j >= 0 {
+		h = h[:j]
+	}
+	return h
 }
 
 // iocsEmbebidos saca la infraestructura que las muestras capturadas llevan
@@ -364,13 +407,14 @@ func (s *Servidor) ficherosCapturados() []Artefacto {
 		if err != nil {
 			continue
 		}
-		tipo, amenaza := describirFichero(filepath.Join(dir, e.Name()), info.Size())
+		tipo, amenaza, c2 := describirFichero(filepath.Join(dir, e.Name()), info.Size())
 		a := Artefacto{
 			Fichero: filepath.Base(e.Name()),
 			Bytes:   info.Size(),
 			Momento: info.ModTime(),
 			Tipo:    tipo,
 			Amenaza: amenaza,
+			C2:      c2,
 		}
 		// De quien y cuando vino: sin esto, un fichero capturado es un hash
 		// suelto sin decir cuantos lo trajeron ni desde donde.

