@@ -976,3 +976,36 @@ Object.assign(IDIOMAS.en, {
   "cfg.modelos.modelo": "model (optional)",
   "cfg.modelos.modelo.t": "Model name. Empty = the provider default. Change it if you need to (e.g. a :free OpenRouter model)."
 });
+
+Object.assign(IDIOMAS.es, {
+    "apr.tab.conceptos": "Conceptos",
+    "apr.tab.comandos": "Comandos",
+    "apr.tab.ataques": "Ataques",
+    "apr.buscar.comandos": "Buscar comando…",
+    "apr.buscar.ataques": "Buscar tipo de ataque…",
+    "apr.glos.vacio.cmd": "k0Pot aún no ha aprendido ningún comando. Actívalo en Ajustes o abre un ataque y pulsa «Explicar paso a paso».",
+    "apr.glos.vacio.atq": "No hay ataques en este periodo.",
+    "apr.glos.sinresultados": "Sin resultados para esa búsqueda.",
+    "apr.glos.sev.trampa": "trampa mordida",
+    "apr.glos.sev.intrusion": "intrusión",
+    "apr.glos.sev.acceso": "acceso",
+    "apr.glos.sev.tanteo": "tanteo",
+    "apr.glos.sev.roce": "roce",
+    "apr.glos.atq.stats": "{n} episodios · {ips} IPs",
+});
+Object.assign(IDIOMAS.en, {
+    "apr.tab.conceptos": "Concepts",
+    "apr.tab.comandos": "Commands",
+    "apr.tab.ataques": "Attacks",
+    "apr.buscar.comandos": "Search command…",
+    "apr.buscar.ataques": "Search attack type…",
+    "apr.glos.vacio.cmd": "k0Pot hasn’t learned any commands yet. Enable it in Settings or open an attack and press “Explain step by step”.",
+    "apr.glos.vacio.atq": "No attacks in this period.",
+    "apr.glos.sinresultados": "No results for that search.",
+    "apr.glos.sev.trampa": "trap sprung",
+    "apr.glos.sev.intrusion": "intrusion",
+    "apr.glos.sev.acceso": "access",
+    "apr.glos.sev.tanteo": "probe",
+    "apr.glos.sev.roce": "touch",
+    "apr.glos.atq.stats": "{n} episodes · {ips} IPs",
+});

@@ -1145,3 +1145,95 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   color: var(--acento, #89b4fa);
   margin-left: auto;
 }
+
+/* ── Tabs y glosario del modo aprende ─────────────────────────────── */
+.tabs-aprende {
+  display: flex;
+  gap: .3rem;
+  margin-bottom: .8rem;
+  border-bottom: 2px solid var(--borde);
+  padding-bottom: 0;
+}
+.tab-apr {
+  background: none;
+  border: none;
+  padding: .5rem 1rem;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--sub);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.tab-apr:hover { color: var(--texto); }
+.tab-apr.activo {
+  color: var(--acento);
+  border-bottom-color: var(--acento);
+}
+.panel-apr[hidden] { display: none; }
+.buscar-glosario {
+  width: 100%;
+  padding: .5rem .75rem;
+  margin-bottom: .6rem;
+  font: inherit; font-size: .88rem;
+  background: var(--fondo);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: .4rem;
+}
+.buscar-glosario::placeholder { color: var(--sub); }
+.glos-tarjeta {
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: .7rem .85rem;
+  background: var(--fondo-2);
+  margin-bottom: .4rem;
+}
+.glos-cmd {
+  font-family: ui-monospace, "Cascadia Code", Menlo, monospace;
+  font-size: .82rem;
+  color: var(--acento);
+  word-break: break-all;
+}
+.glos-explica {
+  margin: .3rem 0 0;
+  color: var(--texto);
+  font-size: .88rem;
+  line-height: 1.45;
+}
+.glos-meta {
+  margin-top: .3rem;
+  font-size: .78rem;
+  color: var(--sub);
+}
+.glos-atq-titulo {
+  font-weight: 600;
+  font-size: .95rem;
+}
+.glos-atq-stats {
+  font-size: .82rem;
+  color: var(--sub);
+  margin-top: .2rem;
+}
+.glos-atq-ejemplo {
+  margin-top: .3rem;
+  font-size: .82rem;
+  font-style: italic;
+  color: var(--sub);
+}
+.glos-sev {
+  display: inline-block;
+  padding: .1rem .4rem;
+  border-radius: .25rem;
+  font-size: .72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-right: .4rem;
+}
+.glos-sev-trampa   { background: #e5605a33; color: var(--rojo); }
+.glos-sev-intrusion { background: #e0a94f33; color: var(--ambar); }
+.glos-sev-acceso   { background: #89b4fa33; color: #89b4fa; }
+.glos-sev-tanteo   { background: #3fb27f33; color: var(--verde); }
+.glos-sev-roce     { background: #8b93a533; color: var(--sub); }
+.glos-vacio { text-align: center; color: var(--sub); padding: 2rem; font-style: italic; }

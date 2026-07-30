@@ -1911,6 +1911,15 @@ function casoRealAprende(ej, datos) {
 }
 
 async function abrirAprende() {
+  // Reset tabs al abrir
+  for (const b of document.querySelectorAll(".tab-apr")) {
+    const es = b.dataset.tabApr === "conceptos";
+    b.classList.toggle("activo", es);
+    b.setAttribute("aria-selected", String(es));
+  }
+  for (const p of document.querySelectorAll(".panel-apr")) {
+    p.hidden = p.dataset.panelApr !== "conceptos";
+  }
   const cont = $("aprende-lista");
   cont.replaceChildren(nodo("p", "sub", t("cargando")));
   $("dialogo-aprende").showModal();
@@ -1942,6 +1951,117 @@ async function abrirAprende() {
   }
 }
 $("abrir-aprende").addEventListener("click", () => abrirAprende().catch(() => {}));
+
+// ── Glosario consultable (dentro del modal aprende) ─────────────────
+let glosarioCache = null;
+
+async function cargarGlosario() {
+  if (glosarioCache) return glosarioCache;
+  glosarioCache = await pedirJSON("/api/glosario");
+  return glosarioCache;
+}
+
+function pintarGlosarioComandos(lista, filtro) {
+  const cont = $("lista-glos-comandos");
+  cont.replaceChildren();
+  if (!lista || !lista.length) {
+    cont.appendChild(nodo("p", "glos-vacio", t("apr.glos.vacio.cmd")));
+    return;
+  }
+  const f = (filtro || "").toLowerCase();
+  let hay = 0;
+  for (const g of lista) {
+    if (f && !g.norm.toLowerCase().includes(f) && !g.glosa.toLowerCase().includes(f)) continue;
+    hay++;
+    const card = nodo("div", "glos-tarjeta");
+    card.appendChild(nodo("div", "glos-cmd", g.norm));
+    card.appendChild(nodo("p", "glos-explica", g.glosa));
+    const meta = [];
+    if (g.veces > 1) meta.push(g.veces + "x");
+    card.appendChild(nodo("span", "glos-meta", meta.join(" \u00b7 ")));
+    cont.appendChild(card);
+  }
+  if (!hay) {
+    cont.appendChild(nodo("p", "glos-vacio", t("apr.glos.sinresultados")));
+  }
+}
+
+function pintarGlosarioAtaques(lista, filtro) {
+  const cont = $("lista-glos-ataques");
+  cont.replaceChildren();
+  if (!lista || !lista.length) {
+    cont.appendChild(nodo("p", "glos-vacio", t("apr.glos.vacio.atq")));
+    return;
+  }
+  const sevNombre = {
+    trampa: t("apr.glos.sev.trampa"),
+    intrusion: t("apr.glos.sev.intrusion"),
+    acceso: t("apr.glos.sev.acceso"),
+    tanteo: t("apr.glos.sev.tanteo"),
+    roce: t("apr.glos.sev.roce"),
+  };
+  const f = (filtro || "").toLowerCase();
+  let hay = 0;
+  for (const a of lista) {
+    const nombre = (sevNombre[a.severidad] || a.severidad) + " / " + a.protocolo;
+    if (f && !nombre.toLowerCase().includes(f) && !(a.ejemplo || "").toLowerCase().includes(f)
+        && !a.protocolo.toLowerCase().includes(f) && !a.severidad.toLowerCase().includes(f)) continue;
+    hay++;
+    const card = nodo("div", "glos-tarjeta");
+    const cab = nodo("div", "glos-atq-titulo");
+    const badge = nodo("span", "glos-sev glos-sev-" + a.severidad, sevNombre[a.severidad] || a.severidad);
+    cab.appendChild(badge);
+    cab.appendChild(document.createTextNode(a.protocolo.toUpperCase()));
+    card.appendChild(cab);
+    const stats = t("apr.glos.atq.stats", { n: a.episodios, ips: a.ips });
+    card.appendChild(nodo("div", "glos-atq-stats", stats));
+    if (a.ejemplo) {
+      card.appendChild(nodo("div", "glos-atq-ejemplo", "\u201c" + a.ejemplo + "\u201d"));
+    }
+    cont.appendChild(card);
+  }
+  if (!hay) {
+    cont.appendChild(nodo("p", "glos-vacio", t("apr.glos.sinresultados")));
+  }
+}
+
+// Tabs del dialogo aprende
+document.querySelector(".tabs-aprende")?.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".tab-apr");
+  if (!btn) return;
+  const tab = btn.dataset.tabApr;
+  for (const b of document.querySelectorAll(".tab-apr")) {
+    b.classList.toggle("activo", b === btn);
+    b.setAttribute("aria-selected", String(b === btn));
+  }
+  for (const p of document.querySelectorAll(".panel-apr")) {
+    p.hidden = p.dataset.panelApr !== tab;
+  }
+  if (tab === "comandos" || tab === "ataques") {
+    const prev = tab === "comandos" ? $("lista-glos-comandos") : $("lista-glos-ataques");
+    if (!prev.children.length || !glosarioCache) {
+      prev.replaceChildren(nodo("p", "sub", t("cargando")));
+      try {
+        const datos = await cargarGlosario();
+        if (tab === "comandos") pintarGlosarioComandos(datos.comandos, $("buscar-comandos").value);
+        else pintarGlosarioAtaques(datos.ataques, $("buscar-ataques").value);
+      } catch (e) {
+        prev.replaceChildren(nodo("p", "sub", "Error"));
+      }
+    }
+  }
+});
+
+$("buscar-comandos")?.addEventListener("input", (e) => {
+  if (glosarioCache) pintarGlosarioComandos(glosarioCache.comandos, e.target.value);
+});
+$("buscar-ataques")?.addEventListener("input", (e) => {
+  if (glosarioCache) pintarGlosarioAtaques(glosarioCache.ataques, e.target.value);
+});
+
+// Invalidar cache del glosario al cambiar rango o refrescar
+const _glosInvalidar = () => { glosarioCache = null; };
+
 $("cerrar-aprende").addEventListener("click", () => $("dialogo-aprende").close());
 
 // ── Exportar IOCs: convertir lo capturado en algo defendible fuera ──────

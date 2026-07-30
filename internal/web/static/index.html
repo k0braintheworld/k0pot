@@ -403,7 +403,20 @@
     </div>
     <button id="cerrar-aprende" type="button" class="boton-menor" data-i18n="dlg.cerrar">Cerrar</button>
   </header>
-  <div id="aprende-lista" class="aprende-lista"></div>
+  <nav class="tabs-aprende" role="tablist">
+    <button class="tab-apr activo" role="tab" aria-selected="true" data-tab-apr="conceptos" data-i18n="apr.tab.conceptos">Conceptos</button>
+    <button class="tab-apr" role="tab" aria-selected="false" data-tab-apr="comandos" data-i18n="apr.tab.comandos">Comandos</button>
+    <button class="tab-apr" role="tab" aria-selected="false" data-tab-apr="ataques" data-i18n="apr.tab.ataques">Ataques</button>
+  </nav>
+  <div id="aprende-lista" class="aprende-lista panel-apr" data-panel-apr="conceptos"></div>
+  <div id="glosario-comandos" class="aprende-lista panel-apr" data-panel-apr="comandos" hidden>
+    <input id="buscar-comandos" type="search" class="buscar-glosario" data-i18n-placeholder="apr.buscar.comandos" placeholder="Buscar comando…">
+    <div id="lista-glos-comandos"></div>
+  </div>
+  <div id="glosario-ataques" class="aprende-lista panel-apr" data-panel-apr="ataques" hidden>
+    <input id="buscar-ataques" type="search" class="buscar-glosario" data-i18n-placeholder="apr.buscar.ataques" placeholder="Buscar ataque…">
+    <div id="lista-glos-ataques"></div>
+  </div>
 </dialog>
 
 <dialog id="dialogo-iocs" class="dialogo dialogo-estrecho">
