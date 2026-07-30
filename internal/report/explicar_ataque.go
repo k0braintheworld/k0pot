@@ -103,6 +103,9 @@ func ExplicarAtaque(ctx context.Context, e Explicador, ep store.EpisodioFila,
 			"su filtro ha leido el analisis de este ataque como una peticion de " +
 			"ayuda para atacar. Prueba con otro modelo en Ajustes → Informes")
 	}
+	if EsMalformada(texto) {
+		return "", fmt.Errorf("el modelo devolvio texto corrupto; se reintentara")
+	}
 	return texto, nil
 }
 

@@ -40,6 +40,9 @@ func explicarCon(ctx context.Context, e Explicador, sistema, usuario, idioma str
 			"el analisis como una peticion de ayuda para atacar. Prueba con otro " +
 			"modelo en Ajustes -> Informes")
 	}
+	if EsMalformada(texto) {
+		return "", fmt.Errorf("el modelo devolvio texto corrupto; se reintentara")
+	}
 	return texto, nil
 }
 
