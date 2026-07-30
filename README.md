@@ -172,7 +172,7 @@ senuelo"* mas abajo).
   retrollamada**: su C2 o el servidor desde el que sirve la segunda fase. Es
   la inteligencia mas valiosa que deja un escaneo, y se saca leyendo texto,
   sin ejecutar nada.
-- **Inteligencia** (bloque con pestanas). Tres vistas agrupadas en un solo
+- **Inteligencia** (bloque con pestanas). Cuatro vistas agrupadas en un solo
   bloque, cada elemento clicable para saltar a los ataques relacionados:
   - **C2.** Agrega los hosts de mando y control de tres fuentes —embebidos
     en muestras capturadas, callbacks de exploits y URLs de descarga— con
@@ -182,6 +182,19 @@ senuelo"* mas abajo).
     y ejemplo de comandos.
   - **Destinos de tunel.** Agrega adonde pidieron reenviar trafico a traves
     del honeypot, con cuantas IPs distintas.
+  - **Cebo.** Responde a la pregunta que las otras no contestan: .funciona
+    el engano? Un embudo cuenta cuantos llegan, hablan, entran, ejecutan,
+    **abren el botin** y **muerden el cebo**, con la duracion media y los
+    comandos por ataque de cada escalon. Lo que informa no es una cifra
+    suelta sino la caida entre dos escalones: si muchos abren el botin y
+    ninguno reutiliza nada, el cebo se lee y se descarta; si ni lo abren,
+    hay que hacerlo mas visible.
+
+    Debajo, que trozo del botin se abre mas y el rastro de cada credencial
+    senuelo reutilizada. Ahi esta la senal fuerte: si una IP muerde un cebo
+    **sin haberlo leido nunca aqui**, esa credencial le llego por otra via
+    -alguien se la paso, o la vendio-, y eso es la prueba de que lo
+    plantado salio del honeypot y esta circulando.
 
   Los datos se precalculan en segundo plano cada 5 minutos (cache en
   memoria), asi que las pestanas cargan al instante aunque haya muchos
@@ -501,6 +514,11 @@ con freno**.
 - **El panel es gratis y siempre al dia.** Semaforo, reparto por gravedad y
   por servicio, metricas y el informe completo se calculan con reglas
   deterministas. Ningun refresco llama a un modelo.
+- **Glosario consultable** (en *Aprende*). Ademas del temario, dos
+  pestanas buscables: **Comandos**, con todo lo que k0Pot lleva aprendido
+  -el comando normalizado, su explicacion y cuantas veces se ha visto-, y
+  **Ataques**, con los tipos vistos por gravedad y servicio, su recuento y
+  un ejemplo real.
 - **La IA trabaja en segundo plano, no al abrir.** Aprende los comandos y
   redacta las narrativas por su cuenta, a ritmo lento. Abrir un ataque no
   dispara ninguna llamada: todo sale de lo ya aprendido.
