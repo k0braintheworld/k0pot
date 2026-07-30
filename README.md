@@ -142,6 +142,13 @@ senuelo"* mas abajo).
   evoluciono, un ataque por marca coloreado por gravedad.
 - **Asistente** (opcional, se activa en Ajustes): chatear con la IA sobre lo
   que ha visto el honeypot esta semana.
+- **Muestras capturadas.** Cada fichero que un atacante deja o se trae se
+  guarda y se describe leyendo solo sus bytes —nunca se ejecuta—: la lista
+  dice al vuelo qué es cada uno (`ELF MIPS` es una botnet de IoT, `ELF
+  x86-64` un servidor, un script, texto…), dónde lo intentaron dejar
+  (`/dev/.fxcat`) y separa las muestras de verdad de las pruebas de
+  escritura de 1 byte que sueltan los bots. Abrir una enseña sus cadenas y,
+  con clave, su veredicto en VirusTotal por el hash, sin subir nada.
 - **Exportar IOCs** (CSV y STIX 2.1): las IPs, hashes, URLs de malware y los
   **C2 que los atacantes filtran** al lanzar un exploit (el `ldap://` de un
   Log4Shell, el `http://` de la segunda fase), listos para importar en tu
