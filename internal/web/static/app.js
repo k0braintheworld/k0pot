@@ -1364,6 +1364,9 @@ async function cargarArtefactos() {
 
   for (const a of lista) {
     const caja = nodo("div", "artefacto");
+    // Etiqueta de amenaza: lo primero, para triar de un vistazo (una botnet
+    // en rojo salta entre las pruebas de escritura grises).
+    if (a.amenaza) caja.appendChild(nodo("span", `amenaza amenaza-${a.amenaza}`, t("amenaza." + a.amenaza)));
     caja.appendChild(nodo("code", null, a.url || a.fichero));
     // Lo mas util de una muestra: que es. Un ELF MIPS es una botnet de IoT;
     // una "prueba de escritura" de 1 byte no es malware, es un bot tanteando.

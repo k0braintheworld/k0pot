@@ -541,6 +541,11 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .sev-intrusion { color: #fff; background: #c0392b; border: 1px solid #c0392b; }
 .sev-trampa    { color: #fff; background: #9b2fd6; border: 1px solid #9b2fd6; }
 .artef-tipo { display: block; margin: .15rem 0; font-size: .82rem; font-weight: 600; color: var(--texto); }
+.amenaza { display: inline-block; margin-right: .4rem; padding: .05rem .45rem; border-radius: .5rem; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; vertical-align: middle; }
+.amenaza-botnet { color: #fff; background: #c0392b; }
+.amenaza-dropper, .amenaza-minero, .amenaza-webshell { color: #1a1a1a; background: #d98a3a; }
+.amenaza-muestra { color: var(--sub); border: 1px solid var(--borde); }
+.amenaza-prueba { color: var(--sub); border: 1px solid var(--borde); opacity: .7; }
 
 .fila-ataque-texto { min-width: 0; }
 .fila-ataque-texto strong { font-weight: 600; }

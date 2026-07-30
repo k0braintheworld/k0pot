@@ -188,7 +188,10 @@ type Artefacto struct {
 	// bytes; o una marca de "prueba de escritura" para los triviales.
 	Tipo string `json:"tipo,omitempty"`
 	// Destino es donde el atacante intento dejarlo (/dev/.fxcat...).
-	Destino string    `json:"destino,omitempty"`
+	Destino string `json:"destino,omitempty"`
+	// Amenaza es la clase de peligro (botnet, dropper, minero, webshell,
+	// prueba, muestra), para triar y ordenar de un vistazo.
+	Amenaza string    `json:"amenaza,omitempty"`
 	IPs     []string  `json:"ips,omitempty"`
 	Momento time.Time `json:"momento"`
 	// FicheroDe es el SHA-256 del fichero que SI se capturo desde esta URL,
@@ -248,25 +251,36 @@ func (s *Servidor) artefactos(w http.ResponseWriter, r *http.Request) {
 	}
 	out = append(out, s.ficherosCapturados()...)
 
-	sort.Slice(out, func(i, j int) bool { return out[i].Momento.After(out[j].Momento) })
+	// Lo peligroso primero (una botnet pesa mas que una prueba de escritura),
+	// y a igual peligro, lo mas reciente.
+	sort.Slice(out, func(i, j int) bool {
+		ri, rj := artefacto.RangoAmenaza(out[i].Amenaza), artefacto.RangoAmenaza(out[j].Amenaza)
+		if ri != rj {
+			return ri > rj
+		}
+		return out[i].Momento.After(out[j].Momento)
+	})
 	responderJSON(w, out)
 }
 
-// tipoDeFichero dice que es una muestra leyendo su cabecera, sin ejecutarla.
-// Los ficheros minusculos casi siempre son una prueba de escritura de un bot
-// (echo > /dev/.algo), no malware: se marcan como tal para no confundir.
-func tipoDeFichero(ruta string, tam int64) string {
+// describirFichero dice QUE es una muestra (tipo) y QUE CLASE de amenaza
+// es, leyendo sus bytes una sola vez, sin ejecutarla. Los ficheros
+// minusculos casi siempre son una prueba de escritura de un bot (echo >
+// /dev/.algo), no malware: se marcan como tal para no confundir.
+func describirFichero(ruta string, tam int64) (tipo, amenaza string) {
 	if tam <= 8 {
-		return fmt.Sprintf("prueba de escritura (%d B)", tam)
+		return fmt.Sprintf("prueba de escritura (%d B)", tam), "prueba"
 	}
-	f, err := os.Open(ruta)
+	datos, err := leerAcotado(ruta, 128<<10)
 	if err != nil {
-		return ""
+		return "", ""
 	}
-	defer f.Close()
-	cab := make([]byte, 512)
-	n, _ := io.ReadFull(f, cab)
-	return artefacto.Tipo(cab[:n])
+	cab := datos
+	if len(cab) > 512 {
+		cab = cab[:512]
+	}
+	tipo = artefacto.Tipo(cab)
+	return tipo, artefacto.Clasificar(datos, tipo, tam)
 }
 
 // iocsEmbebidos saca la infraestructura que las muestras capturadas llevan
@@ -350,11 +364,13 @@ func (s *Servidor) ficherosCapturados() []Artefacto {
 		if err != nil {
 			continue
 		}
+		tipo, amenaza := describirFichero(filepath.Join(dir, e.Name()), info.Size())
 		a := Artefacto{
 			Fichero: filepath.Base(e.Name()),
 			Bytes:   info.Size(),
 			Momento: info.ModTime(),
-			Tipo:    tipoDeFichero(filepath.Join(dir, e.Name()), info.Size()),
+			Tipo:    tipo,
+			Amenaza: amenaza,
 		}
 		// De quien y cuando vino: sin esto, un fichero capturado es un hash
 		// suelto sin decir cuantos lo trajeron ni desde donde.
