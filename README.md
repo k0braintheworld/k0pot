@@ -148,9 +148,13 @@ senuelo"* mas abajo).
   x86-64` un servidor, un script, texto…), dónde lo intentaron dejar
   (`/dev/.fxcat`) y separa las muestras de verdad de las pruebas de
   escritura de 1 byte que sueltan los bots. Abrir una enseña sus cadenas y,
-  con clave, su veredicto en VirusTotal por el hash, sin subir nada.
-- **Exportar IOCs** (CSV y STIX 2.1): las IPs, hashes, URLs de malware y los
-  **C2 que los atacantes filtran** al lanzar un exploit (el `ldap://` de un
+  con clave, su veredicto en VirusTotal por el hash, sin subir nada. Y se le
+  extrae la **infraestructura que lleva escrita dentro** —el C2 de un binario,
+  el `wget http://…/mirai.arm7` de un dropper—: esos indicadores pasan a los
+  IOCs, filtrando el ruido (versiones, IPs de relleno, dominios benignos).
+- **Exportar IOCs** (CSV y STIX 2.1): las IPs, hashes, URLs de malware, los
+  **C2** que traen dentro las muestras y los que los atacantes filtran al
+  lanzar un exploit (el `ldap://` de un
   Log4Shell, el `http://` de la segunda fase), listos para importar en tu
   firewall, tu SIEM o en MISP.
 - **Blocklist descargable.** Un fichero con las IPs que *de verdad* atacaron
