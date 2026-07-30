@@ -72,7 +72,7 @@ func Abrir(ruta string) (*Store, error) {
 	//
 	// WAL ademas permite que otro proceso (el resumen, o el futuro
 	// dashboard) lea mientras el collector escribe.
-	dsn := ruta + "?_pragma=busy_timeout(10000)&_pragma=journal_mode(WAL)"
+	dsn := ruta + "?_pragma=busy_timeout(10000)&_pragma=journal_mode(WAL)&_pragma=auto_vacuum(incremental)"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("abriendo %s: %w", ruta, err)
@@ -98,6 +98,15 @@ func Abrir(ruta string) (*Store, error) {
 }
 
 // migrar deja el esquema al dia sin tirar lo ya capturado.
+// ReclamarEspacio devuelve al disco las paginas que una purga de retencion
+// dejo libres. Solo surte efecto si la base se creo con auto_vacuum
+// incremental (instalaciones nuevas); en una antigua es un no-op inofensivo.
+// Evita el VACUUM completo, que reescribe y bloquea toda la base.
+func (s *Store) ReclamarEspacio() error {
+	_, err := s.db.Exec("PRAGMA incremental_vacuum")
+	return err
+}
+
 func migrar(db *sql.DB) error {
 	if _, err := db.Exec(esquema); err != nil {
 		return fmt.Errorf("creando esquema: %w", err)

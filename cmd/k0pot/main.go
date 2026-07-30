@@ -353,6 +353,9 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 				log.Printf("retencion: %v", err)
 			case !r.Vacio():
 				log.Printf("retencion: borrados %s", r)
+				if err := almacen.ReclamarEspacio(); err != nil {
+					log.Printf("retencion: reclamando espacio: %v", err)
+				}
 			}
 		}
 
