@@ -408,9 +408,10 @@ func (s *Store) Episodios(f FiltroEpisodios) ([]EpisodioFila, error) {
 		// numerados con posicionales rompe con este driver, y el fallo sale
 		// como un 500 sin pista de donde.
 		consulta += ` AND (e.ip LIKE ? OR e.resumen LIKE ? OR e.protocolo LIKE ?
-		                   OR COALESCE(i.pais,'') LIKE ? OR COALESCE(i.isp,'') LIKE ?)`
+		                   OR COALESCE(i.pais,'') LIKE ? OR COALESCE(i.isp,'') LIKE ?
+		                   OR e.comandos LIKE ? OR e.descargas LIKE ?)`
 		patron := "%" + t + "%"
-		args = append(args, patron, patron, patron, patron, patron)
+		args = append(args, patron, patron, patron, patron, patron, patron, patron)
 	}
 	consulta += `
 		  ORDER BY CASE e.severidad

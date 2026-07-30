@@ -1659,76 +1659,119 @@ async function cargarAprendizaje() {
 
 
 
-// ── Inteligencia: C2, botnets, tuneles ──────────────────────────────
-async function cargarC2() {
-  const lista = await traer("/api/c2");
-  const cont = $("lista-c2");
-  cont.replaceChildren();
-  const sec = document.querySelector(".bloque-c2");
-  if (!lista.length) { if (sec) sec.hidden = true; return; }
+// ── Inteligencia: C2, botnets, tuneles (bloque unificado con tabs) ──
+let datosIntel = { c2: [], botnets: [], tuneles: [] };
+
+function filtrarPorTexto(texto) {
+  $("f-texto").value = texto;
+  document.querySelector(".bloque-ataques").scrollIntoView({ behavior: "smooth" });
+  cargarAtaques().catch(() => {});
+}
+
+async function cargarInteligencia() {
+  const [c2, botnets, tun] = await Promise.all([
+    traer("/api/c2"), traer("/api/botnets"), traer("/api/tuneles"),
+  ]);
+  datosIntel = { c2, botnets, tuneles: tun };
+
+  const sec = document.querySelector(".bloque-intel");
+  if (!c2.length && !botnets.length && !tun.length) {
+    if (sec) sec.hidden = true;
+    return;
+  }
   if (sec) sec.hidden = false;
+
+  pintarC2(c2);
+  pintarBotnets(botnets);
+  pintarTuneles(tun);
+
+  // Contar para las pestanas
+  for (const btn of document.querySelectorAll(".tab-intel")) {
+    const k = btn.dataset.tab;
+    const n = datosIntel[k === "tuneles" ? "tuneles" : k]?.length || 0;
+    if (n) btn.textContent = t("tab." + k) + " (" + n + ")";
+  }
+}
+
+function pintarC2(lista) {
+  const cont = $("intel-c2");
+  cont.replaceChildren();
+  if (!lista.length) { cont.appendChild(nodo("span", "sub", "\u2014")); return; }
   const fuentes = { callback: "c2.fuente.callback", muestra: "c2.fuente.muestra", descarga: "c2.fuente.descarga" };
   for (const n of lista) {
-    const card = nodo("div", "intel-card");
+    const card = nodo("div", "intel-card pulsable");
     card.appendChild(nodo("span", "host", n.host));
     for (const f of (n.fuentes || [])) {
-      const cls = "badge badge-" + f;
-      card.appendChild(nodo("span", cls, t(fuentes[f] || f)));
+      card.appendChild(nodo("span", "badge badge-" + f, t(fuentes[f] || f)));
     }
     if (n.familias?.length) {
       for (const f of n.familias) card.appendChild(nodo("span", "familia-tag", f));
     }
-    const partes = [];
-    partes.push(n.veces + "x");
+    const partes = [n.veces + "x"];
     if (n.ultima) partes.push(hace(n.ultima));
     card.appendChild(nodo("span", "stat", partes.join(" \u00b7 ")));
+    card.appendChild(nodo("span", "intel-enlace", "\u2192 " + t("intel.ver")));
+    card.addEventListener("click", () => filtrarPorTexto(n.host));
     cont.appendChild(card);
   }
 }
 
-async function cargarBotnets() {
-  const lista = await traer("/api/botnets");
-  const cont = $("lista-botnets");
+function pintarBotnets(lista) {
+  const cont = $("intel-botnets");
   cont.replaceChildren();
-  const sec = document.querySelector(".bloque-botnets");
-  if (!lista.length) { if (sec) sec.hidden = true; return; }
-  if (sec) sec.hidden = false;
+  if (!lista.length) { cont.appendChild(nodo("span", "sub", "\u2014")); return; }
   for (const b of lista) {
-    const card = nodo("div", "bot-card");
+    const card = nodo("div", "bot-card pulsable");
     card.appendChild(nodo("div", "bot-nombre", b.familia));
     card.appendChild(nodo("div", "bot-desc", b.descripcion));
     const stats = nodo("div", "bot-stats");
     stats.appendChild(nodo("span", null, b.episodios + " " + t("bot.episodios")));
     stats.appendChild(nodo("span", null, b.ips + " " + t("bot.ips")));
     if (b.ultima) stats.appendChild(nodo("span", null, hace(b.ultima)));
+    stats.appendChild(nodo("span", "intel-enlace", "\u2192 " + t("intel.ver")));
     card.appendChild(stats);
     if (b.ejemplo?.length) {
       const pre = document.createElement("pre");
       pre.textContent = b.ejemplo.join("\n");
       card.appendChild(pre);
     }
+    // Click: buscar por la firma mas reconocible de la familia
+    const firma = (b.ejemplo || []).join(" ").match(/busybox|mirai|gafgyt|mozi|hajime|xorddos|tsunami|kaiten|xmrig|minerd|shellbot/i);
+    card.addEventListener("click", () => filtrarPorTexto(firma ? firma[0] : b.familia));
     cont.appendChild(card);
   }
 }
 
-async function cargarTuneles() {
-  const lista = await traer("/api/tuneles");
-  const cont = $("lista-tuneles");
+function pintarTuneles(lista) {
+  const cont = $("intel-tuneles");
   cont.replaceChildren();
-  const sec = document.querySelector(".bloque-tuneles");
-  if (!lista.length) { if (sec) sec.hidden = true; return; }
-  if (sec) sec.hidden = false;
+  if (!lista.length) { cont.appendChild(nodo("span", "sub", "\u2014")); return; }
   for (const d of lista) {
-    const card = nodo("div", "tun-card");
+    const card = nodo("div", "tun-card pulsable");
     card.appendChild(nodo("code", null, d.destino));
-    const partes = [];
-    partes.push(d.veces + " " + t("tun.veces"));
-    partes.push(d.ips.length + " " + t("tun.ips"));
+    const partes = [d.veces + " " + t("tun.veces"), d.ips.length + " " + t("tun.ips")];
     if (d.ultima) partes.push(hace(d.ultima));
     card.appendChild(nodo("span", "stat", partes.join(" \u00b7 ")));
+    card.appendChild(nodo("span", "intel-enlace", "\u2192 " + t("intel.ver")));
+    // Buscar por la IP o host del destino del tunel
+    const host = d.destino.split(":")[0];
+    card.addEventListener("click", () => filtrarPorTexto(host));
     cont.appendChild(card);
   }
 }
+
+// Tabs de inteligencia
+document.querySelector(".tabs-intel")?.addEventListener("click", (e) => {
+  const btn = e.target.closest(".tab-intel");
+  if (!btn) return;
+  for (const b of document.querySelectorAll(".tab-intel")) {
+    b.classList.toggle("activo", b === btn);
+    b.setAttribute("aria-selected", String(b === btn));
+  }
+  for (const p of document.querySelectorAll(".panel-intel")) {
+    p.hidden = p.id !== "intel-" + btn.dataset.tab;
+  }
+});
 
 async function refrescar() {
   const latido = $("latido");
@@ -1749,9 +1792,7 @@ async function refrescar() {
       cargarTendencias(),
       cargarAprendizaje(),
       traer("/api/serie").then(pintarSerie),
-      cargarC2(),
-      cargarBotnets(),
-      cargarTuneles(),
+      cargarInteligencia(),
     ]);
     latido.className = "punto conectado";
     $("actualizado").textContent = new Date().toLocaleTimeString("es");

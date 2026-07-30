@@ -94,9 +94,7 @@ main.rejilla-panel {
    asi no dejan un cuadro vacio ni descuadran la fila de abajo. */
 .bloque-campanas   { grid-column: span 12; }
 .bloque-artefactos { grid-column: span 12; }
-.bloque-c2       { grid-column: span 12; }
-.bloque-botnets  { grid-column: span 12; }
-.bloque-tuneles  { grid-column: span 12; }
+.bloque-intel    { grid-column: span 12; }
 /* La fila final cuadra exacta: IPs ancha para que no se parta el proveedor,
    paises estrecha, y credenciales -usuarios y contrasenas juntas- al lado. */
 .bloque-ips          { grid-column: span 5; }
@@ -1107,3 +1105,42 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 }
 .tun-card code { font-weight: 600; font-size: .95rem; }
 .tun-card .stat { color: var(--txt-sec, #a6adc8); font-size: .82rem; }
+
+/* ── Tabs de inteligencia ──────────────────────────────────────── */
+.tabs-intel {
+  display: flex;
+  gap: .3rem;
+  margin-bottom: .8rem;
+  border-bottom: 2px solid var(--borde, #313244);
+  padding-bottom: 0;
+}
+.tab-intel {
+  background: none;
+  border: none;
+  padding: .5rem 1rem;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--txt-sec, #a6adc8);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.tab-intel:hover { color: var(--txt, #cdd6f4); }
+.tab-intel.activo {
+  color: var(--acento, #89b4fa);
+  border-bottom-color: var(--acento, #89b4fa);
+}
+.panel-intel { min-height: 2rem; }
+.intel-card.pulsable, .bot-card.pulsable, .tun-card.pulsable {
+  cursor: pointer;
+  transition: background .15s;
+}
+.intel-card.pulsable:hover, .bot-card.pulsable:hover, .tun-card.pulsable:hover {
+  background: var(--bg-hover, #2a2a3e);
+}
+.intel-enlace {
+  font-size: .72rem;
+  color: var(--acento, #89b4fa);
+  margin-left: auto;
+}
