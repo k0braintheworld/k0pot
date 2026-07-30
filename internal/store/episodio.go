@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS episodios (
     solo_conexiones INTEGER  NOT NULL DEFAULT 0,
     avisado         TEXT     NOT NULL DEFAULT '',
     explicacion     TEXT     NOT NULL DEFAULT '',
+    tuneles         TEXT     NOT NULL DEFAULT '[]',
+    cebo_mordido    TEXT     NOT NULL DEFAULT '',
     resumen         TEXT     NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_episodios_fin ON episodios (fin);
@@ -327,8 +329,8 @@ func (s *Store) GuardarEpisodios(es []episodio.Episodio) error {
 		`INSERT INTO episodios (clave, ip, protocolo, inicio, fin, eventos,
 		     severidad, logins_fallidos, login_exitoso, usuarios, passwords,
 		     comandos, rutas, descargas, motivos, puerto, solo_conexiones,
-		     resumen)
-		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+		     tuneles, cebo_mordido, resumen)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		 ON CONFLICT(clave) DO UPDATE SET
 		     fin = excluded.fin, eventos = excluded.eventos,
 		     severidad = excluded.severidad,
@@ -338,6 +340,7 @@ func (s *Store) GuardarEpisodios(es []episodio.Episodio) error {
 		     comandos = excluded.comandos, rutas = excluded.rutas,
 		     descargas = excluded.descargas, motivos = excluded.motivos,
 		     puerto = excluded.puerto, solo_conexiones = excluded.solo_conexiones,
+		     tuneles = excluded.tuneles, cebo_mordido = excluded.cebo_mordido,
 		     resumen = excluded.resumen`)
 	if err != nil {
 		return fmt.Errorf("preparando la insercion de episodios: %w", err)
@@ -352,7 +355,8 @@ func (s *Store) GuardarEpisodios(es []episodio.Episodio) error {
 			e.Eventos, string(e.Severidad), e.LoginsFallidos, e.LoginExitoso,
 			listaJSON(e.Usuarios), listaJSON(e.Passwords), listaJSON(e.Comandos),
 			listaJSON(e.Rutas), listaJSON(e.Descargas), listaJSON(e.Motivos),
-			e.Puerto, e.SoloConexiones, e.Resumen,
+			e.Puerto, e.SoloConexiones,
+			listaJSON(e.Tuneles), e.CeboMordido, e.Resumen,
 		); err != nil {
 			return fmt.Errorf("guardando el episodio %s: %w", e.Clave, err)
 		}
@@ -448,7 +452,8 @@ const selectEpisodio = `
 	SELECT e.clave, e.ip, e.protocolo, e.inicio, e.fin, e.eventos,
 	       e.severidad, e.logins_fallidos, e.login_exitoso,
 	       e.usuarios, e.passwords, e.comandos, e.rutas, e.descargas,
-	       e.motivos, e.puerto, e.solo_conexiones, e.resumen,
+	       e.motivos, e.puerto, e.solo_conexiones,
+	       e.tuneles, e.cebo_mordido, e.resumen,
 	       COALESCE(i.pais,''), COALESCE(i.isp,''), COALESCE(i.reputacion,0)
 	  FROM episodios e
 	  LEFT JOIN ips i ON i.ip = e.ip`
@@ -456,12 +461,13 @@ const selectEpisodio = `
 func escanearEpisodio(f escaneable) (EpisodioFila, error) {
 	var e EpisodioFila
 	var inicio, fin, sev string
-	var usuarios, passwords, comandos, rutas, descargas, motivos string
+	var usuarios, passwords, comandos, rutas, descargas, motivos, tuneles string
 	if err := f.Scan(
 		&e.Clave, &e.IP, &e.Protocolo, &inicio, &fin, &e.Eventos,
 		&sev, &e.LoginsFallidos, &e.LoginExitoso,
 		&usuarios, &passwords, &comandos, &rutas, &descargas, &motivos,
-		&e.Puerto, &e.SoloConexiones, &e.Resumen,
+		&e.Puerto, &e.SoloConexiones,
+		&tuneles, &e.CeboMordido, &e.Resumen,
 		&e.Pais, &e.ISP, &e.Reputacion,
 	); err != nil {
 		return e, err
@@ -475,6 +481,7 @@ func escanearEpisodio(f escaneable) (EpisodioFila, error) {
 	e.Rutas = listaDeJSON(rutas)
 	e.Descargas = listaDeJSON(descargas)
 	e.Motivos = listaDeJSON(motivos)
+	e.Tuneles = listaDeJSON(tuneles)
 	return e, nil
 }
 

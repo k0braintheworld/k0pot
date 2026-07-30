@@ -141,6 +141,15 @@ func migrar(db *sql.DB) error {
 	if err := anadirColumna(db, "cuota_llm", "tokens", "INTEGER NOT NULL DEFAULT 0"); err != nil {
 		return err
 	}
+	// Bases creadas antes de que el episodio recordara a donde quisieron
+	// tunelizar y que cebo mordieron. Sin esto los dos campos se perdian
+	// al guardar, y el panel los daba por vacios.
+	if err := anadirColumna(db, "episodios", "tuneles", "TEXT NOT NULL DEFAULT '[]'"); err != nil {
+		return err
+	}
+	if err := anadirColumna(db, "episodios", "cebo_mordido", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
 	if err := anadirColumna(db, "episodios", "puerto", "TEXT NOT NULL DEFAULT ''"); err != nil {
 		return err
 	}
