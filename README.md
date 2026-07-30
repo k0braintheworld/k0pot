@@ -150,8 +150,9 @@ senuelo"* mas abajo).
   con dónde lo intentaron dejar (`/dev/.fxcat`). Abrir una enseña sus cadenas y,
   con clave, su veredicto en VirusTotal por el hash, sin subir nada. Y se le
   extrae la **infraestructura que lleva escrita dentro** —el C2 de un binario,
-  el `wget http://…/mirai.arm7` de un dropper—: esos indicadores pasan a los
-  IOCs, filtrando el ruido (versiones, IPs de relleno, dominios benignos).
+  el `wget http://…/mirai.arm7` de un dropper—: el C2 se ve en la propia lista
+  y esos indicadores pasan a los IOCs, filtrando el ruido (versiones, IPs de
+  relleno, dominios benignos).
 - **Exportar IOCs** (CSV y STIX 2.1): las IPs, hashes, URLs de malware, los
   **C2** que traen dentro las muestras y los que los atacantes filtran al
   lanzar un exploit (el `ldap://` de un
