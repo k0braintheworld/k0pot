@@ -1365,10 +1365,14 @@ async function cargarArtefactos() {
   for (const a of lista) {
     const caja = nodo("div", "artefacto");
     caja.appendChild(nodo("code", null, a.url || a.fichero));
+    // Lo mas util de una muestra: que es. Un ELF MIPS es una botnet de IoT;
+    // una "prueba de escritura" de 1 byte no es malware, es un bot tanteando.
+    if (a.tipo) caja.appendChild(nodo("span", "artef-tipo", a.tipo));
 
     const partes = [];
     if (a.ips?.length) partes.push(`${a.ips.length} IP${a.ips.length > 1 ? "s" : ""}`);
     if (a.bytes) partes.push(tamano(a.bytes));
+    if (a.destino) partes.push("→ " + a.destino);
     // Cowrie nombra los ficheros con el SHA-256 de su contenido, asi que
     // el nombre sirve tal cual para consultarlo sin subir la muestra.
     if (a.fichero && !a.url) partes.push(t("artef.sha"));

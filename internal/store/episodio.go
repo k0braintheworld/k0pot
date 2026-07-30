@@ -58,10 +58,11 @@ type EpisodioFila struct {
 // cronologico, que es como los necesita la reconstruccion de episodios.
 // FuenteArtefacto agrupa de donde y quien trajo un fichero capturado.
 type FuenteArtefacto struct {
-	IPs     []string
-	URLs    []string
-	Primera time.Time
-	Ultima  time.Time
+	IPs      []string
+	URLs     []string
+	Destinos []string
+	Primera  time.Time
+	Ultima   time.Time
 }
 
 // FuentesDeArtefacto busca, por el hash SHA-256 del fichero, los eventos de
@@ -154,7 +155,8 @@ func (s *Store) ArtefactosNuevos(desde time.Time) ([]ArtefactoNuevo, error) {
 
 func (s *Store) FuentesDeArtefacto(sha256 string) (FuenteArtefacto, error) {
 	filas, err := s.db.Query(
-		`SELECT ip, COALESCE(json_extract(detalle,'$.url'),''), timestamp
+		`SELECT ip, COALESCE(json_extract(detalle,'$.url'),''),
+		        COALESCE(json_extract(detalle,'$.destino_fichero'),''), timestamp
 		   FROM eventos
 		  WHERE tipo = ? AND json_extract(detalle,'$.sha256') = ?
 		  ORDER BY timestamp`,
@@ -165,10 +167,10 @@ func (s *Store) FuentesDeArtefacto(sha256 string) (FuenteArtefacto, error) {
 	defer filas.Close()
 
 	var f FuenteArtefacto
-	vistaIP, vistaURL := map[string]bool{}, map[string]bool{}
+	vistaIP, vistaURL, vistaDst := map[string]bool{}, map[string]bool{}, map[string]bool{}
 	for filas.Next() {
-		var ip, url, ts string
-		if err := filas.Scan(&ip, &url, &ts); err != nil {
+		var ip, url, dst, ts string
+		if err := filas.Scan(&ip, &url, &dst, &ts); err != nil {
 			return FuenteArtefacto{}, err
 		}
 		if ip != "" && !vistaIP[ip] {
@@ -178,6 +180,10 @@ func (s *Store) FuentesDeArtefacto(sha256 string) (FuenteArtefacto, error) {
 		if url != "" && !vistaURL[url] {
 			vistaURL[url] = true
 			f.URLs = append(f.URLs, url)
+		}
+		if dst != "" && !vistaDst[dst] {
+			vistaDst[dst] = true
+			f.Destinos = append(f.Destinos, dst)
 		}
 		if t, err := time.Parse(time.RFC3339Nano, ts); err == nil {
 			if f.Primera.IsZero() || t.Before(f.Primera) {

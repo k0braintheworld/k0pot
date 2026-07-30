@@ -32,6 +32,8 @@ type lineaCowrie struct {
 	Version  string  `json:"version"`
 	URL      string  `json:"url"`
 	Shasum   string  `json:"shasum"`
+	Destfile string  `json:"destfile"`
+	Filename string  `json:"filename"`
 	Duration float64 `json:"duration"`
 	// Destino del tunel que piden abrir.
 	DstIP   string `json:"dst_ip"`
@@ -47,6 +49,7 @@ var tiposCowrie = map[string]model.TipoEvento{
 	"cowrie.login.success":         model.LoginExitoso,
 	"cowrie.command.input":         model.ComandoEjecutado,
 	"cowrie.session.file_download": model.DescargaFichero,
+	"cowrie.session.file_upload":   model.DescargaFichero,
 	"cowrie.client.version":        model.HuellaCliente,
 	// Pedir un canal direct-tcpip es intentar usar la maquina de pasarela
 	// para reenviar trafico ajeno. Es de lo mas valioso que registra un
@@ -138,6 +141,14 @@ func detalleDe(lc lineaCowrie) map[string]string {
 	poner("cliente", lc.Version)
 	poner("url", lc.URL)
 	poner("sha256", lc.Shasum)
+	// destfile es donde el atacante lo dejo (/dev/.fxcat, /usr/bin/...);
+	// filename, el nombre con que lo subio por SFTP. Dice mucho de la
+	// intencion, y muchas descargas por "echo" no traen URL pero si esto.
+	if dest := lc.Destfile; dest != "" {
+		poner("destino_fichero", dest)
+	} else {
+		poner("destino_fichero", lc.Filename)
+	}
 	if lc.DstIP != "" && lc.DstPort > 0 {
 		poner("destino", fmt.Sprintf("%s:%d", lc.DstIP, lc.DstPort))
 	}

@@ -182,8 +182,13 @@ type Artefacto struct {
 	// URL de donde lo bajaba. Vacio si solo consta el fichero capturado.
 	URL string `json:"url,omitempty"`
 	// Fichero guardado en disco, si Cowrie llego a capturarlo.
-	Fichero string    `json:"fichero,omitempty"`
-	Bytes   int64     `json:"bytes,omitempty"`
+	Fichero string `json:"fichero,omitempty"`
+	Bytes   int64  `json:"bytes,omitempty"`
+	// Tipo es que es el fichero (ELF MIPS, script, texto...), leido de sus
+	// bytes; o una marca de "prueba de escritura" para los triviales.
+	Tipo string `json:"tipo,omitempty"`
+	// Destino es donde el atacante intento dejarlo (/dev/.fxcat...).
+	Destino string    `json:"destino,omitempty"`
 	IPs     []string  `json:"ips,omitempty"`
 	Momento time.Time `json:"momento"`
 	// FicheroDe es el SHA-256 del fichero que SI se capturo desde esta URL,
@@ -247,6 +252,23 @@ func (s *Servidor) artefactos(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, out)
 }
 
+// tipoDeFichero dice que es una muestra leyendo su cabecera, sin ejecutarla.
+// Los ficheros minusculos casi siempre son una prueba de escritura de un bot
+// (echo > /dev/.algo), no malware: se marcan como tal para no confundir.
+func tipoDeFichero(ruta string, tam int64) string {
+	if tam <= 8 {
+		return fmt.Sprintf("prueba de escritura (%d B)", tam)
+	}
+	f, err := os.Open(ruta)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	cab := make([]byte, 512)
+	n, _ := io.ReadFull(f, cab)
+	return artefacto.Tipo(cab[:n])
+}
+
 // ficherosCapturados lista lo que Cowrie llego a guardar en disco.
 //
 // El nombre que les pone Cowrie es el resumen SHA-256 del contenido, asi
@@ -275,11 +297,15 @@ func (s *Servidor) ficherosCapturados() []Artefacto {
 			Fichero: filepath.Base(e.Name()),
 			Bytes:   info.Size(),
 			Momento: info.ModTime(),
+			Tipo:    tipoDeFichero(filepath.Join(dir, e.Name()), info.Size()),
 		}
 		// De quien y cuando vino: sin esto, un fichero capturado es un hash
 		// suelto sin decir cuantos lo trajeron ni desde donde.
 		if fu, err := s.Almacen.FuentesDeArtefacto(e.Name()); err == nil {
 			a.IPs = fu.IPs
+			if len(fu.Destinos) > 0 {
+				a.Destino = fu.Destinos[0]
+			}
 			if !fu.Ultima.IsZero() {
 				a.Momento = fu.Ultima
 			}
