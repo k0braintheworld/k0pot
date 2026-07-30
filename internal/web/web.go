@@ -94,6 +94,7 @@ func (s *Servidor) Rutas() http.Handler {
 	mux.HandleFunc("/api/tendencias", s.protegido(s.tendencias))
 	mux.HandleFunc("/api/aprende", s.protegido(s.aprende))
 	mux.HandleFunc("/api/glosario", s.protegido(s.glosario))
+	mux.HandleFunc("/api/cebo", s.protegido(s.informeCebo))
 	mux.HandleFunc("/api/iocs", s.protegido(s.iocs))
 	mux.HandleFunc("/api/episodio/glosa", s.protegido(s.glosarEpisodio))
 	mux.HandleFunc("/api/aprendizaje", s.protegido(s.aprendizaje))

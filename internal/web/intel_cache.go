@@ -22,6 +22,7 @@ type cacheIntel struct {
 	c2        []NodoC2
 	botnets   []FamiliaBotnet
 	tuneles   []DestinoTunel
+	cebo      InformeCebo
 	calculado time.Time
 }
 
@@ -43,11 +44,13 @@ func (c *cacheIntel) recalcular(s *Servidor) {
 	nuevoC2 := calcularC2(s, eps, desde)
 	nuevoBot := calcularBotnets(eps)
 	nuevoTun := calcularTuneles(eps)
+	nuevoCebo := calcularCebo(eps)
 
 	c.mu.Lock()
 	c.c2 = nuevoC2
 	c.botnets = nuevoBot
 	c.tuneles = nuevoTun
+	c.cebo = nuevoCebo
 	c.calculado = time.Now()
 	c.mu.Unlock()
 }
@@ -80,6 +83,22 @@ func (s *Servidor) tuneles(w http.ResponseWriter, r *http.Request) {
 	s.intel.mu.RUnlock()
 	if out == nil {
 		out = []DestinoTunel{}
+	}
+	responderJSON(w, out)
+}
+
+func (s *Servidor) informeCebo(w http.ResponseWriter, r *http.Request) {
+	s.intel.mu.RLock()
+	out := s.intel.cebo
+	s.intel.mu.RUnlock()
+	if out.Fases == nil {
+		out.Fases = []FaseEmbudo{}
+	}
+	if out.Piezas == nil {
+		out.Piezas = []PiezaTocada{}
+	}
+	if out.Mordiscos == nil {
+		out.Mordiscos = []Mordisco{}
 	}
 	responderJSON(w, out)
 }

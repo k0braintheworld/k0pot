@@ -1009,3 +1009,33 @@ Object.assign(IDIOMAS.en, {
     "apr.glos.sev.roce": "touch",
     "apr.glos.atq.stats": "{n} episodes · {ips} IPs",
 });
+Object.assign(IDIOMAS.es, {
+  "tab.cebo": "Cebo",
+  "cebo.fase.llegan": "Llegan",
+  "cebo.fase.hablan": "Dicen algo",
+  "cebo.fase.entran": "Entran",
+  "cebo.fase.ejecutan": "Ejecutan",
+  "cebo.fase.tocan": "Abren el botín",
+  "cebo.fase.muerden": "Muerden el cebo",
+  "cebo.dura": "duran {d} de media",
+  "cebo.cmds": "{n} comandos por ataque",
+  "cebo.piezas": "Qué parte del botín abren",
+  "cebo.mordiscos": "Credenciales señuelo reutilizadas",
+  "cebo.sinleer": "no lo leyó aquí",
+  "cebo.circulando": "{n} mordisco(s) vienen de IPs que nunca abrieron el botín aquí: esa credencial les llegó por otra vía, así que lo plantado está circulando fuera.",
+});
+Object.assign(IDIOMAS.en, {
+  "tab.cebo": "Bait",
+  "cebo.fase.llegan": "Arrive",
+  "cebo.fase.hablan": "Say something",
+  "cebo.fase.entran": "Get in",
+  "cebo.fase.ejecutan": "Run commands",
+  "cebo.fase.tocan": "Open the loot",
+  "cebo.fase.muerden": "Take the bait",
+  "cebo.dura": "{d} long on average",
+  "cebo.cmds": "{n} commands per attack",
+  "cebo.piezas": "Which part of the loot they open",
+  "cebo.mordiscos": "Reused decoy credentials",
+  "cebo.sinleer": "never read it here",
+  "cebo.circulando": "{n} bite(s) come from IPs that never opened the loot here: that credential reached them some other way, so what we planted is circulating outside.",
+});

@@ -1669,13 +1669,14 @@ function filtrarPorTexto(texto) {
 }
 
 async function cargarInteligencia() {
-  const [c2, botnets, tun] = await Promise.all([
-    traer("/api/c2"), traer("/api/botnets"), traer("/api/tuneles"),
+  const [c2, botnets, tun, cebo] = await Promise.all([
+    traer("/api/c2"), traer("/api/botnets"), traer("/api/tuneles"), traer("/api/cebo"),
   ]);
-  datosIntel = { c2, botnets, tuneles: tun };
+  datosIntel = { c2, botnets, tuneles: tun, cebo };
 
   const sec = document.querySelector(".bloque-intel");
-  if (!c2.length && !botnets.length && !tun.length) {
+  const hayCebo = (cebo?.fases || []).some((f) => f.episodios > 0);
+  if (!c2.length && !botnets.length && !tun.length && !hayCebo) {
     if (sec) sec.hidden = true;
     return;
   }
@@ -1684,11 +1685,17 @@ async function cargarInteligencia() {
   pintarC2(c2);
   pintarBotnets(botnets);
   pintarTuneles(tun);
+  pintarCebo(cebo);
 
   // Contar para las pestanas
   for (const btn of document.querySelectorAll(".tab-intel")) {
     const k = btn.dataset.tab;
-    const n = datosIntel[k === "tuneles" ? "tuneles" : k]?.length || 0;
+    let n = 0;
+    if (k === "cebo") {
+      n = (datosIntel.cebo?.fases || []).find((f) => f.clave === "muerden")?.episodios || 0;
+    } else {
+      n = datosIntel[k]?.length || 0;
+    }
     if (n) btn.textContent = t("tab." + k) + " (" + n + ")";
   }
 }
@@ -1758,6 +1765,88 @@ function pintarTuneles(lista) {
     card.addEventListener("click", () => filtrarPorTexto(host));
     cont.appendChild(card);
   }
+}
+
+
+// ── .Funciona el cebo? Embudo del engano y rastro de los mordiscos ───
+// El embudo se lee de arriba abajo: cada escalon es un filtro. Lo que
+// informa no es una cifra suelta sino la caida entre dos escalones.
+function pintarCebo(datos) {
+  const cont = $("intel-cebo");
+  cont.replaceChildren();
+  if (!datos || !datos.fases || !datos.fases.length) {
+    cont.appendChild(nodo("p", "sub", "\u2014"));
+    return;
+  }
+
+  const tope = datos.fases[0]?.episodios || 1;
+  const emb = nodo("div", "embudo-cebo");
+  for (const f of datos.fases) {
+    const fila = nodo("div", "embudo-fila");
+    fila.appendChild(nodo("span", "embudo-nombre", t("cebo.fase." + f.clave)));
+    const canal = nodo("div", "embudo-canal");
+    const barra = nodo("div", "embudo-barra embudo-" + f.clave);
+    // El ancho es proporcional al primer escalon, que es el 100%.
+    barra.style.width = Math.max(1, Math.round((f.episodios / tope) * 100)) + "%";
+    canal.appendChild(barra);
+    fila.appendChild(canal);
+    const cifra = f.episodios + " \u00b7 " + f.ips + " IP";
+    fila.appendChild(nodo("span", "embudo-cifra", cifra));
+    emb.appendChild(fila);
+
+    // Duracion y comandos medios: dicen si el cebo entretiene.
+    if (f.episodios > 0 && (f.duracion > 0 || f.comandos > 0)) {
+      const det = nodo("div", "embudo-detalle");
+      const trozos = [];
+      if (f.duracion > 0) trozos.push(t("cebo.dura", { d: duracionCorta(f.duracion) }));
+      if (f.comandos > 0) trozos.push(t("cebo.cmds", { n: f.comandos.toFixed(1) }));
+      det.textContent = trozos.join(" \u00b7 ");
+      emb.appendChild(det);
+    }
+  }
+  cont.appendChild(emb);
+
+  // Botin: que trozo se abre mas.
+  if (datos.piezas?.length) {
+    cont.appendChild(nodo("h3", "cebo-sub", t("cebo.piezas")));
+    const lista = nodo("div", "lista-intel");
+    for (const p of datos.piezas) {
+      const card = nodo("div", "intel-card");
+      card.appendChild(nodo("span", "host", p.nombre));
+      card.appendChild(nodo("span", "stat", p.episodios + "x \u00b7 " + p.ips + " IP"));
+      lista.appendChild(card);
+    }
+    cont.appendChild(lista);
+  }
+
+  // Mordiscos, con la senal fuerte: quien muerde sin haber leido.
+  if (datos.mordiscos?.length) {
+    cont.appendChild(nodo("h3", "cebo-sub", t("cebo.mordiscos")));
+    if (datos.circulando > 0) {
+      cont.appendChild(nodo("p", "cebo-aviso", t("cebo.circulando", { n: datos.circulando })));
+    }
+    const lista = nodo("div", "lista-intel");
+    for (const m of datos.mordiscos) {
+      const card = nodo("div", "intel-card pulsable");
+      card.appendChild(nodo("span", "host", m.ip));
+      card.appendChild(nodo("span", "familia-tag", m.cebo));
+      card.appendChild(nodo("span", "badge", m.protocolo));
+      if (!m.leido_aqui) {
+        card.appendChild(nodo("span", "cebo-marca", t("cebo.sinleer")));
+      }
+      if (m.cuando) card.appendChild(nodo("span", "stat", hace(m.cuando)));
+      card.addEventListener("click", () => filtrarPorTexto(m.ip));
+      lista.appendChild(card);
+    }
+    cont.appendChild(lista);
+  }
+}
+
+// duracionCorta pasa segundos a algo legible de un vistazo.
+function duracionCorta(seg) {
+  if (seg < 60) return Math.round(seg) + "s";
+  if (seg < 3600) return Math.round(seg / 60) + "m";
+  return (seg / 3600).toFixed(1) + "h";
 }
 
 // Tabs de inteligencia

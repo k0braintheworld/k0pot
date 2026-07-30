@@ -1237,3 +1237,32 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
 .glos-sev-tanteo   { background: #3fb27f33; color: var(--verde); }
 .glos-sev-roce     { background: #8b93a533; color: var(--sub); }
 .glos-vacio { text-align: center; color: var(--sub); padding: 2rem; font-style: italic; }
+
+/* ── Embudo del engano (pestana Cebo) ──────────────────────────────
+   Ojo: .embudo (sin sufijo) ya existe mas arriba para el reparto de
+   ruido/serio. Este es otro, con su propio nombre, para no pisarlo. */
+.embudo-cebo { display: grid; gap: .15rem; margin-bottom: 1rem; }
+.embudo-fila { display: flex; align-items: center; gap: .6rem; }
+.embudo-nombre { flex: 0 0 9rem; font-size: .82rem; color: var(--sub); }
+.embudo-canal { flex: 1; height: 1.35rem; background: var(--panel-alto); border-radius: .25rem; overflow: hidden; }
+.embudo-barra { height: 100%; border-radius: .25rem; transition: width .3s; }
+.embudo-llegan   { background: #8b93a5; }
+.embudo-hablan   { background: #3fb27f; }
+.embudo-entran   { background: #89b4fa; }
+.embudo-ejecutan { background: #e0a94f; }
+.embudo-tocan    { background: #e5605a; }
+.embudo-muerden  { background: #9b2fd6; }
+.embudo-cifra { flex: 0 0 7rem; text-align: right; font-size: .8rem; color: var(--sub); font-variant-numeric: tabular-nums; }
+.embudo-detalle { margin: 0 0 .35rem 9.6rem; font-size: .75rem; color: var(--sub); }
+.cebo-sub { margin: 1rem 0 .5rem; font-size: .9rem; font-weight: 650; }
+.cebo-aviso {
+  margin: 0 0 .6rem; padding: .5rem .7rem;
+  background: color-mix(in srgb, #9b2fd6 14%, transparent);
+  border-left: 3px solid #9b2fd6; border-radius: .25rem;
+  font-size: .84rem;
+}
+.cebo-marca {
+  padding: .1rem .4rem; border-radius: .25rem;
+  background: color-mix(in srgb, #9b2fd6 22%, transparent);
+  color: #c07ae8; font-size: .72rem; font-weight: 600;
+}
