@@ -1499,6 +1499,9 @@ t("artef.aviso")));
   datos.appendChild(vtFila);
   if (d.urls?.length) datos.appendChild(dato(t("dato.origen"), d.urls.join("  ")));
   if (d.ips?.length) datos.appendChild(dato(t("dato.trajeron"), d.ips.join(", ")));
+  // Infraestructura que la muestra lleva DENTRO: su C2, su segunda fase.
+  if (d.urls_dentro?.length) datos.appendChild(dato(t("dato.c2.urls"), d.urls_dentro.join("  ")));
+  if (d.ips_dentro?.length) datos.appendChild(dato(t("dato.c2.ips"), d.ips_dentro.join(", ")));
   if (d.primera) datos.appendChild(dato(t("dato.primera"), new Date(d.primera).toLocaleString(IDIOMA)));
 
   cadenas.replaceChildren();

@@ -269,6 +269,63 @@ func tipoDeFichero(ruta string, tam int64) string {
 	return artefacto.Tipo(cab[:n])
 }
 
+// iocsEmbebidos saca la infraestructura que las muestras capturadas llevan
+// ESCRITA dentro (el C2 de un dropper o un binario). Lee cada fichero hasta
+// un tope y extrae sus URLs e IPs. Nunca ejecuta nada.
+func (s *Servidor) iocsEmbebidos() []ioc {
+	if s.DirDescargas == "" {
+		return nil
+	}
+	entradas, err := os.ReadDir(s.DirDescargas)
+	if err != nil {
+		return nil
+	}
+	vistos := map[string]bool{}
+	var out []ioc
+	for _, e := range entradas {
+		if e.IsDir() || !reHashArtefacto.MatchString(e.Name()) {
+			continue
+		}
+		datos, err := leerAcotado(filepath.Join(s.DirDescargas, e.Name()), 4<<20)
+		if err != nil {
+			continue
+		}
+		var cuando time.Time
+		if info, err := e.Info(); err == nil {
+			cuando = info.ModTime()
+		}
+		ind := artefacto.IndicadoresDe(datos)
+		anota := func(clase, valor string) {
+			k := clase + "|" + valor
+			if valor == "" || vistos[k] {
+				return
+			}
+			vistos[k] = true
+			out = append(out, ioc{clase: clase, valor: valor, primera: cuando, ultima: cuando,
+				etiqueta: "hallado dentro de una muestra capturada"})
+		}
+		for _, u := range ind.URLs {
+			anota("url", u)
+		}
+		for _, ip := range ind.IPs {
+			anota("ipv4-addr", ip)
+		}
+	}
+	return out
+}
+
+// leerAcotado lee hasta 'tope' bytes de un fichero, sin cargarlo entero.
+func leerAcotado(ruta string, tope int) ([]byte, error) {
+	f, err := os.Open(ruta)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	buf := make([]byte, tope)
+	n, _ := io.ReadFull(f, buf)
+	return buf[:n], nil
+}
+
 // ficherosCapturados lista lo que Cowrie llego a guardar en disco.
 //
 // El nombre que les pone Cowrie es el resumen SHA-256 del contenido, asi
@@ -369,9 +426,14 @@ type DetalleArtefacto struct {
 	Cadenas []string `json:"cadenas"`
 	// Vista es el contenido tal cual cuando es texto (un script .sh se lee
 	// entero); vacio si es binario, donde el volcado no dice nada.
-	Vista       string    `json:"vista,omitempty"`
-	IPs         []string  `json:"ips,omitempty"`
-	URLs        []string  `json:"urls,omitempty"`
+	Vista string   `json:"vista,omitempty"`
+	IPs   []string `json:"ips,omitempty"`
+	URLs  []string `json:"urls,omitempty"`
+	// URLsDentro / IPsDentro es la infraestructura que la muestra lleva
+	// ESCRITA dentro (su C2, su segunda fase); distinto de URLs/IPs, que
+	// son de donde vino y quien la trajo.
+	URLsDentro  []string  `json:"urls_dentro,omitempty"`
+	IPsDentro   []string  `json:"ips_dentro,omitempty"`
 	Primera     time.Time `json:"primera,omitempty"`
 	Ultima      time.Time `json:"ultima,omitempty"`
 	Pendiente   bool      `json:"pendiente,omitempty"`
@@ -414,10 +476,16 @@ func (s *Servidor) detalleArtefacto(hash string) (DetalleArtefacto, bool) {
 		return DetalleArtefacto{}, false
 	}
 	defer f.Close()
-	// Solo los primeros 4 KB: basta para el tipo y una vista previa de cadenas.
-	cabecera := make([]byte, 4096)
-	n, _ := io.ReadFull(f, cabecera)
-	cabecera = cabecera[:n]
+	// Se leen hasta 4 MB: el tipo y la vista salen de la cabecera, pero la
+	// infraestructura embebida (el C2) puede estar mas adentro. Nunca se
+	// ejecuta: solo se leen bytes.
+	contenido := make([]byte, 4<<20)
+	n, _ := io.ReadFull(f, contenido)
+	contenido = contenido[:n]
+	cabecera := contenido
+	if len(cabecera) > 4096 {
+		cabecera = cabecera[:4096]
+	}
 
 	det := DetalleArtefacto{
 		SHA256:  hash,
@@ -427,6 +495,9 @@ func (s *Servidor) detalleArtefacto(hash string) (DetalleArtefacto, bool) {
 	}
 	if artefacto.EsTexto(cabecera) {
 		det.Vista = string(cabecera)
+	}
+	if ind := artefacto.IndicadoresDe(contenido); len(ind.URLs) > 0 || len(ind.IPs) > 0 {
+		det.URLsDentro, det.IPsDentro = ind.URLs, ind.IPs
 	}
 	if fu, err := s.Almacen.FuentesDeArtefacto(hash); err == nil {
 		det.IPs, det.URLs = fu.IPs, fu.URLs

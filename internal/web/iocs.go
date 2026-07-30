@@ -115,6 +115,10 @@ func (s *Servidor) reunirIOCs(desde time.Time) []ioc {
 			etiqueta: fmt.Sprintf("fichero capturado (%d bytes)", f.Bytes)})
 	}
 
+	// La infraestructura que las muestras llevan escrita dentro: el C2 de un
+	// dropper, el servidor de segunda fase de un binario. IOC de primera.
+	out = append(out, s.iocsEmbebidos()...)
+
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].clase != out[j].clase {
 			return out[i].clase < out[j].clase
