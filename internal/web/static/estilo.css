@@ -1131,7 +1131,17 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   color: var(--acento, #89b4fa);
   border-bottom-color: var(--acento, #89b4fa);
 }
-.panel-intel { min-height: 2rem; }
+/* La lista de C2 crece sin techo (un honeypot activo acumula decenas de
+   hosts), y eso estiraba el bloque hasta empujar todo lo de abajo fuera de
+   la pantalla. Se acota y scrollea por dentro, igual que .lista-ataques:
+   las pestanas se quedan fijas arriba y solo se mueve el contenido. */
+.panel-intel {
+  min-height: 2rem;
+  max-height: 26rem;
+  overflow-y: auto;
+  /* Hueco para que la barra de scroll no se coma el borde de las tarjetas. */
+  padding-right: .3rem;
+}
 .panel-intel[hidden] { display: none; }
 .intel-card.pulsable, .bot-card.pulsable, .tun-card.pulsable {
   cursor: pointer;
