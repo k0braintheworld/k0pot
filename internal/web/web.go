@@ -48,7 +48,8 @@ type Servidor struct {
 	DirCowrie string
 	// Version es la del binario, para mostrarla en el panel.
 	Version string
-	intel   cacheIntel
+	intel       cacheIntel
+	estadoCache cacheEstado
 	// AlCambiarConfig avisa a quien haya que reconfigurar (el generador de
 	// informes, el enriquecedor) cuando se guardan ajustes nuevos.
 	AlCambiarConfig func(config.Config)
@@ -255,53 +256,33 @@ type Estado struct {
 
 func (s *Servidor) estado(w http.ResponseWriter, r *http.Request) {
 	d := dias(r)
-	desde := time.Now().AddDate(0, 0, -d)
+	s.estadoCache.mu.Lock()
+	e := s.estadoCache.porRango[d]
+	s.estadoCache.mu.Unlock()
 
-	resumen, err := s.Almacen.Resumir(desde)
-	if err != nil {
-		http.Error(w, "no se pudo leer el resumen", http.StatusInternalServerError)
-		return
-	}
-	niveles, err := s.Almacen.PorClasificacion(desde)
-	if err != nil {
-		http.Error(w, "no se pudo leer la clasificacion", http.StatusInternalServerError)
-		return
-	}
-	// Reparto de los ATAQUES por gravedad, para la grafica: es el resumen de
-	// una linea del negocio de k0Pot -cuanto ruido, cuanto de verdad.
-	severidades, err := s.Almacen.EpisodiosDesde(desde)
-	if err != nil {
-		http.Error(w, "no se pudo leer la gravedad de los ataques", http.StatusInternalServerError)
-		return
-	}
-	// Reparto de ataques por servicio, para el semaforo: dice a que puerto le
-	// estan dando, no solo cuanto preocupa.
-	porServicio, err := s.Almacen.AtaquesPorServicio(desde)
-	if err != nil {
-		http.Error(w, "no se pudo leer el reparto por servicio", http.StatusInternalServerError)
+	// Primer visitante de este rango: se calcula ahora (una vez) y se guarda.
+	if e == nil {
+		datos, err := s.calcularEstado(d)
+		if err != nil {
+			http.Error(w, "no se pudo leer el resumen", http.StatusInternalServerError)
+			return
+		}
+		s.estadoCache.mu.Lock()
+		if s.estadoCache.porRango == nil {
+			s.estadoCache.porRango = map[int]*entradaEstado{}
+		}
+		s.estadoCache.porRango[d] = &entradaEstado{datos: datos, calculado: time.Now()}
+		s.estadoCache.mu.Unlock()
+		responderJSON(w, datos)
 		return
 	}
 
-	responderJSON(w, Estado{
-		Severidades:  severidades,
-		PorServicio:  porServicio,
-		Nivel:        report.NivelDeAtaques(severidades),
-		PaisPropio:   s.Config.Actual().PaisPropio,
-		Latitud:      s.Config.Actual().LatitudPropia,
-		Longitud:     s.Config.Actual().LongitudPropia,
-		Frase:        report.FraseSemaforoAtaques(severidades),
-		Dias:         d,
-		Total:        resumen.Total,
-		IPsUnicas:    resumen.IPsUnicas,
-		Niveles:      niveles,
-		PorTipo:      resumen.PorTipo,
-		PorPais:      resumen.PorPais,
-		TopIPs:       resumen.TopIPs,
-		TopUsuarios:  resumen.TopUsuarios,
-		TopPasswords: resumen.TopPasswords,
-		Primero:      resumen.Primero,
-		Ultimo:       resumen.Ultimo,
-	})
+	// Caducado: se sirve lo que hay y se refresca por detras, sin hacer
+	// esperar a quien mira.
+	if time.Since(e.calculado) > frescuraEstado {
+		s.refrescarEnFondo(d)
+	}
+	responderJSON(w, e.datos)
 }
 
 // serie alimenta la grafica temporal. La granularidad se elige sola: por

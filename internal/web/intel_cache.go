@@ -29,8 +29,10 @@ type cacheIntel struct {
 const intervaloIntel = 5 * time.Minute
 
 func (s *Servidor) IniciarCacheIntel() {
-	s.intel.recalcular(s)
+	// En segundo plano tambien el primer calculo: barre episodios y lee los
+	// artefactos de disco, y no puede retrasar la apertura del panel.
 	go func() {
+		s.intel.recalcular(s)
 		for range time.Tick(intervaloIntel) {
 			s.intel.recalcular(s)
 		}
