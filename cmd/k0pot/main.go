@@ -303,6 +303,12 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 	// episodios. Arranca a cero a proposito: al iniciar se reconstruye todo
 	// una vez, que es lo que hace falta tras actualizar o restaurar.
 	var ultimoEvento int64
+	// ultimoComando es la marca de agua del aprendiz: hasta que id de
+	// evento ha mirado ya. Persistida, para no rebarrer tras un reinicio.
+	var ultimoComando int64
+	if v, err := almacen.LeerEstado("aprendiz_ultimo_evento"); err == nil && v != "" {
+		ultimoComando, _ = strconv.ParseInt(v, 10, 64)
+	}
 
 	for {
 		if err := ajustes.Recargar(); err != nil {
@@ -327,10 +333,15 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 		// bucle ni quemar la cuota de golpe.
 		if time.Since(ultimoAprendizaje) > 2*time.Minute {
 			ultimoAprendizaje = time.Now()
-			if n, err := aprenderComandos(ctx, almacen, ajustes.Actual(), sinLLM); err != nil {
+			n, marca, err := aprenderComandos(ctx, almacen, ajustes.Actual(), sinLLM, ultimoComando)
+			if err != nil {
 				log.Printf("aprendizaje: %v", err)
 			} else if n > 0 {
 				log.Printf("aprendizaje: %d comandos nuevos glosados", n)
+			}
+			if marca != ultimoComando {
+				ultimoComando = marca
+				_ = almacen.GuardarEstado("aprendiz_ultimo_evento", strconv.FormatInt(marca, 10))
 			}
 		}
 
@@ -426,13 +437,13 @@ func enviarResumen(ctx context.Context, almacen *store.Store, c config.Config) e
 // explicaciones ya esten hechas sin tener que pedirlas. Reserva parte de la
 // cuota diaria para lo que pida el usuario en directo y avanza despacio: unas
 // pocas formas por vuelta, empezando por las mas repetidas.
-func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config, sinLLM bool) (int, error) {
+func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config, sinLLM bool, desdeID int64) (int, int64, error) {
 	if sinLLM || !c.UsarLLM || !c.AprendizajeAutomatico {
-		return 0, nil
+		return 0, desdeID, nil
 	}
 	ex, ok := generadorDe(almacen, c, sinLLM).(report.Explicador)
 	if !ok {
-		return 0, nil
+		return 0, desdeID, nil
 	}
 	idioma := c.Idioma
 	if idioma == "" {
@@ -443,13 +454,13 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 	dia := time.Now().Format("2006-01-02")
 	if tope > 0 {
 		if usadas, _ := almacen.CuotaLLMUsada(dia); usadas >= tope {
-			return 0, nil // agotado el tope global de hoy
+			return 0, desdeID, nil // agotado el tope global de hoy
 		}
 	}
 
-	grupos, err := almacen.ComandosRecientesAgrupados(time.Now().AddDate(0, 0, -30))
+	grupos, hasta, err := almacen.ComandosNuevosAgrupados(desdeID)
 	if err != nil {
-		return 0, err
+		return 0, desdeID, err
 	}
 	type forma struct {
 		norm, repr string
@@ -475,7 +486,7 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 		f.veces += g.Veces
 	}
 	if len(porNorm) == 0 {
-		return 0, nil
+		return 0, hasta, nil // al dia: nada nuevo que glosar
 	}
 	orden := make([]*forma, 0, len(porNorm))
 	for _, f := range porNorm {
@@ -504,7 +515,9 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 			orden = orden[1:]
 		}
 		if ok, _ := almacen.ConsumirCuotaLLM(dia, tope); !ok {
-			break // agotado el presupuesto de fondo de hoy
+			// Agotado el presupuesto de hoy: no adelantamos la marca para
+			// retomar estos mismos comandos cuando haya cuota.
+			return aprendidas, desdeID, nil
 		}
 		lineas := make([]string, len(lote))
 		for i, f := range lote {
@@ -516,7 +529,7 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 		cancelar()
 		if err != nil {
 			almacen.DevolverCuotaLLM(dia)
-			return aprendidas, err
+			return aprendidas, desdeID, err
 		}
 		for i, f := range lote {
 			if g := strings.TrimSpace(glosas[i]); g != "" {
@@ -526,7 +539,12 @@ func aprenderComandos(ctx context.Context, almacen *store.Store, c config.Config
 		}
 		_ = almacen.GuardarEstado("ia_pausa_hasta", "") // funciono: hay tokens de nuevo
 	}
-	return aprendidas, nil
+	if len(orden) > 0 {
+		// Quedaron candidatos fuera de la tanda; no adelantamos la marca
+		// para volver a encontrarlos en la proxima vuelta.
+		return aprendidas, desdeID, nil
+	}
+	return aprendidas, hasta, nil
 }
 
 // avisarDeLoGrave saca del panel lo que no puede esperar a que alguien
@@ -1061,6 +1079,7 @@ func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion, rutaBD
 	// Al guardar ajustes se rehace el generador, para que cambiar de modelo
 	// o de clave surta efecto sin reiniciar el servicio.
 	srv.IniciarCacheIntel()
+	srv.IniciarCacheEstado()
 	srv.AlCambiarConfig = func(c config.Config) {
 		srv.Generador = generadorDe(almacen, c, sinLLM)
 	}

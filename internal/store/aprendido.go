@@ -88,6 +88,44 @@ func (s *Store) ComandosRecientesAgrupados(desde time.Time) ([]ComandoAgrupado, 
 	return out, filas.Err()
 }
 
+// ComandosNuevosAgrupados es la version incremental de
+// ComandosRecientesAgrupados: agrupa solo los comandos de eventos con id
+// posterior a desdeID y devuelve, ademas de los grupos, el mayor id
+// examinado, para que quien llama guarde esa marca de agua y la proxima vez
+// no vuelva a barrer lo mismo.
+//
+// El aprendiz de fondo corre cada pocos minutos; sin esto rebarria semanas de
+// eventos en cada vuelta -cientos de miles de filas con json_extract, segundos
+// que bloquean la unica conexion de la base- para descubrir, casi siempre,
+// cero comandos nuevos.
+func (s *Store) ComandosNuevosAgrupados(desdeID int64) ([]ComandoAgrupado, int64, error) {
+	// El techo se fija ANTES de agrupar: asi la marca que devolvemos no se
+	// adelanta a filas que aun no hemos mirado si entra un evento entre medias.
+	var hasta int64
+	if err := s.db.QueryRow(`SELECT COALESCE(MAX(id), ?) FROM eventos`, desdeID).Scan(&hasta); err != nil {
+		return nil, desdeID, fmt.Errorf("techo de eventos: %w", err)
+	}
+	filas, err := s.db.Query(
+		`SELECT protocolo, json_extract(detalle,'$.comando') AS cmd, COUNT(*)
+		   FROM eventos
+		  WHERE tipo = 'comando_ejecutado' AND id > ? AND id <= ? AND cmd IS NOT NULL
+		  GROUP BY protocolo, cmd`,
+		desdeID, hasta)
+	if err != nil {
+		return nil, desdeID, fmt.Errorf("comandos nuevos agrupados: %w", err)
+	}
+	defer filas.Close()
+	var out []ComandoAgrupado
+	for filas.Next() {
+		var c ComandoAgrupado
+		if err := filas.Scan(&c.Protocolo, &c.Comando, &c.Veces); err != nil {
+			return nil, desdeID, err
+		}
+		out = append(out, c)
+	}
+	return out, hasta, filas.Err()
+}
+
 // GlosasAprendidasDe busca de golpe las glosas de varias formas normalizadas.
 // Es para pintar el detalle de un ataque: una sola consulta en vez de una por
 // comando, que con cientos de pasos ahogaria la unica conexion de la BD.
