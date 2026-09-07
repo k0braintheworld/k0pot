@@ -20,8 +20,7 @@ import (
 // segundo plano lo mantiene al dia.
 
 const (
-	frescuraEstado  = 90 * time.Second
-	intervaloEstado = 60 * time.Second
+	frescuraEstado = 90 * time.Second
 )
 
 type entradaEstado struct {
@@ -48,31 +47,7 @@ func (s *Servidor) IniciarCacheEstado() {
 			s.estadoCache.porRango[1] = &entradaEstado{datos: d, calculado: time.Now()}
 			s.estadoCache.mu.Unlock()
 		}
-		for range time.Tick(intervaloEstado) {
-			s.refrescarEstados()
-		}
 	}()
-}
-
-// refrescarEstados recalcula en segundo plano los rangos ya cacheados. Solo
-// toca los que alguien ha pedido: un rango que nadie mira no cuesta nada.
-func (s *Servidor) refrescarEstados() {
-	s.estadoCache.mu.Lock()
-	rangos := make([]int, 0, len(s.estadoCache.porRango))
-	for d := range s.estadoCache.porRango {
-		rangos = append(rangos, d)
-	}
-	s.estadoCache.mu.Unlock()
-
-	for _, d := range rangos {
-		datos, err := s.calcularEstado(d)
-		if err != nil {
-			continue
-		}
-		s.estadoCache.mu.Lock()
-		s.estadoCache.porRango[d] = &entradaEstado{datos: datos, calculado: time.Now()}
-		s.estadoCache.mu.Unlock()
-	}
 }
 
 // refrescarEnFondo recalcula un rango sin bloquear la peticion, con un cerrojo
