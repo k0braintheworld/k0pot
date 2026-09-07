@@ -62,6 +62,19 @@ CREATE TABLE IF NOT EXISTS ips (
 );
 `
 
+// PermitirLecturaConcurrente sube el numero de conexiones del pool. Lo usa
+// SOLO el panel: es de lectura casi pura y, en WAL, varias lecturas a la vez
+// son seguras y NO se bloquean entre si. Con una sola conexion (lo que deja
+// Abrir por defecto, pensado para el collector escritor) las multiples
+// llamadas que el panel hace en paralelo al refrescar se serializan y se
+// suman; con varias, van de verdad en paralelo. Las escrituras del panel,
+// escasas y breves, las sigue serializando SQLite con el busy_timeout del DSN.
+func (s *Store) PermitirLecturaConcurrente(n int) {
+	if n > 1 {
+		s.db.SetMaxOpenConns(n)
+	}
+}
+
 // Abrir abre (y crea si hace falta) la base de datos en la ruta dada.
 func Abrir(ruta string) (*Store, error) {
 	// Los PRAGMA van en el DSN, no en un Exec posterior: ejecutados con

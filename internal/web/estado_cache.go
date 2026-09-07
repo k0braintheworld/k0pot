@@ -42,9 +42,15 @@ func (s *Servidor) IniciarCacheEstado() {
 	// una consulta pesada. Hasta que termine, el handler calcula el rango en
 	// frio la primera vez que se pide.
 	go func() {
-		if d, err := s.calcularEstado(1); err == nil {
+		// Se precalientan los rangos del selector (24 h, 7, 30, 90 dias) para
+		// que cambiar de uno a otro sea instantaneo, no un calculo en frio.
+		for _, d := range []int{1, 7, 30, 90} {
+			datos, err := s.calcularEstado(d)
+			if err != nil {
+				continue
+			}
 			s.estadoCache.mu.Lock()
-			s.estadoCache.porRango[1] = &entradaEstado{datos: d, calculado: time.Now()}
+			s.estadoCache.porRango[d] = &entradaEstado{datos: datos, calculado: time.Now()}
 			s.estadoCache.mu.Unlock()
 		}
 	}()

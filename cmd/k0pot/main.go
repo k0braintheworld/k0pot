@@ -1064,6 +1064,11 @@ func servirPanel(almacen *store.Store, ajustes *config.Gestor, direccion, rutaBD
 	// configuracion si la hay: es lo que se edita desde el panel.
 	direccion = direccionDelPanel(direccion, ajustes.Actual().EscuchaPanel)
 
+	// El panel lee mucho en paralelo (cada refresco dispara varias consultas
+	// a la vez); en WAL varias lecturas concurrentes son seguras. El collector,
+	// que es quien escribe, sigue con una sola conexion.
+	almacen.PermitirLecturaConcurrente(4)
+
 	srv := &web.Servidor{
 		Almacen:   almacen,
 		Config:    ajustes,
