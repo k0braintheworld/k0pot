@@ -416,6 +416,60 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 	}
 }
 
+// resumenCebos arma la linea de -quien mordio el cebo- del digest: las
+// direcciones que reutilizaron una credencial senuelo en el periodo. Es la
+// severidad Trampa, la mas alta.
+func resumenCebos(almacen *store.Store, desde time.Time, idioma string) string {
+	cebos, err := almacen.Episodios(store.FiltroEpisodios{Desde: desde, Minima: "trampa", Limite: 100})
+	if err != nil {
+		return ""
+	}
+	var orden []string
+	cebo := map[string]string{}
+	for _, e := range cebos {
+		if _, visto := cebo[e.IP]; !visto {
+			orden = append(orden, e.IP)
+			cebo[e.IP] = ""
+		}
+		if cebo[e.IP] == "" && e.CeboMordido != "" {
+			cebo[e.IP] = e.CeboMordido
+		}
+	}
+	return formatearCebos(orden, cebo, idioma)
+}
+
+// formatearCebos redacta la linea (separada para poder probarla): el total de
+// direcciones y hasta tres ejemplos con el cebo que mordieron.
+func formatearCebos(ips []string, cebo map[string]string, idioma string) string {
+	if len(ips) == 0 {
+		return ""
+	}
+	var ej []string
+	for i, ip := range ips {
+		if i >= 3 {
+			break
+		}
+		if cebo[ip] != "" {
+			ej = append(ej, ip+" ("+cebo[ip]+")")
+		} else {
+			ej = append(ej, ip)
+		}
+	}
+	lista := strings.Join(ej, ", ")
+	if idioma == "en" {
+		s := fmt.Sprintf("\U0001f36f %d attacker(s) took the bait", len(ips))
+		if lista != "" {
+			s += ": " + lista
+		}
+		return s + "."
+	}
+	s := fmt.Sprintf("\U0001f36f %d atacante(s) mordieron el cebo", len(ips))
+	if lista != "" {
+		s += ": " + lista
+	}
+	return s + "."
+}
+
 // enviarResumen manda por el canal de avisos un digest del periodo, si toca.
 // Se autolimita leyendo cuando se envio el ultimo, para no repetirlo en cada
 // vuelta del bucle ni tras un reinicio.
@@ -452,6 +506,11 @@ func enviarResumen(ctx context.Context, almacen *store.Store, c config.Config) e
 		} else {
 			cuerpo += fmt.Sprintf("\n%d muestra(s) de malware nueva(s).", len(nuevos))
 		}
+	}
+	// El cebo mordido es lo mas importante que puede contar un honeypot: va
+	// arriba del resumen, no perdido entre las cifras de ruido de fondo.
+	if linea := resumenCebos(almacen, desde, c.Idioma); linea != "" {
+		cuerpo = linea + "\n\n" + cuerpo
 	}
 	canal, err := aviso.De(aviso.Config{
 		Canal: c.AvisoCanal, Destino: c.AvisoDestino, Clave: c.ClaveAviso,
@@ -1498,6 +1557,10 @@ func mostrarResumen(almacen *store.Store, dias int) error {
 		return err
 	}
 	fmt.Printf("  %s\n\n", semaforo(niveles))
+
+	if linea := resumenCebos(almacen, desde, "es"); linea != "" {
+		fmt.Printf("  %s\n\n", linea)
+	}
 
 	fmt.Printf("  %d eventos desde %d IPs distintas\n", r.Total, r.IPsUnicas)
 	fmt.Printf("  entre %s y %s\n\n",
