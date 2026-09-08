@@ -35,6 +35,17 @@ type PerfilIP struct {
 	// leve que el ultimo. Es la diferencia entre insistir y progresar.
 	Escalo bool `json:"escalo"`
 
+	// Cruce con la inteligencia: lo que sabemos de ESTA direccion mas alla
+	// de sus ataques sueltos. Es lo que convierte una lista en un retrato:
+	// no solo -vino mucho-, sino -es de Mirai, mordio el cebo y quiso
+	// tunelizar a este SMTP-.
+	CeboMordido string   `json:"cebo_mordido,omitempty"`
+	Familia     string   `json:"familia,omitempty"`
+	Tuneles     []string `json:"tuneles,omitempty"`
+	// DiasActivo son los dias DISTINTOS con actividad: distingue un
+	// arreon de una tarde de alguien que vuelve un mes seguido.
+	DiasActivo int `json:"dias_activo"`
+
 	Ataques []store.EpisodioFila `json:"ataques"`
 }
 
@@ -69,6 +80,8 @@ func (s *Servidor) perfilIP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	peor := episodio.Roce
+	var comandos []string
+	diasVistos := map[string]bool{}
 	for i, e := range ataques {
 		p.Eventos += e.Eventos
 		if i == 0 || e.Inicio.Before(p.Vista) {
@@ -84,9 +97,26 @@ func (s *Servidor) perfilIP(w http.ResponseWriter, r *http.Request) {
 		if e.LoginExitoso {
 			p.LlegoAEntrar = true
 		}
+		comandos = append(comandos, e.Comandos...)
+		// El cebo del episodio mas grave (los ataques vienen por severidad)
+		// es el que mejor retrata a la direccion.
+		if e.CeboMordido != "" && p.CeboMordido == "" {
+			p.CeboMordido = e.CeboMordido
+		}
+		for _, dst := range e.Tuneles {
+			if !contiene(p.Tuneles, dst) {
+				p.Tuneles = append(p.Tuneles, dst)
+			}
+		}
+		diasVistos[e.Inicio.UTC().Format("2006-01-02")] = true
 	}
 	sort.Strings(p.Servicios)
+	sort.Strings(p.Tuneles)
 	p.PeorHasta = string(peor)
+	p.DiasActivo = len(diasVistos)
+	// La familia se deduce de la firma de sus comandos, la misma que usa
+	// el panel de botnets: asi la ficha y el agregado cuentan lo mismo.
+	p.Familia = clasificarBotnet(comandos)
 
 	// Escalo se mide comparando el primero en el tiempo con el peor: si el
 	// primero fue lo mas grave, insistio; si lo peor vino despues, progreso.

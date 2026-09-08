@@ -1084,9 +1084,12 @@ async function abrirIP(ip) {
   }
   if (p.llego_a_entrar) frases.push(t("ip.entro"));
   if (p.escalo) frases.push(t("ip.escalo"));
+  if (p.familia) frases.push(t("ip.familia", { familia: p.familia }));
   if (p.nota_proveedor) {
     frases.push(`${p.nota_proveedor.que}: ${p.nota_proveedor.por}.`);
   }
+  // El cebo mordido es la senal mas fuerte: va aparte y destacado.
+  if (p.cebo_mordido) caja.appendChild(nodo("p", "ip-cebo", t("ip.cebo", { cebo: p.cebo_mordido })));
   caja.appendChild(nodo("p", null, frases.join(" ")));
   caja.hidden = false;
 
@@ -1099,6 +1102,9 @@ async function abrirIP(ip) {
   datos.appendChild(dato(t("dato.servicios"), (p.servicios || []).join(", ") || "—"));
   datos.appendChild(dato(t("dato.peor"), nombreSev(p.peor_hasta),
     p.peor_hasta === "intrusion" || p.peor_hasta === "acceso"));
+  if (p.familia) datos.appendChild(dato(t("dato.familia"), p.familia));
+  if (p.dias_activo > 1) datos.appendChild(dato(t("dato.diasactivo"), String(p.dias_activo)));
+  if ((p.tuneles || []).length) datos.appendChild(dato(t("dato.tuneles"), p.tuneles.join(", ")));
   if (p.origen.reputacion) {
     datos.appendChild(dato(t("dato.reputacion"), `${p.origen.reputacion}/100`, p.origen.reputacion >= 75));
   }

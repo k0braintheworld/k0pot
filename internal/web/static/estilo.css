@@ -1276,3 +1276,13 @@ footer p { margin: 0; font-size: .76rem; color: var(--sub); }
   background: color-mix(in srgb, #9b2fd6 22%, transparent);
   color: #c07ae8; font-size: .72rem; font-weight: 600;
 }
+
+/* Cebo mordido en la ficha de IP: la senal mas fuerte, destacada. */
+.ip-cebo {
+  margin: 0 0 .5rem;
+  padding: .5rem .7rem;
+  background: color-mix(in srgb, #9b2fd6 16%, transparent);
+  border-left: 3px solid #9b2fd6;
+  border-radius: .3rem;
+  font-weight: 600;
+}

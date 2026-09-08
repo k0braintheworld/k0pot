@@ -1039,3 +1039,17 @@ Object.assign(IDIOMAS.en, {
   "cebo.sinleer": "never read it here",
   "cebo.circulando": "{n} bite(s) come from IPs that never opened the loot here: that credential reached them some other way, so what we planted is circulating outside.",
 });
+Object.assign(IDIOMAS.es, {
+  "ip.cebo": "\ud83c\udf6f Mordi\u00f3 el cebo: {cebo}.",
+  "ip.familia": "Parece de la familia {familia}.",
+  "dato.familia": "Familia",
+  "dato.diasactivo": "D\u00edas activo",
+  "dato.tuneles": "T\u00faneles",
+});
+Object.assign(IDIOMAS.en, {
+  "ip.cebo": "\ud83c\udf6f Took the bait: {cebo}.",
+  "ip.familia": "Looks like the {familia} family.",
+  "dato.familia": "Family",
+  "dato.diasactivo": "Days active",
+  "dato.tuneles": "Tunnels",
+});
