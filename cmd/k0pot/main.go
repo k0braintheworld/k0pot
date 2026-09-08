@@ -313,6 +313,7 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 	ultimoAprendizaje := time.Time{}
 	// El respaldo se recuerda entre reinicios: sin esto, cada despliegue
 	// (que reinicia el collector) dispararia una copia nueva.
+	ultimoChequeoSalud := time.Time{}
 	ultimoRespaldo := time.Time{}
 	if v, _ := almacen.LeerEstado("ultimo_respaldo"); v != "" {
 		ultimoRespaldo, _ = time.Parse(time.RFC3339, v)
@@ -367,6 +368,13 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 		// aqui, sin reiniciar nada.
 		c := ajustes.Actual()
 		sup.Aplicar(ctx, c.EscuchaHoneypots, deseadoDe(c))
+
+		// Salud: una vez por hora basta para pillar un disco lleno o una
+		// captura muerta sin machacar el bucle.
+		if time.Since(ultimoChequeoSalud) > time.Hour {
+			ultimoChequeoSalud = time.Now()
+			chequearSalud(ctx, almacen, ajustes.Actual())
+		}
 
 		// Respaldo diario de la base. Barato de programar, invaluable el dia
 		// que el disco falle o una purga se pase de lista.
@@ -642,6 +650,110 @@ func rotarRespaldos(dir string, conservar int) {
 			log.Printf("respaldo: no se pudo borrar %s: %v", viejo, err)
 		}
 	}
+}
+
+// ── Autochequeo de salud ─────────────────────────────────────────────
+//
+// Un honeypot que deja de capturar sin avisar es peor que inutil: da una falsa
+// sensacion de tranquilidad. Y una base que se queda sin disco pierde justo lo
+// que venia a guardar. Estas dos comprobaciones, baratas, avisan por el mismo
+// canal que el resto.
+
+const (
+	discoMinimoSalud = 2 << 30             // 2 GiB: por debajo, escribir se arriesga
+	capturaMudaDesde = 12 * time.Hour      // sin eventos tanto rato = algo va mal
+	capturaMudaHasta = 30 * 24 * time.Hour // mas alla, honeypot retirado: callar
+)
+
+type alertaSalud struct {
+	clave   string // para no repetir el mismo aviso a diario
+	titulo  string
+	cuerpo  string
+	urgente bool
+}
+
+// evaluarSalud decide que avisos de salud tocan, SIN enviarlos ni tocar estado:
+// asi la logica -la parte con matices- se puede probar sola.
+func evaluarSalud(c config.Config, discoLibre uint64, ultimoEvento time.Time, hayEventos bool, ahora time.Time) []alertaSalud {
+	tr := func(es, en string) string {
+		if c.Idioma == "en" {
+			return en
+		}
+		return es
+	}
+	var out []alertaSalud
+	// discoLibre==0 suele ser un statfs fallido: no se avisa a ciegas.
+	if discoLibre > 0 && discoLibre < discoMinimoSalud {
+		gb := float64(discoLibre) / (1 << 30)
+		out = append(out, alertaSalud{
+			clave:   "salud_disco",
+			urgente: true,
+			titulo:  tr("k0Pot: disco casi lleno", "k0Pot: disk almost full"),
+			cuerpo: tr(
+				fmt.Sprintf("Quedan %.1f GB de disco. Libera espacio o baja la retencion en Ajustes; si se llena, k0Pot dejara de guardar lo que capture.", gb),
+				fmt.Sprintf("Only %.1f GB of disk left. Free space or lower retention in Settings; if it fills up, k0Pot will stop saving what it captures.", gb)),
+		})
+	}
+	if hayEventos {
+		if edad := ahora.Sub(ultimoEvento); edad > capturaMudaDesde && edad < capturaMudaHasta {
+			horas := int(edad.Hours())
+			out = append(out, alertaSalud{
+				clave:  "salud_captura",
+				titulo: tr("k0Pot: dejo de capturar", "k0Pot: capture stopped"),
+				cuerpo: tr(
+					fmt.Sprintf("No entra ningun evento desde hace %d h, pero antes si capturaba. Revisa que Cowrie sigue vivo y que los puertos siguen redirigidos.", horas),
+					fmt.Sprintf("No events for %d h, though it was capturing before. Check that Cowrie is alive and the ports are still forwarded.", horas)),
+			})
+		}
+	}
+	return out
+}
+
+// chequearSalud evalua y envia lo que toque, sin repetir un aviso mas de una
+// vez al dia.
+func chequearSalud(ctx context.Context, almacen *store.Store, c config.Config) {
+	if c.AvisoCanal == "" {
+		return // sin canal configurado no hay a donde avisar
+	}
+	libre, _ := discoLibre("data")
+	ult, hay, err := almacen.UltimoEventoEn()
+	if err != nil {
+		log.Printf("salud: %v", err)
+	}
+	for _, a := range evaluarSalud(c, libre, ult, hay, time.Now()) {
+		if !debeAvisarSalud(almacen, a.clave) {
+			continue
+		}
+		canal, err := aviso.De(aviso.Config{
+			Canal: c.AvisoCanal, Destino: c.AvisoDestino, Clave: c.ClaveAviso,
+			Servidor: c.AvisoServidor, Enlace: c.AvisoEnlace,
+		}, nil)
+		if err != nil || canal == nil {
+			continue
+		}
+		_ = canal.Enviar(ctx, aviso.Mensaje{Titulo: a.titulo, Cuerpo: a.cuerpo, Urgente: a.urgente, Enlace: c.AvisoEnlace})
+	}
+}
+
+// debeAvisarSalud limita cada aviso a uno al dia: un problema de salud sigue
+// ahi hasta que lo arreglas, y no ayuda repetirlo cada hora.
+func debeAvisarSalud(almacen *store.Store, clave string) bool {
+	if v, _ := almacen.LeerEstado(clave); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil && time.Since(t) < 24*time.Hour {
+			return false
+		}
+	}
+	_ = almacen.GuardarEstado(clave, time.Now().UTC().Format(time.RFC3339))
+	return true
+}
+
+// discoLibre son los bytes disponibles en la particion de una ruta.
+func discoLibre(ruta string) (uint64, error) {
+	var st syscall.Statfs_t
+	if err := syscall.Statfs(ruta, &st); err != nil {
+		return 0, err
+	}
+	return st.Bavail * uint64(st.Bsize), nil
 }
 
 // reconstruirEpisodios agrupa en ataques los eventos nuevos y devuelve
