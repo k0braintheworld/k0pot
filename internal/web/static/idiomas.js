@@ -1053,3 +1053,31 @@ Object.assign(IDIOMAS.en, {
   "dato.diasactivo": "Days active",
   "dato.tuneles": "Tunnels",
 });
+Object.assign(IDIOMAS.es, {
+  "cfg.tab.sistema": "Sistema",
+  "sis.h3": "Estado del sistema",
+  "sis.ayuda": "k0Pot se respalda y se vigila solo. Aqu\u00ed lo ves de un vistazo, sin entrar por SSH.",
+  "sis.captura": "Captura",
+  "sis.viva": "activa",
+  "sis.muda": "\u26a0 sin actividad reciente",
+  "sis.sineventos": "a\u00fan sin eventos",
+  "sis.copia": "\u00daltima copia",
+  "sis.ncopias": "{n} guardadas",
+  "sis.sincopia": "a\u00fan sin copia",
+  "sis.disco": "Disco libre",
+  "sis.bd": "Tama\u00f1o de la base",
+});
+Object.assign(IDIOMAS.en, {
+  "cfg.tab.sistema": "System",
+  "sis.h3": "System status",
+  "sis.ayuda": "k0Pot backs itself up and watches itself. See it at a glance here, no SSH needed.",
+  "sis.captura": "Capture",
+  "sis.viva": "active",
+  "sis.muda": "\u26a0 no recent activity",
+  "sis.sineventos": "no events yet",
+  "sis.copia": "Last backup",
+  "sis.ncopias": "{n} kept",
+  "sis.sincopia": "no backup yet",
+  "sis.disco": "Free disk",
+  "sis.bd": "Database size",
+});

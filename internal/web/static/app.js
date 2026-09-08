@@ -2727,10 +2727,53 @@ async function descartarActualizacion() {
   }
 }
 
+async function cargarSistema() {
+  const cont = $("sistema-datos");
+  cont.replaceChildren(nodo("p", "sub", t("cargando")));
+  let d;
+  try {
+    d = await pedirJSON("/api/sistema");
+  } catch (e) {
+    cont.replaceChildren(nodo("p", "sub", e.message));
+    return;
+  }
+  cont.replaceChildren();
+  // Captura: la senal de que el honeypot sigue vivo.
+  if (d.ultimo_evento) {
+    const viva = Date.now() - new Date(d.ultimo_evento).getTime() < 12 * 3600 * 1000;
+    cont.appendChild(dato(t("sis.captura"),
+      (viva ? t("sis.viva") : t("sis.muda")) + " \u00b7 " + hace(d.ultimo_evento), !viva));
+  } else {
+    cont.appendChild(dato(t("sis.captura"), t("sis.sineventos")));
+  }
+  // Copia de seguridad.
+  if (d.ultima_copia) {
+    cont.appendChild(dato(t("sis.copia"),
+      hace(d.ultima_copia) + " \u00b7 " + t("sis.ncopias", { n: d.copias })));
+  } else {
+    cont.appendChild(dato(t("sis.copia"), t("sis.sincopia"), true));
+  }
+  // Disco: se resalta si queda poco.
+  if (d.disco_libre != null) {
+    const gbL = (d.disco_libre / 1e9).toFixed(1);
+    let txt = gbL + " GB";
+    if (d.disco_total) {
+      txt += " / " + (d.disco_total / 1e9).toFixed(0) + " GB (" +
+        Math.round((100 * d.disco_libre) / d.disco_total) + "%)";
+    }
+    cont.appendChild(dato(t("sis.disco"), txt, d.disco_libre < 2e9));
+  }
+  // Tamano de la base.
+  if (d.bd_bytes != null) {
+    cont.appendChild(dato(t("sis.bd"), (d.bd_bytes / 1e6).toFixed(0) + " MB"));
+  }
+}
+
 async function abrirAjustes() {
   try {
     volcarAjustes(await pedirJSON("/api/ajustes"));
     pintarServicios(await pedirJSON("/api/servicios"));
+    cargarSistema().catch(() => {});
   } catch (err) {
     $("actualizado").textContent = err.message;
     return;

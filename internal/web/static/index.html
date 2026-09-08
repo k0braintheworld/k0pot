@@ -58,6 +58,7 @@
       <button type="button" role="tab" data-ir="informes" aria-selected="false" data-i18n="cfg.tab.informes">Informes</button>
         <button type="button" role="tab" data-ir="avisos" aria-selected="false" data-i18n="cfg.tab.avisos">Avisos</button>
       <button type="button" role="tab" data-ir="general" aria-selected="false" data-i18n="cfg.tab.general">General</button>
+      <button type="button" role="tab" data-ir="sistema" aria-selected="false" data-i18n="cfg.tab.sistema">Sistema</button>
       <button type="button" role="tab" data-ir="actualizaciones" aria-selected="false" data-i18n="cfg.tab.actualizaciones">Actualizaciones</button>
     </nav>
 
@@ -288,6 +289,12 @@
       <label data-i18n-first="cfg.pass.nueva">Nueva<input type="password" id="p-nueva" autocomplete="new-password"></label>
       <button type="button" id="guardar-contrasena" class="boton-secundario" data-i18n="cfg.pass.boton">Cambiar contrasena</button>
       <p class="ayuda" id="estado-contrasena"></p>
+    </div>
+
+    <div class="grupo" data-pestana="sistema">
+      <h3 data-i18n="sis.h3">Estado del sistema</h3>
+      <p class="ayuda" data-i18n="sis.ayuda">k0Pot se respalda y se vigila solo. Aqui lo ves de un vistazo, sin entrar por SSH.</p>
+      <div id="sistema-datos" class="ficha-datos"></div>
     </div>
 
     <div class="grupo" data-pestana="actualizaciones">
