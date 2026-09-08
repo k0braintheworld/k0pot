@@ -19,7 +19,8 @@ import (
 
 // Store es el acceso a la base de datos.
 type Store struct {
-	db *sql.DB
+	db   *sql.DB
+	ruta string
 }
 
 // El enriquecimiento vive en su propia tabla, no repetido en cada evento:
@@ -98,7 +99,7 @@ func Abrir(ruta string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
-	s := &Store{db: db}
+	s := &Store{db: db, ruta: ruta}
 	if err := s.sembrarGlosas(); err != nil {
 		db.Close()
 		return nil, err

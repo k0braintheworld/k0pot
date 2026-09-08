@@ -13,6 +13,7 @@ import (
 	"net"
 	nethttp "net/http"
 	"os"
+	"path/filepath"
 	"os/signal"
 	"sort"
 	"strconv"
@@ -73,6 +74,8 @@ func main() {
 			"lista las cuentas del panel y sale")
 		asistente = flag.Bool("configurar", false,
 			"asistente de configuracion inicial y sale")
+		respaldar = flag.Bool("respaldar", false,
+			"hace una copia de la base en data/backups/ y sale")
 		revisar = flag.Bool("reclasificar", false,
 			"vuelve a juzgar los eventos guardados con el criterio de hoy y sale")
 	)
@@ -123,6 +126,15 @@ func main() {
 		if err := reclasificar(almacen, ajustes, time.Now().AddDate(0, 0, -*dias)); err != nil {
 			log.Fatalf("reclasificando: %v", err)
 		}
+		return
+	}
+
+	if *respaldar {
+		destino, err := respaldarBD(almacen, "data/backups", 7)
+		if err != nil {
+			log.Fatalf("respaldo: %v", err)
+		}
+		fmt.Printf("copia creada: %s\n", destino)
 		return
 	}
 
@@ -299,6 +311,12 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 	const intervalo = 30 * time.Second
 	ultimaPurga := time.Time{}
 	ultimoAprendizaje := time.Time{}
+	// El respaldo se recuerda entre reinicios: sin esto, cada despliegue
+	// (que reinicia el collector) dispararia una copia nueva.
+	ultimoRespaldo := time.Time{}
+	if v, _ := almacen.LeerEstado("ultimo_respaldo"); v != "" {
+		ultimoRespaldo, _ = time.Parse(time.RFC3339, v)
+	}
 	// ultimoEvento marca hasta donde se han convertido eventos en
 	// episodios. Arranca a cero a proposito: al iniciar se reconstruye todo
 	// una vez, que es lo que hace falta tras actualizar o restaurar.
@@ -349,6 +367,18 @@ func mantenimiento(ctx context.Context, almacen *store.Store, ajustes *config.Ge
 		// aqui, sin reiniciar nada.
 		c := ajustes.Actual()
 		sup.Aplicar(ctx, c.EscuchaHoneypots, deseadoDe(c))
+
+		// Respaldo diario de la base. Barato de programar, invaluable el dia
+		// que el disco falle o una purga se pase de lista.
+		if time.Since(ultimoRespaldo) > 24*time.Hour {
+			if destino, err := respaldarBD(almacen, "data/backups", 7); err != nil {
+				log.Printf("respaldo: %v", err)
+			} else {
+				ultimoRespaldo = time.Now()
+				_ = almacen.GuardarEstado("ultimo_respaldo", ultimoRespaldo.UTC().Format(time.RFC3339))
+				log.Printf("respaldo: copia creada en %s", destino)
+			}
+		}
 
 		// La purga es cara y no urge: una vez por hora basta.
 		if time.Since(ultimaPurga) > time.Hour {
@@ -581,6 +611,37 @@ func avisarDeLoGrave(ctx context.Context, almacen *store.Store, c config.Config)
 	}
 	log.Printf("aviso enviado por %s: %d ataque(s)", canal.Nombre(), len(pendientes))
 	return almacen.MarcarAvisados(pendientes)
+}
+
+// respaldarBD hace una copia de la base en dir/ y conserva las N mas
+// recientes. Devuelve la ruta de la copia creada.
+func respaldarBD(almacen *store.Store, dir string, conservar int) (string, error) {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return "", fmt.Errorf("creando %s: %w", dir, err)
+	}
+	// El nombre lleva la fecha: asi el orden alfabetico es el cronologico
+	// y rotar es tan simple como quedarse con las ultimas.
+	destino := filepath.Join(dir, "honey-"+time.Now().Format("20060102-150405")+".db")
+	if err := almacen.RespaldarEn(destino); err != nil {
+		return "", err
+	}
+	rotarRespaldos(dir, conservar)
+	return destino, nil
+}
+
+// rotarRespaldos deja solo las N copias mas recientes. Un fallo aqui no es
+// grave: la copia ya esta hecha, solo sobra disco.
+func rotarRespaldos(dir string, conservar int) {
+	copias, err := filepath.Glob(filepath.Join(dir, "honey-*.db"))
+	if err != nil || len(copias) <= conservar {
+		return
+	}
+	sort.Strings(copias)
+	for _, viejo := range copias[:len(copias)-conservar] {
+		if err := os.Remove(viejo); err != nil {
+			log.Printf("respaldo: no se pudo borrar %s: %v", viejo, err)
+		}
+	}
 }
 
 // reconstruirEpisodios agrupa en ataques los eventos nuevos y devuelve
