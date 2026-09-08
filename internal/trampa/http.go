@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/k0braintheworld/k0pot/internal/exploit"
 	"github.com/k0braintheworld/k0pot/internal/model"
@@ -234,11 +235,14 @@ func (t *HTTP) Servir(ctx context.Context, direccion string, reg Registrar) erro
 
 		reg(evento(t.ID(), "http", ipDe(conn), model.PeticionHTTP, detalle))
 
+		// Date con la hora actual, como un nginx real (que faltara delataba).
 		fmt.Fprintf(conn, "HTTP/1.1 200 OK\r\n"+
 			"Server: nginx/1.24.0\r\n"+
+			"Date: %s\r\n"+
 			"Content-Type: %s\r\n"+
 			"Content-Length: %d\r\n"+
-			"Connection: close\r\n\r\n%s", tipoResp, len(cuerpoResp), cuerpoResp)
+			"Connection: close\r\n\r\n%s",
+			time.Now().UTC().Format(http.TimeFormat), tipoResp, len(cuerpoResp), cuerpoResp)
 	})
 }
 

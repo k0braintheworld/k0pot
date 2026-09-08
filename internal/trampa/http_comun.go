@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/k0braintheworld/k0pot/internal/exploit"
 	"github.com/k0braintheworld/k0pot/internal/model"
@@ -94,11 +95,15 @@ func atenderHTTP(t Trampa, protocolo, direccion string, conn net.Conn, reg Regis
 	for k, v := range resp.Cabeceras {
 		fmt.Fprintf(&extra, "%s: %s\r\n", k, v)
 	}
+	// Date con la hora actual: un servidor HTTP real siempre la envia. Que
+	// faltara era una firma uniforme que delataba a todas las trampas HTTP.
 	fmt.Fprintf(conn, "HTTP/1.1 %d %s\r\n"+
+		"Date: %s\r\n"+
 		"Content-Type: %s\r\n"+
 		"Content-Length: %d\r\n%s"+
 		"Connection: close\r\n\r\n%s",
-		codigo, http.StatusText(codigo), tipo, len(resp.Cuerpo), extra.String(), resp.Cuerpo)
+		codigo, http.StatusText(codigo), time.Now().UTC().Format(http.TimeFormat),
+		tipo, len(resp.Cuerpo), extra.String(), resp.Cuerpo)
 }
 
 var (
