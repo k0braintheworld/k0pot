@@ -13,7 +13,6 @@ package trampa
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"net"
 	"time"
 
@@ -89,7 +88,7 @@ func servirTCP(ctx context.Context, direccion string, atender func(net.Conn)) er
 				recover()
 			}()
 			conn.SetDeadline(time.Now().Add(plazoLectura))
-			pausaCreible()
+			memoriaTrampas.esperar(ipDe(conn))
 			atender(conn)
 		}()
 	}
@@ -147,22 +146,3 @@ func Disponibles() []Trampa {
 	}
 }
 
-// pausaCreible retrasa un poco la atencion de cada conexion.
-//
-// Un servicio de verdad tarda algo en contestar, y lo que tarda varia entre
-// conexiones: hay red, disco y un proceso ocupado por medio. Una trampa que
-// responde siempre al instante y siempre igual tiene una firma temporal muy
-// plana, que es justo lo que mira quien intenta distinguir un honeypot de un
-// servidor real.
-//
-// El retraso se mantiene por debajo de cualquier plazo razonable de un
-// escaner: la gracia es parecerse a un servicio lento, no perder capturas
-// porque el atacante se canse y corte.
-func pausaCreible() {
-	time.Sleep(retrasoMinimo + time.Duration(rand.Int63n(int64(retrasoExtra))))
-}
-
-const (
-	retrasoMinimo = 20 * time.Millisecond
-	retrasoExtra  = 130 * time.Millisecond
-)
