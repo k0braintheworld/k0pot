@@ -124,6 +124,13 @@ func (s *Servidor) entrar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Freno de fuerza bruta: si esta IP viene fallando, se le hace esperar
+	// antes de siquiera procesar el intento.
+	ip := ipRemota(r)
+	if d := limitadorDeLogin.penalizacion(ip); d > 0 {
+		time.Sleep(d)
+	}
+
 	hay, err := s.Almacen.HayUsuarios()
 	if err != nil {
 		responderError(w, http.StatusInternalServerError, "error interno")
@@ -145,11 +152,13 @@ func (s *Servidor) entrar(w http.ResponseWriter, r *http.Request) {
 		// Mismo mensaje y mismo coste que una contrasena mala: decir
 		// "ese usuario no existe" regala la mitad de la credencial.
 		auth.Verificar(p.Contrasena, hashSenuelo)
+		limitadorDeLogin.fallo(ip)
 		log.Printf("intento de acceso fallido para %q desde %s", p.Usuario, r.RemoteAddr)
 		responderError(w, http.StatusUnauthorized, auth.ErrCredenciales.Error())
 		return
 	}
 	if err := auth.Verificar(p.Contrasena, u.Hash); err != nil {
+		limitadorDeLogin.fallo(ip)
 		log.Printf("intento de acceso fallido para %q desde %s", p.Usuario, r.RemoteAddr)
 		responderError(w, http.StatusUnauthorized, auth.ErrCredenciales.Error())
 		return
@@ -166,6 +175,7 @@ func (s *Servidor) entrar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.Almacen.MarcarAcceso(u.ID)
+	limitadorDeLogin.exito(ip)
 	s.Almacen.PurgarSesiones()
 
 	ponerCookie(w, r, token, expira)
